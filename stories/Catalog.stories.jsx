@@ -33,12 +33,13 @@ function entriesOf() {
       // Storybook adds a __namedExportsOrder array to every story module.
       if (name === "default" || name.startsWith("__") || !story || typeof story !== "object" || Array.isArray(story)) continue;
       const path = meta.title.split("/");
-      // The story's name as Storybook has it: its own `name`, else the
-      // export's, spaced ("LightBox" is "Light Box"); the id, and so the
-      // picture's name, comes from that
+      // The story's name as Storybook shows it: its own `name`, else the
+      // export's, spaced ("LightBox" is "Light Box"). Its id, and so the
+      // picture's name, comes from the EXPORT's name alone, whatever it is
+      // called: `Picture`, named "Picture Window", is ...--picture.
       const storyName = story.name ?? storyNameFromExport(name);
       out.push({
-        id: toId(meta.title, storyName),
+        id: toId(meta.title, storyNameFromExport(name)),
         name: path[path.length - 1] + (name === "Default" ? "" : ` · ${storyName}`),
         section: path.slice(0, -1).join(" / "),
         top: path[0],
