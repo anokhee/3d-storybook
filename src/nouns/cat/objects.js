@@ -52,7 +52,7 @@ export const CAT_POSES = ["standing", "sitting", "loaf"];
 // A toy cat: one lump of clay (see lump.js) — the head and body a single
 // continuous form, the legs pulled down out of it to feet on the ground
 // — with a lighter patch painted on the chest, two pointed ears (a pink
-// triangle set down inside each), a small muzzle bump with a triangle nose and a line
+// triangle in each), a small muzzle bump with a triangle nose and a line
 // of a mouth drawn down from it, two bead eyes,
 // three whiskers a side, and a long tail that curls up at the tip. It
 // stands on the ground facing +z, about 1.2 tall at the head.
@@ -66,7 +66,7 @@ export const CAT_POSES = ["standing", "sitting", "loaf"];
 //   head    `radius` of the head's ball
 //   legs    `radius` of the feet; the legs taper down to them from thicker
 //   resolution  the lump's grid, cells a side: more is smoother, slower
-//   stripes bands of `markings` across the back and round the tail
+//   stripes bands of `markings` painted across the back and round the tail
 //   paws    a white sock on every foot
 //   colors  `fur` the coat; `belly` the lighter patch under the body and
 //           the muzzle; `eyes` the iris, `pupil` the dark bead behind it;

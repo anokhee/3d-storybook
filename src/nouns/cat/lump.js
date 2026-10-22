@@ -10,8 +10,11 @@ import { MarchingCubes } from "three/examples/jsm/objects/MarchingCubes.js";
 // per build, not per frame, and the triangles copied out into a geometry
 // of their own.
 //
-//   balls       [{ at: [x, y, z], r }] in the object's own units: `r` is
-//               the radius the ball would have on its own
+//   balls       [{ at: [x, y, z], r, subtract? }] in the object's own
+//               units: `r` is the radius the ball would have on its own;
+//               `subtract`, if given, is this ball's own blend tightness
+//               (below), looser for a part that should fillet softly
+//               into its neighbours
 //   resolution  the grid's cells a side; more is smoother and slower
 //   subtract    how tight the blend is: a ball's field reaches out to
 //               about r * sqrt((ISOLATION + subtract) / subtract), so a
@@ -47,13 +50,14 @@ export function lumpOf(balls, { resolution = 52, subtract = 48 } = {}) {
     // Field coordinates run 0..1 across the cube; a radius R there (as a
     // share of the cube) is the surface of strength / R² - subtract = ISOLATION.
     const R = b.r / extent / 2;
-    const strength = (ISOLATION + subtract) * R * R;
+    const sub = b.subtract ?? subtract;
+    const strength = (ISOLATION + sub) * R * R;
     cubes.addBall(
       (b.at[0] - center.x) / extent / 2 + 0.5,
       (b.at[1] - center.y) / extent / 2 + 0.5,
       (b.at[2] - center.z) / extent / 2 + 0.5,
       strength,
-      subtract,
+      sub,
     );
   }
   cubes.update();

@@ -21,6 +21,7 @@ import { CAT, coatOf } from "./objects.js";
 // bends it from the root, `sway` scaling that, small when the tail lies
 // on the ground. `top` is how tall the cat stands, at the head.
 const LEG_SAMPLES = 8;
+const LEG_BLEND = 18;
 function layoutOf(C) {
   const B = C.body;
   const H = C.head;
@@ -28,12 +29,14 @@ function layoutOf(C) {
   // A leg: a thicker ball up in the body and the foot on the ground, with
   // balls between them on a curve — thinning fast just under the body,
   // then easing into an even shaft down to the foot — so the leg flares
-  // smoothly out of the belly instead of beading or coning.
+  // smoothly out of the belly instead of beading or coning. The leg's
+  // balls blend looser than the body's (LEG_BLEND), so where the leg
+  // enters the belly the two fillet into each other instead of creasing.
   const leg = (x, z, top) =>
     Array.from({ length: LEG_SAMPLES }, (_, i) => {
       const u = i / (LEG_SAMPLES - 1);
       const flare = (1 - u) * (1 - u);
-      return { at: [x, THREE.MathUtils.lerp(top, L.radius, u), z], r: L.radius + 0.035 * flare };
+      return { at: [x, THREE.MathUtils.lerp(top, L.radius, u), z], r: L.radius * 0.9 + 0.03 * flare, subtract: LEG_BLEND };
     });
   if (C.pose === "sitting") {
     const spine = [
@@ -52,8 +55,8 @@ function layoutOf(C) {
         { at: [0.2, 0.26, -0.2], r: 0.25 },
         { at: [-0.2, 0.1, 0.1], r: 0.1 }, // the hind feet, toes forward
         { at: [0.2, 0.1, 0.1], r: 0.1 },
-        ...leg(-0.16, 0.3, 0.55),
-        ...leg(0.16, 0.3, 0.55),
+        ...leg(-0.16, 0.3, 0.6),
+        ...leg(0.16, 0.3, 0.6),
       ],
       spine,
       feet,
@@ -111,7 +114,7 @@ function layoutOf(C) {
       ...spine,
       { at: [0, 0.84, 0.4], r: 0.17 }, // the neck
       { at: head, r: H.radius },
-      ...feet.flatMap(([x, , z]) => leg(x, z, 0.44)),
+      ...feet.flatMap(([x, , z]) => leg(x, z, 0.5)),
     ],
     spine,
     feet,
@@ -148,35 +151,8 @@ const whiskerDir = (s, fan) =>
   new THREE.Vector3(s * Math.cos(fan) * Math.cos(WHISKER_SWEEP), Math.sin(fan), -Math.cos(fan) * Math.sin(WHISKER_SWEEP));
 const FANS = [-0.16, 0, 0.16];
 const MUZZLE_R = 0.11;
-
-// An ear, its foot at y = 0 and its front at z = 0: a triangle EAR_W
-// across the foot and EAR_H tall. The front is flat — a rim EAR_RIM wide
-// and EAR_LIP deep round the pink inner, which lies at the back of that
-// rim, set in — and behind it the ear is a pyramid, its three back faces
-// drawing in to a point EAR_DEPTH behind the front.
-const EAR_W = 0.24, EAR_H = 0.27, EAR_RIM = 0.035, EAR_LIP = 0.03, EAR_DEPTH = 0.12;
-const triangle = (w, h, lift = 0) => {
-  const t = new THREE.Shape();
-  t.moveTo(-w / 2, lift);
-  t.lineTo(w / 2, lift);
-  t.lineTo(0, lift + h);
-  t.closePath();
-  return t;
-};
-function earGeometry() {
-  const innerW = EAR_W - 2 * EAR_RIM * 1.7, innerH = EAR_H - EAR_RIM * 3.4;
-  const outer = triangle(EAR_W, EAR_H);
-  outer.holes.push(triangle(innerW, innerH, EAR_RIM));
-  const rim = new THREE.ExtrudeGeometry(outer, { depth: EAR_LIP, bevelEnabled: false }).translate(0, 0, -EAR_LIP);
-  const pink = new THREE.ExtrudeGeometry(triangle(innerW, innerH, EAR_RIM), { depth: 0.01, bevelEnabled: false }).translate(0, 0, -EAR_LIP);
-  // The pyramid: the front triangle's three corners at the rim's back,
-  // and an apex behind them, a third of the way up; three faces between.
-  const a = [-EAR_W / 2, 0, -EAR_LIP], b = [EAR_W / 2, 0, -EAR_LIP], c = [0, EAR_H, -EAR_LIP], d = [0, EAR_H * 0.35, -EAR_LIP - EAR_DEPTH];
-  const back = new THREE.BufferGeometry();
-  back.setAttribute("position", new THREE.Float32BufferAttribute([...a, ...d, ...b, ...b, ...d, ...c, ...c, ...d, ...a, ...a, ...b, ...c], 3));
-  back.computeVertexNormals();
-  return { rim, back, inner: pink };
-}
+const EAR_BASE = 0.13, EAR_H = 0.3;
+const EYE_X = 0.15, EYE_Y = 0.05, EYE_R = 0.038;
 
 // A turn that points local z along `dir`, as an Euler for a mesh.
 const Z = new THREE.Vector3(0, 0, 1);
@@ -222,6 +198,19 @@ function tailWeights(geo, balls) {
   return { weights, index: Int32Array.from(index) };
 }
 
+// Paint on the lump: its own surface where a box at `at`, turned `turn`
+// and `size` across, tall and deep, falls on it, copied out as a decal
+// and lifted a hair along its normals so it sits on the fur.
+function paintOn(geo, at, turn, size) {
+  const onto = new THREE.Mesh(geo);
+  onto.updateMatrixWorld();
+  const decal = new DecalGeometry(onto, at, turn, new THREE.Vector3(...size));
+  const p = decal.attributes.position.array, n = decal.attributes.normal.array;
+  for (let i = 0; i < p.length; i++) p[i] += n[i] * 0.006;
+  return decal;
+}
+const Y = new THREE.Vector3(0, 1, 0);
+
 // One cat, standing on the ground at y = 0 facing +z. `config` overrides
 // any of CAT's fields for this one instance; the coat it names lays its
 // colours and markings under the rest of it.
@@ -243,72 +232,59 @@ export default function Cat({ config }) {
   }, [lay, tail, C.resolution]);
   useEffect(() => () => lump.geo.dispose(), [lump]);
 
-  // The chest: the lump's own surface where the patch falls, copied and
-  // lifted a hair off it along its normals, in the belly colour — paint,
-  // not a bump.
-  const chest = useMemo(() => {
-    if (!lay.chest) return null;
-    const onto = new THREE.Mesh(lump.geo);
-    onto.updateMatrixWorld();
-    const geo = new DecalGeometry(onto, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), new THREE.Vector3(lay.chest.size[0], lay.chest.size[1], 0.5));
-    const p = geo.attributes.position.array, n = geo.attributes.normal.array;
-    for (let i = 0; i < p.length; i++) p[i] += n[i] * 0.006;
-    return geo;
-  }, [lump, lay.chest]);
+  // The chest: painted on the front, from straight ahead.
+  const chest = useMemo(() => lay.chest && paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], 0.5]), [lump, lay.chest]);
   useEffect(() => () => chest?.dispose(), [chest]);
 
-  // A tabby's stripes: half-rings of the markings colour over the back,
-  // one round each ball of the spine, turned to sit square across it;
-  // and full rings round the tail, square across it where they are,
-  // which the swish carries along.
+  // A tabby's stripes, painted on: bands across the back, each projected
+  // straight down over one ball of the spine; and bands round the tail,
+  // each projected in from the side, square across the tail where it is.
+  // The tail's carry the same weights as the lump's tail, so the swish
+  // bends them with it.
   const stripes = useMemo(() => {
     if (!C.stripes) return null;
-    const S = lay.spine;
-    const backs = S.map((b, i) => {
-      const dir = new THREE.Vector3(...S[Math.min(i + 1, S.length - 1)].at).sub(new THREE.Vector3(...S[Math.max(i - 1, 0)].at));
-      return { at: b.at, turn: along(dir), geo: new THREE.TorusGeometry(b.r * 1.06, 0.03, 6, 20, Math.PI) };
+    const backs = lay.spine.map((b) => paintOn(lump.geo, new THREE.Vector3(b.at[0], b.at[1] + 0.1, b.at[2]), new THREE.Euler(-Math.PI / 2, 0, 0), [b.r * 1.6, 0.07, 0.6]));
+    const tails = [5, 8, 11].map((k) => {
+      const at = new THREE.Vector3(...tail[k].at);
+      const t = new THREE.Vector3(...tail[k + 1].at).sub(new THREE.Vector3(...tail[k - 1].at)).normalize();
+      const side = new THREE.Vector3().crossVectors(t, Y).normalize();
+      if (side.lengthSq() < 0.5) side.set(1, 0, 0);
+      const across = new THREE.Vector3().crossVectors(t, side);
+      const turn = new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeBasis(across, t, side));
+      const geo = paintOn(lump.geo, at, turn, [tail[k].r * 4, 0.045, tail[k].r * 4]);
+      return { geo, ...tailWeights(geo, tail), rest: { position: geo.attributes.position.array.slice(), normal: geo.attributes.normal.array.slice() } };
     });
-    const rings = [5, 8, 11].map((k) => {
-      const dir = new THREE.Vector3(...tail[k + 1].at).sub(new THREE.Vector3(...tail[k - 1].at));
-      return { at: new THREE.Vector3(...tail[k].at), turn: along(dir), u: tail[k].u, geo: new THREE.TorusGeometry(tail[k].r + 0.004, 0.018, 6, 14) };
-    });
-    return { backs, rings };
-  }, [C.stripes, lay, tail]);
-  useEffect(() => () => { stripes?.backs.forEach((b) => b.geo.dispose()); stripes?.rings.forEach((r) => r.geo.dispose()); }, [stripes]);
+    return { backs, tails };
+  }, [C.stripes, lay, lump, tail]);
+  useEffect(() => () => { stripes?.backs.forEach((g) => g.dispose()); stripes?.tails.forEach((t) => t.geo.dispose()); }, [stripes]);
 
   // The swish: the tail bent side to side about its root, each vertex by
-  // its weight, the normals turned with it; the tail's rings likewise.
-  const ringRefs = useRef([]);
+  // its weight, the normals turned with it — the lump's, and the painted
+  // stripes' on it.
   const clock = useRef(0);
   const q = useMemo(() => new THREE.Quaternion(), []);
   const v = useMemo(() => new THREE.Vector3(), []);
-  const Y = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
     clock.current += dt;
     const angle = Math.sin(clock.current * 2.6) * 0.5 * C.swish * lay.tail.sway;
-    const { geo, rest, weights, index, root } = lump;
-    const pos = geo.attributes.position.array;
-    const nor = geo.attributes.normal.array;
-    for (let j = 0; j < index.length; j++) {
-      const i = index[j], o = i * 3;
-      q.setFromAxisAngle(Y, angle * weights[i]);
-      v.set(rest.position[o] - root.x, rest.position[o + 1] - root.y, rest.position[o + 2] - root.z).applyQuaternion(q);
-      pos[o] = v.x + root.x; pos[o + 1] = v.y + root.y; pos[o + 2] = v.z + root.z;
-      v.set(rest.normal[o], rest.normal[o + 1], rest.normal[o + 2]).applyQuaternion(q);
-      nor[o] = v.x; nor[o + 1] = v.y; nor[o + 2] = v.z;
-    }
-    geo.attributes.position.needsUpdate = true;
-    geo.attributes.normal.needsUpdate = true;
-    stripes?.rings.forEach((r, k) => {
-      const m = ringRefs.current[k];
-      if (!m) return;
-      const w = r.u * r.u * (3 - 2 * r.u);
-      q.setFromAxisAngle(Y, angle * w);
-      m.position.copy(r.at).sub(root).applyQuaternion(q).add(root);
-      m.rotation.set(...r.turn);
-      m.rotateOnWorldAxis(Y, angle * w);
-    });
+    const root = lump.root;
+    const bend = ({ geo, rest, weights, index }) => {
+      const pos = geo.attributes.position.array;
+      const nor = geo.attributes.normal.array;
+      for (let j = 0; j < index.length; j++) {
+        const i = index[j], o = i * 3;
+        q.setFromAxisAngle(Y, angle * weights[i]);
+        v.set(rest.position[o] - root.x, rest.position[o + 1] - root.y, rest.position[o + 2] - root.z).applyQuaternion(q);
+        pos[o] = v.x + root.x; pos[o + 1] = v.y + root.y; pos[o + 2] = v.z + root.z;
+        v.set(rest.normal[o], rest.normal[o + 1], rest.normal[o + 2]).applyQuaternion(q);
+        nor[o] = v.x; nor[o + 1] = v.y; nor[o + 2] = v.z;
+      }
+      geo.attributes.position.needsUpdate = true;
+      geo.attributes.normal.needsUpdate = true;
+    };
+    bend(lump);
+    stripes?.tails.forEach(bend);
   });
 
   const head = new THREE.Vector3(...lay.head);
@@ -316,8 +292,6 @@ export default function Cat({ config }) {
   const belly = unlitMat(paint.belly);
   const markings = unlitMat(paint.markings);
   const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, H.radius * 0.84));
-  const ear = useMemo(() => earGeometry(), []);
-  useEffect(() => () => { ear.rim.dispose(); ear.back.dispose(); ear.inner.dispose(); }, [ear]);
   const noseGeo = useMemo(() => {
     const t = new THREE.Shape();
     t.moveTo(-0.04, 0.02);
@@ -333,9 +307,12 @@ export default function Cat({ config }) {
       <mesh geometry={lump.geo} castShadow receiveShadow material={fur} />
       {/* The chest: a lighter patch painted on the front. */}
       {chest && <mesh geometry={chest} receiveShadow material={belly} />}
-      {/* Stripes over the back, on a tabby. */}
-      {stripes?.backs.map((b, i) => (
-        <mesh key={i} geometry={b.geo} position={b.at} rotation={b.turn} castShadow material={markings} />
+      {/* Stripes painted over the back and round the tail, on a tabby. */}
+      {stripes?.backs.map((g, i) => (
+        <mesh key={i} geometry={g} receiveShadow material={markings} />
+      ))}
+      {stripes?.tails.map((t, i) => (
+        <mesh key={i} geometry={t.geo} receiveShadow material={markings} />
       ))}
       {/* Socks: a foot again, a hair bigger, in white, on a tuxedo. */}
       {C.paws &&
@@ -346,14 +323,17 @@ export default function Cat({ config }) {
         ))}
       {/* The face, on the head. */}
       <group position={lay.head}>
-        {/* Ears: a triangle each, standing up from the head and tilted
-            outward — a flat front, a rim of fur round a pink inner set
-            back inside it, and a pyramid drawing to a point behind. */}
+        {/* Ears: four-sided pyramids, turned so a face looks forward,
+            their feet down in the head so they meet it along its curve;
+            a smaller pink pyramid pushed forward out of the front face. */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * 0.17, H.radius * 0.8, -0.04]} rotation={[0, s * 0.3, -s * 0.32]}>
-            <mesh geometry={ear.rim} castShadow receiveShadow material={fur} />
-            <mesh geometry={ear.back} castShadow receiveShadow material={fur} />
-            <mesh geometry={ear.inner} material={unlitMat(paint.ear)} />
+          <group key={s} position={[s * 0.17, H.radius * 0.72 + EAR_H / 2, -0.02]} rotation-z={-s * 0.3}>
+            <mesh rotation-y={Math.PI / 4} castShadow receiveShadow material={fur}>
+              <coneGeometry args={[EAR_BASE, EAR_H, 4]} />
+            </mesh>
+            <mesh position={[0, -0.05, EAR_BASE * 0.7]} rotation-y={Math.PI / 4} castShadow material={unlitMat(paint.ear)}>
+              <coneGeometry args={[EAR_BASE * 0.55, EAR_H * 0.6, 4]} />
+            </mesh>
           </group>
         ))}
         {/* The muzzle bump, in the belly colour; the nose, a little
@@ -368,12 +348,12 @@ export default function Cat({ config }) {
         </mesh>
         {/* Eyes: a dark bead with the iris set in its front. */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * 0.12, 0.05, H.radius * 0.96]}>
+          <group key={s} position={[s * EYE_X, EYE_Y, Math.sqrt(H.radius * H.radius - EYE_X * EYE_X - EYE_Y * EYE_Y) + 0.012]}>
             <mesh castShadow material={unlitMat(paint.pupil)}>
-              <sphereGeometry args={[0.05, 12, 8]} />
+              <sphereGeometry args={[EYE_R, 12, 8]} />
             </mesh>
-            <mesh position-z={0.025} material={unlitMat(paint.eyes)}>
-              <sphereGeometry args={[0.035, 10, 8]} />
+            <mesh position-z={EYE_R * 0.5} material={unlitMat(paint.eyes)}>
+              <sphereGeometry args={[EYE_R * 0.7, 10, 8]} />
             </mesh>
           </group>
         ))}
@@ -390,10 +370,6 @@ export default function Cat({ config }) {
           );
         }),
       )}
-      {/* Rings round the tail, on a tabby; the swish carries them. */}
-      {stripes?.rings.map((r, k) => (
-        <mesh key={k} ref={(m) => (ringRefs.current[k] = m)} geometry={r.geo} position={r.at} rotation={r.turn} castShadow material={markings} />
-      ))}
     </group>
   );
 }
