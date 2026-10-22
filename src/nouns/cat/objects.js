@@ -79,7 +79,7 @@ export const CAT = {
   pose: "standing",
   swish: 0.6,
   body: { width: 0.5, height: 0.58, length: 0.96, round: 0.12 },
-  legs: { thickness: 0.14, round: 0.04, blend: 0.08 },
+  legs: { thickness: 0.14, round: 0.04, blend: 0.02 },
   resolution: 56,
   stripes: CAT_COATS["orange tabby"].stripes,
   paws: CAT_COATS["orange tabby"].paws,

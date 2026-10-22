@@ -155,7 +155,7 @@ function earPaint() {
   const at = new THREE.Vector3(0, -EAR_H / 2, d).addScaledVector(up, (L - h) * 0.45).addScaledVector(out, EAR_PROUD);
   return { geo: new THREE.ShapeGeometry(t), at: at.toArray(), tilt };
 }
-const EYE_X = 0.15, EYE_Y = 0.05, EYE_R = 0.038;
+const EYE_X = 0.15, EYE_Y = 0.05, EYE_R = 0.038, IRIS_SPREAD = 0.8;
 
 // A turn that points local z along `dir`, as an Euler for a mesh.
 const Z = new THREE.Vector3(0, 0, 1);
@@ -356,6 +356,11 @@ export default function Cat({ config }) {
   const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, F + 0.02));
   const earPink = useMemo(() => earPaint(), []);
   useEffect(() => () => earPink.geo.dispose(), [earPink]);
+  // The iris: a cap of the bead's sphere, the front IRIS_SPREAD of it
+  // either way from straight ahead, a hair proud. Built round +y and
+  // turned to face +z.
+  const irisGeo = useMemo(() => new THREE.SphereGeometry(EYE_R + 0.002, 14, 6, 0, Math.PI * 2, 0, IRIS_SPREAD).rotateX(Math.PI / 2), []);
+  useEffect(() => () => irisGeo.dispose(), [irisGeo]);
   const noseGeo = useMemo(() => {
     const t = new THREE.Shape();
     t.moveTo(-0.04, 0.02);
@@ -409,15 +414,14 @@ export default function Cat({ config }) {
         <mesh position={[0, -0.095, F + 0.02 + MUZZLE_R - 0.018]} rotation-x={0.5} material={unlitMat(paint.pupil)}>
           <boxGeometry args={[0.012, 0.075, 0.012]} />
         </mesh>
-        {/* Eyes: a dark bead with the iris set in its front. */}
+        {/* Eyes: a dark bead with the iris painted on its front — a cap
+            of a sphere a hair bigger than the bead, lying on it. */}
         {[-1, 1].map((s) => (
           <group key={s} position={[s * EYE_X, EYE_Y, F + 0.004]}>
             <mesh castShadow material={unlitMat(paint.pupil)}>
               <sphereGeometry args={[EYE_R, 12, 8]} />
             </mesh>
-            <mesh position-z={EYE_R * 0.5} material={unlitMat(paint.eyes)}>
-              <sphereGeometry args={[EYE_R * 0.7, 10, 8]} />
-            </mesh>
+            <mesh geometry={irisGeo} material={unlitMat(paint.eyes)} />
           </group>
         ))}
       </group>
