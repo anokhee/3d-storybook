@@ -32,35 +32,36 @@ function layoutOf(C) {
   // ground, its edges rounded, filleting into the belly by L.blend.
   const leg = (x, z, top) => ({ kind: "box", at: [x, top / 2, z], half: [L.thickness / 2 - L.round, top / 2 - L.round, L.thickness / 2 - L.round], round: L.round, blend: L.blend });
   if (C.pose === "sitting") {
-    // The block stood on end and leant back a little; haunches out at
-    // the bottom, the front legs straight down before them.
-    const lean = -0.22;
-    const sw = B.width * 0.9, sl = B.length * 0.55;
-    const lx = sw / 2 - L.thickness / 2 - 0.01, lz = -0.06 + sl / 2 - L.thickness / 2 - 0.01;
-    const feet = [[-lx, 0, lz], [lx, 0, lz]];
+    // The block stood on end and tipped back to rest on its bottom rear
+    // edge, so its front lifts off the ground; the front legs hang from
+    // the raised front corners down to the ground, and the hind toes peek
+    // out under it at the sides. No haunches of its own: the block's
+    // base is the seat.
+    const lean = -0.35;
+    const sw = B.width * 0.9, sh = 0.9, sl = B.length * 0.55;
+    const lx = sw / 2 - L.thickness / 2 - 0.01;
+    const feet = [[-lx, 0, 0.28], [lx, 0, 0.28]];
     return {
       parts: [
-        block([0, 0.6, -0.06], [sw, 1.0, sl], lean),
-        { kind: "sphere", at: [-0.2, 0.22, -0.14], r: 0.2, blend: 0.08 }, // the haunches
-        { kind: "sphere", at: [0.2, 0.22, -0.14], r: 0.2, blend: 0.08 },
-        { kind: "box", at: [-0.2, 0.06, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 }, // the hind feet, toes forward
-        { kind: "box", at: [0.2, 0.06, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 },
-        leg(-lx, lz, 0.55),
-        leg(lx, lz, 0.55),
+        block([0, 0.64, -0.06], [sw, sh, sl], lean),
+        { kind: "box", at: [-0.2, 0.05, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.03 }, // the hind toes
+        { kind: "box", at: [0.2, 0.05, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.03 },
+        leg(-lx, 0.28, 0.45),
+        leg(lx, 0.28, 0.45),
       ],
-      face: [0, 0.9, 0.14],
+      face: [0, 0.96, 0.1],
       lean,
-      ears: [0.15, 0.1, -0.12],
-      spine: [{ at: [0, 0.8, -0.3], r: 0.18 }, { at: [0, 1.0, -0.22], r: 0.18 }],
+      ears: [0.15, 0.2, -0.14],
+      spine: [{ at: [0, 1.0, -0.32], r: 0.18 }, { at: [0, 1.0, -0.12], r: 0.18 }],
       feet,
-      chest: { at: [0, 0.6, 0.35], size: [0.26, 0.4] },
+      chest: { at: [0, 0.62, 0.4], size: [0.26, 0.4] },
       tail: {
-        points: [[0.1, 0.24, -0.28], [0.3, 0.1, -0.4], [0.46, 0.08, -0.1], [0.4, 0.08, 0.25], [0.12, 0.08, 0.42]],
+        points: [[0.1, 0.2, -0.26], [0.3, 0.1, -0.4], [0.46, 0.08, -0.1], [0.4, 0.08, 0.25], [0.12, 0.08, 0.42]],
         rootR: 0.09,
         tipR: 0.055,
         sway: 0.25,
       },
-      top: 1.1,
+      top: 1.18,
     };
   }
   if (C.pose === "loaf") {
@@ -124,34 +125,38 @@ export function catFootprintOf(C) {
 }
 
 // A whisker's turn: lying along x on side `s` (-1 left, +1 right), fanned
-// up by `fan` radians and swept back a little. Euler XYZ applies z first,
-// which lays the cylinder flat and tilts it; then y sweeps it back.
-const WHISKER_SWEEP = 0.3;
+// up by `fan` radians and swept a little forward — the face is a flat
+// front, so swept back they would run into it. Euler XYZ applies z
+// first, which lays the cylinder flat and tilts it; then y sweeps it.
+const WHISKER_SWEEP = -0.06;
 const whiskerTurn = (s, fan) => [0, s * WHISKER_SWEEP, -s * (Math.PI / 2 - fan)];
 const whiskerDir = (s, fan) =>
   new THREE.Vector3(s * Math.cos(fan) * Math.cos(WHISKER_SWEEP), Math.sin(fan), -Math.cos(fan) * Math.sin(WHISKER_SWEEP));
 const FANS = [-0.16, 0, 0.16];
 const MUZZLE_R = 0.11;
-const EAR_BASE = 0.13, EAR_H = 0.3;
+const EAR_BASE = 0.13, EAR_H = 0.3, EAR_TIP = 0.22; // the tip, as a share of the base: blunt, not a point
 
-// The pink of an ear: a triangle lying flat on the pyramid's front face.
-// The pyramid (a four-sided cone turned an eighth) has that face from a
-// base edge EAR_BASE / √2 forward of its axis up to the apex, so the face
-// leans back by `tilt`; the triangle is the face shrunk toward its
-// middle, set EAR_PROUD off it along its normal.
+// The pink of an ear: a shape lying flat on the pyramid's front face.
+// The pyramid (a four-sided cone turned an eighth, its point taken off)
+// has that face from a base edge EAR_BASE / √2 forward of its axis up to
+// a short top edge EAR_TIP of that, so the face leans back by `tilt`; the
+// pink is the face shrunk toward its middle, set EAR_PROUD off it along
+// its normal.
 const EAR_PROUD = 0.004;
 function earPaint() {
   const d = EAR_BASE / Math.SQRT2; // the front edge, forward of the axis
-  const L = Math.hypot(EAR_H, d); // the face, base to apex
-  const tilt = Math.atan2(d, EAR_H);
-  const w = 2 * d * 0.6, h = L * 0.6;
+  const dTop = d * EAR_TIP; // the top edge, forward of the axis
+  const L = Math.hypot(EAR_H, d - dTop); // the face, base to top
+  const tilt = Math.atan2(d - dTop, EAR_H);
+  const w = 2 * d * 0.6, wTop = 2 * dTop * 0.6, h = L * 0.6;
   const t = new THREE.Shape();
   t.moveTo(-w / 2, 0);
   t.lineTo(w / 2, 0);
-  t.lineTo(0, h);
+  t.lineTo(wTop / 2, h);
+  t.lineTo(-wTop / 2, h);
   t.closePath();
-  const up = new THREE.Vector3(0, EAR_H, -d).divideScalar(L); // along the face, base to apex
-  const out = new THREE.Vector3(0, d, EAR_H).divideScalar(L); // the face's normal
+  const up = new THREE.Vector3(0, EAR_H, dTop - d).divideScalar(L); // along the face, base to top
+  const out = new THREE.Vector3(0, d - dTop, EAR_H).divideScalar(L); // the face's normal
   const at = new THREE.Vector3(0, -EAR_H / 2, d).addScaledVector(up, (L - h) * 0.45).addScaledVector(out, EAR_PROUD);
   return { geo: new THREE.ShapeGeometry(t), at: at.toArray(), tilt };
 }
@@ -392,14 +397,15 @@ export default function Cat({ config }) {
         ))}
       {/* The face, drawn on the block's front, leaning back with it. */}
       <group position={lay.face} rotation-x={lay.lean}>
-        {/* Ears: four-sided pyramids, turned so a face looks forward,
-            their feet down in the block so they meet it along its edge;
+        {/* Ears: four-sided pyramids with the point taken off, turned so
+            a face looks forward, their feet down in the block so they
+            meet it along its edge;
             the pink painted on that front face, a flat triangle lying
             on it a hair proud. */}
         {[-1, 1].map((s) => (
           <group key={s} position={[s * lay.ears[0], lay.ears[1] + EAR_H / 2 - 0.06, lay.ears[2]]} rotation-z={-s * 0.3}>
             <mesh rotation-y={Math.PI / 4} castShadow receiveShadow material={fur}>
-              <coneGeometry args={[EAR_BASE, EAR_H, 4]} />
+              <cylinderGeometry args={[EAR_BASE * EAR_TIP, EAR_BASE, EAR_H, 4]} />
             </mesh>
             <mesh geometry={earPink.geo} position={earPink.at} rotation-x={-earPink.tilt} material={unlitMat(paint.ear)} />
           </group>
@@ -426,10 +432,10 @@ export default function Cat({ config }) {
         ))}
       </group>
       {/* Whiskers: three hair-thin cylinders a side, fanned, from the
-          sides of the muzzle. */}
+          front of the muzzle, clear of the face. */}
       {[-1, 1].map((s) =>
         FANS.map((fan, i) => {
-          const at = whiskerDir(s, fan).multiplyScalar(0.2).add(muzzle).add(new THREE.Vector3(s * 0.06, 0, 0));
+          const at = whiskerDir(s, fan).multiplyScalar(0.2).add(muzzle).add(new THREE.Vector3(s * 0.05, 0, MUZZLE_R * 0.55));
           return (
             <mesh key={`${s}${i}`} position={at.toArray()} rotation={whiskerTurn(s, fan)} material={belly}>
               <cylinderGeometry args={[0.006, 0.006, 0.42, 4]} />
