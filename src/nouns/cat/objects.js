@@ -64,7 +64,6 @@ export const CAT_POSES = ["standing", "sitting", "loaf"];
 //   body    `radius` of the balls the body is poured round
 //   head    `radius` of the head's ball
 //   legs    `radius` of the feet, and so of the legs pulled down to them
-//   tail    `radius` of the tube
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   stripes bands of `markings` across the back and round the tail
 //   paws    a white sock on every foot
@@ -79,8 +78,7 @@ export const CAT = {
   body: { radius: 0.32 },
   head: { radius: 0.3 },
   legs: { radius: 0.1 },
-  tail: { radius: 0.055 },
-  resolution: 52,
+  resolution: 64,
   stripes: CAT_COATS["orange tabby"].stripes,
   paws: CAT_COATS["orange tabby"].paws,
   colors: {
