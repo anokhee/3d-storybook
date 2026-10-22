@@ -10,103 +10,100 @@ import { lumpOf } from "./lump.js";
 import { CAT, coatOf } from "./objects.js";
 
 // Where everything sits for each pose, at size 1. The cat is one lump
-// (see lump.js): `parts` are the forms it is poured from — the body a
-// rounded block, the head another grown out of its front, each leg a
-// slimmer block pulled straight down out of the body to the ground, and
-// the tail a run of capsules out of the rump. `spine` is where the
-// stripes go, along the top of the back, with how wide; `feet` where the
-// socks go; `chest` the lighter patch painted on the front, projected
-// from `at` straight back along -z, `size` across and tall, or null;
-// `face` how far the face's front is from the head's middle. The tail is
-// a curve of `points` from where it leaves the rump to its tip, `rootR`
-// thick where it leaves and `tipR` at the tip; the swish bends it from
-// the root, `sway` scaling that, small when the tail lies on the ground.
-// `top` is how tall the cat stands, at the head.
+// (see lump.js): `parts` are the forms it is poured from — ONE rounded
+// block for head and body together, each leg a slimmer block pulled
+// straight down out of it to the ground, and the tail a run of capsules
+// out of its rear. The face is drawn on the block's front: `face` is the
+// middle of it, on the front surface, and `lean` how the front leans
+// back (the eyes, muzzle and ears go with it); `ears` where the two ears
+// stand, from `face`. `spine` is where the stripes go, along the top,
+// with how wide; `feet` where the socks go; `chest` the lighter patch
+// painted on the front, projected from `at` straight back along -z,
+// `size` across and tall, or null. The tail is a curve of `points` from
+// where it leaves the rear to its tip, `rootR` thick where it leaves and
+// `tipR` at the tip; the swish bends it from the root, `sway` scaling
+// that, small when the tail lies on the ground. `top` is how tall the
+// cat stands.
 function layoutOf(C) {
   const B = C.body;
-  const H = C.head;
   const L = C.legs;
-  const body = (at, half, tilt = 0) => ({ kind: "box", at, half, round: B.round, tilt, blend: 0 });
-  const head = (at) => ({ kind: "box", at, half: [H.width / 2 - H.round, H.height / 2 - H.round, H.depth / 2 - H.round], round: H.round, blend: H.blend });
+  const block = (at, size, tilt = 0) => ({ kind: "box", at, half: [size[0] / 2 - B.round, size[1] / 2 - B.round, size[2] / 2 - B.round], round: B.round, tilt, blend: 0 });
   // A leg: a slim block from up inside the body straight down to the
   // ground, its edges rounded, filleting into the belly by L.blend.
   const leg = (x, z, top) => ({ kind: "box", at: [x, top / 2, z], half: [L.thickness / 2 - L.round, top / 2 - L.round, L.thickness / 2 - L.round], round: L.round, blend: L.blend });
-  const face = H.depth / 2;
   if (C.pose === "sitting") {
-    const headAt = [0, 1.06, 0.3];
-    const feet = [[-0.16, 0, 0.3], [0.16, 0, 0.3]];
+    // The block stood on end and leant back a little; haunches out at
+    // the bottom, the front legs straight down before them.
+    const lean = -0.22;
+    const feet = [[-0.15, 0, 0.2], [0.15, 0, 0.2]];
     return {
       parts: [
-        body([0, 0.58, -0.08], [B.width / 2 - B.round, 0.42 - B.round, B.length / 2 - 0.2 - B.round], -0.45),
-        head(headAt),
-        { kind: "sphere", at: [-0.2, 0.24, -0.18], r: 0.22, blend: 0.08 }, // the haunches
-        { kind: "sphere", at: [0.2, 0.24, -0.18], r: 0.22, blend: 0.08 },
-        { kind: "box", at: [-0.2, 0.06, 0.08], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 }, // the hind feet, toes forward
-        { kind: "box", at: [0.2, 0.06, 0.08], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 },
-        leg(-0.16, 0.3, 0.62),
-        leg(0.16, 0.3, 0.62),
+        block([0, 0.6, -0.06], [B.width * 0.9, 1.0, B.length * 0.55], lean),
+        { kind: "sphere", at: [-0.2, 0.22, -0.14], r: 0.2, blend: 0.08 }, // the haunches
+        { kind: "sphere", at: [0.2, 0.22, -0.14], r: 0.2, blend: 0.08 },
+        { kind: "box", at: [-0.2, 0.06, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 }, // the hind feet, toes forward
+        { kind: "box", at: [0.2, 0.06, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 },
+        leg(-0.15, 0.2, 0.55),
+        leg(0.15, 0.2, 0.55),
       ],
-      spine: [{ at: [0, 0.7, -0.3], r: 0.2 }, { at: [0, 0.86, -0.1], r: 0.2 }],
+      face: [0, 0.9, 0.14],
+      lean,
+      ears: [0.15, 0.1, -0.12],
+      spine: [{ at: [0, 0.8, -0.3], r: 0.18 }, { at: [0, 1.0, -0.22], r: 0.18 }],
       feet,
-      chest: { at: [0, 0.62, 0.7], size: [0.3, 0.42] },
-      head: headAt,
-      face,
-      // Out of the rump low down and round the feet along the ground.
+      chest: { at: [0, 0.6, 0.35], size: [0.26, 0.4] },
       tail: {
-        points: [[0.1, 0.26, -0.4], [0.3, 0.1, -0.5], [0.48, 0.08, -0.2], [0.42, 0.08, 0.2], [0.15, 0.08, 0.45]],
+        points: [[0.1, 0.24, -0.28], [0.3, 0.1, -0.4], [0.46, 0.08, -0.1], [0.4, 0.08, 0.25], [0.12, 0.08, 0.42]],
         rootR: 0.09,
         tipR: 0.055,
         sway: 0.25,
       },
-      top: headAt[1] + H.height / 2,
+      top: 1.1,
     };
   }
   if (C.pose === "loaf") {
-    const headAt = [0, 0.58, 0.38];
-    const feet = [[-0.15, 0.06, 0.38], [0.15, 0.06, 0.38]];
+    // The block low and long, flat on the ground; two paws out in front.
+    const feet = [[-0.15, 0.06, 0.42], [0.15, 0.06, 0.42]];
     return {
       parts: [
-        body([0, 0.28, -0.1], [B.width / 2 + 0.03 - B.round, 0.26 - B.round, B.length / 2 - B.round]),
-        head(headAt),
-        { kind: "box", at: feet[0], half: [0.03, 0.02, 0.06], round: 0.035, blend: 0.05 }, // the paws, peeking out
+        block([0, 0.3, -0.05], [B.width + 0.06, 0.6, B.length]),
+        { kind: "box", at: feet[0], half: [0.03, 0.02, 0.06], round: 0.035, blend: 0.05 },
         { kind: "box", at: feet[1], half: [0.03, 0.02, 0.06], round: 0.035, blend: 0.05 },
       ],
-      spine: [{ at: [0, 0.5, -0.38], r: 0.24 }, { at: [0, 0.52, -0.1], r: 0.24 }, { at: [0, 0.5, 0.16], r: 0.22 }],
+      face: [0, 0.4, 0.45],
+      lean: 0,
+      ears: [0.15, 0.14, -0.14],
+      spine: [{ at: [0, 0.6, -0.36], r: 0.26 }, { at: [0, 0.6, -0.1], r: 0.26 }, { at: [0, 0.6, 0.16], r: 0.24 }],
       feet,
       chest: null,
-      head: headAt,
-      face,
-      // Out of the rump and laid along the side.
       tail: {
-        points: [[0.1, 0.2, -0.54], [0.28, 0.09, -0.62], [0.36, 0.08, -0.3], [0.35, 0.08, 0.12], [0.26, 0.08, 0.42]],
+        points: [[0.1, 0.2, -0.5], [0.3, 0.09, -0.6], [0.4, 0.08, -0.3], [0.38, 0.08, 0.1], [0.28, 0.08, 0.42]],
         rootR: 0.09,
         tipR: 0.055,
         sway: 0.2,
       },
-      top: headAt[1] + H.height / 2,
+      top: 0.6,
     };
   }
-  const headAt = [0, 0.98, 0.5];
-  const feet = [[-0.18, 0, 0.3], [0.18, 0, 0.3], [-0.18, 0, -0.3], [0.18, 0, -0.3]];
+  // Standing: the block up on four legs, the face on its front, the tail
+  // out of the top of its rear, curling up.
+  const feet = [[-0.17, 0, 0.3], [0.17, 0, 0.3], [-0.17, 0, -0.3], [0.17, 0, -0.3]];
+  const top = 0.3 + B.height;
   return {
-    parts: [
-      body([0, 0.64, -0.03], [B.width / 2 - B.round, B.height / 2 - B.round, B.length / 2 - B.round]),
-      head(headAt),
-      ...feet.map(([x, , z]) => leg(x, z, 0.5)),
-    ],
-    spine: [{ at: [0, 0.86, -0.3], r: 0.22 }, { at: [0, 0.87, -0.04], r: 0.22 }, { at: [0, 0.86, 0.2], r: 0.2 }],
+    parts: [block([0, 0.3 + B.height / 2, 0], [B.width, B.height, B.length]), ...feet.map(([x, , z]) => leg(x, z, 0.5))],
+    face: [0, top - 0.2, B.length / 2],
+    lean: 0,
+    ears: [0.15, 0.14, -0.16],
+    spine: [{ at: [0, top, -0.3], r: 0.22 }, { at: [0, top, -0.05], r: 0.22 }, { at: [0, top, 0.2], r: 0.2 }],
     feet,
-    chest: { at: [0, 0.52, 0.5], size: [0.3, 0.26] },
-    head: headAt,
-    face,
-    // Out of the top of the rump, dipping, then curling up.
+    chest: { at: [0, 0.5, B.length / 2 + 0.02], size: [0.3, 0.26] },
     tail: {
-      points: [[0, 0.8, -0.44], [0, 0.74, -0.66], [0, 0.84, -0.82], [0, 1.04, -0.88], [0, 1.2, -0.8]],
+      points: [[0, top - 0.12, -B.length / 2 + 0.06], [0, top - 0.18, -B.length / 2 - 0.18], [0, top - 0.06, -B.length / 2 - 0.34], [0, top + 0.14, -B.length / 2 - 0.4], [0, top + 0.3, -B.length / 2 - 0.32]],
       rootR: 0.09,
       tipR: 0.055,
       sway: 1,
     },
-    top: headAt[1] + H.height / 2,
+    top,
   };
 }
 
@@ -220,7 +217,6 @@ const Y = new THREE.Vector3(0, 1, 0);
 export default function Cat({ config }) {
   const C = useMemo(() => merge(merge(CAT, coatOf(config?.coat ?? CAT.coat)), config), [config]);
   const lay = useMemo(() => layoutOf(C), [C]);
-  const H = C.head;
   const paint = C.colors;
 
   // The lump: head, body, legs and tail as one, poured round the pose's
@@ -289,11 +285,11 @@ export default function Cat({ config }) {
     stripes?.tails.forEach(bend);
   });
 
-  const head = new THREE.Vector3(...lay.head);
+  const head = new THREE.Vector3(...lay.face);
   const fur = unlitMat(paint.fur);
   const belly = unlitMat(paint.belly);
   const markings = unlitMat(paint.markings);
-  const F = lay.face;
+  const F = 0; // the face's middle is on the front surface
   const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, F + 0.02));
   const earPink = useMemo(() => earPaint(), []);
   useEffect(() => () => earPink.geo.dispose(), [earPink]);
@@ -326,14 +322,14 @@ export default function Cat({ config }) {
             <sphereGeometry args={[C.legs.thickness / 2 + 0.014, 12, 8]} />
           </mesh>
         ))}
-      {/* The face, on the head. */}
-      <group position={lay.head}>
+      {/* The face, drawn on the block's front, leaning back with it. */}
+      <group position={lay.face} rotation-x={lay.lean}>
         {/* Ears: four-sided pyramids, turned so a face looks forward,
-            their feet down in the head so they meet it along its curve;
+            their feet down in the block so they meet it along its edge;
             the pink painted on that front face, a flat triangle lying
             on it a hair proud. */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * 0.15, H.height / 2 - 0.08 + EAR_H / 2, -0.04]} rotation-z={-s * 0.3}>
+          <group key={s} position={[s * lay.ears[0], lay.ears[1] + EAR_H / 2 - 0.06, lay.ears[2]]} rotation-z={-s * 0.3}>
             <mesh rotation-y={Math.PI / 4} castShadow receiveShadow material={fur}>
               <coneGeometry args={[EAR_BASE, EAR_H, 4]} />
             </mesh>
