@@ -35,16 +35,18 @@ function layoutOf(C) {
     // The block stood on end and leant back a little; haunches out at
     // the bottom, the front legs straight down before them.
     const lean = -0.22;
-    const feet = [[-0.15, 0, 0.2], [0.15, 0, 0.2]];
+    const sw = B.width * 0.9, sl = B.length * 0.55;
+    const lx = sw / 2 - L.thickness / 2 - 0.01, lz = -0.06 + sl / 2 - L.thickness / 2 - 0.01;
+    const feet = [[-lx, 0, lz], [lx, 0, lz]];
     return {
       parts: [
-        block([0, 0.6, -0.06], [B.width * 0.9, 1.0, B.length * 0.55], lean),
+        block([0, 0.6, -0.06], [sw, 1.0, sl], lean),
         { kind: "sphere", at: [-0.2, 0.22, -0.14], r: 0.2, blend: 0.08 }, // the haunches
         { kind: "sphere", at: [0.2, 0.22, -0.14], r: 0.2, blend: 0.08 },
         { kind: "box", at: [-0.2, 0.06, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 }, // the hind feet, toes forward
         { kind: "box", at: [0.2, 0.06, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 },
-        leg(-0.15, 0.2, 0.55),
-        leg(0.15, 0.2, 0.55),
+        leg(-lx, lz, 0.55),
+        leg(lx, lz, 0.55),
       ],
       face: [0, 0.9, 0.14],
       lean,
@@ -63,7 +65,8 @@ function layoutOf(C) {
   }
   if (C.pose === "loaf") {
     // The block low and long, flat on the ground; two paws out in front.
-    const feet = [[-0.15, 0.06, 0.42], [0.15, 0.06, 0.42]];
+    const px = (B.width + 0.06) / 2 - 0.04 - 0.01;
+    const feet = [[-px, 0.06, 0.42], [px, 0.06, 0.42]];
     return {
       parts: [
         block([0, 0.3, -0.05], [B.width + 0.06, 0.6, B.length]),
@@ -85,18 +88,20 @@ function layoutOf(C) {
       top: 0.6,
     };
   }
-  // Standing: the block up on four legs, the face on its front, the tail
-  // out of the top of its rear, curling up.
-  const feet = [[-0.17, 0, 0.3], [0.17, 0, 0.3], [-0.17, 0, -0.3], [0.17, 0, -0.3]];
+  // Standing: the block up on four legs — each pulled down from one of
+  // its corners, flush with the sides and the ends — the face on its
+  // front, the tail out of the top of its rear, curling up.
+  const lx = B.width / 2 - L.thickness / 2 - 0.01, lz = B.length / 2 - L.thickness / 2 - 0.01;
+  const feet = [[-lx, 0, lz], [lx, 0, lz], [-lx, 0, -lz], [lx, 0, -lz]];
   const top = 0.3 + B.height;
   return {
     parts: [block([0, 0.3 + B.height / 2, 0], [B.width, B.height, B.length]), ...feet.map(([x, , z]) => leg(x, z, 0.5))],
-    face: [0, top - 0.2, B.length / 2],
+    face: [0, top - 0.18, B.length / 2],
     lean: 0,
-    ears: [0.15, 0.14, -0.16],
+    ears: [0.15, 0.12, -0.16],
     spine: [{ at: [0, top, -0.3], r: 0.22 }, { at: [0, top, -0.05], r: 0.22 }, { at: [0, top, 0.2], r: 0.2 }],
     feet,
-    chest: { at: [0, 0.5, B.length / 2 + 0.02], size: [0.3, 0.26] },
+    chest: { at: [0, 0.41, B.length / 2 + 0.02], size: [0.26, 0.24] },
     tail: {
       points: [[0, top - 0.12, -B.length / 2 + 0.06], [0, top - 0.18, -B.length / 2 - 0.18], [0, top - 0.06, -B.length / 2 - 0.34], [0, top + 0.14, -B.length / 2 - 0.4], [0, top + 0.3, -B.length / 2 - 0.32]],
       rootR: 0.09,
@@ -200,14 +205,72 @@ function tailWeights(geo, balls) {
 
 // Paint on the lump: its own surface where a box at `at`, turned `turn`
 // and `size` across, tall and deep, falls on it, copied out as a decal
-// and lifted a hair along its normals so it sits on the fur.
-function paintOn(geo, at, turn, size) {
+// and lifted a hair along its normals so it sits on the fur. `arch`
+// rounds the patch's top off into a half-circle as wide as the patch:
+// the decal's triangles are trimmed against a fan of planes tangent to
+// that circle, in the box's own frame, the way the decal itself was
+// trimmed to the box.
+function paintOn(geo, at, turn, size, { arch = false } = {}) {
   const onto = new THREE.Mesh(geo);
   onto.updateMatrixWorld();
-  const decal = new DecalGeometry(onto, at, turn, new THREE.Vector3(...size));
+  let decal = new DecalGeometry(onto, at, turn, new THREE.Vector3(...size));
+  if (arch) decal = archTop(decal, at, turn, size);
   const p = decal.attributes.position.array, n = decal.attributes.normal.array;
   for (let i = 0; i < p.length; i++) p[i] += n[i] * 0.006;
   return decal;
+}
+
+// A triangle clipped to the half-space n·p <= d (Sutherland–Hodgman),
+// as a polygon of { p, n } corners, each new corner interpolated along
+// the edge it cuts.
+function clipPolygon(poly, normal, d) {
+  const out = [];
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    const da = a.p.dot(normal) - d, db = b.p.dot(normal) - d;
+    if (da <= 0) out.push(a);
+    if ((da <= 0) !== (db <= 0)) {
+      const t = da / (da - db);
+      out.push({ p: a.p.clone().lerp(b.p, t), n: a.n.clone().lerp(b.n, t).normalize() });
+    }
+  }
+  return out;
+}
+
+const ARCH_PLANES = 9;
+function archTop(decal, at, turn, size) {
+  const frame = new THREE.Matrix4().makeRotationFromEuler(turn).setPosition(at);
+  const into = frame.clone().invert();
+  const r = size[0] / 2, cy = size[1] / 2 - r; // the circle: as wide as the patch, at its top
+  const planes = Array.from({ length: ARCH_PLANES }, (_, k) => {
+    const a = (Math.PI * (k + 1)) / (ARCH_PLANES + 1);
+    const normal = new THREE.Vector3(Math.cos(a), Math.sin(a), 0);
+    return { normal, d: normal.y * cy + r };
+  });
+  const pos = decal.attributes.position, nor = decal.attributes.normal;
+  const outP = [], outN = [];
+  const rot = new THREE.Matrix3().setFromMatrix4(into), back = new THREE.Matrix3().setFromMatrix4(frame);
+  for (let i = 0; i < pos.count; i += 3) {
+    let poly = [0, 1, 2].map((k) => ({
+      p: new THREE.Vector3().fromBufferAttribute(pos, i + k).applyMatrix4(into),
+      n: new THREE.Vector3().fromBufferAttribute(nor, i + k).applyMatrix3(rot),
+    }));
+    for (const { normal, d } of planes) {
+      poly = clipPolygon(poly, normal, d);
+      if (poly.length < 3) break;
+    }
+    for (let k = 1; k + 1 < poly.length; k++) {
+      for (const c of [poly[0], poly[k], poly[k + 1]]) {
+        outP.push(...c.p.clone().applyMatrix4(frame).toArray());
+        outN.push(...c.n.clone().applyMatrix3(back).toArray());
+      }
+    }
+  }
+  decal.dispose();
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(outP, 3));
+  geo.setAttribute("normal", new THREE.Float32BufferAttribute(outN, 3));
+  return geo;
 }
 const Y = new THREE.Vector3(0, 1, 0);
 
@@ -230,8 +293,8 @@ export default function Cat({ config }) {
   }, [lay, tail, C.resolution]);
   useEffect(() => () => lump.geo.dispose(), [lump]);
 
-  // The chest: painted on the front, from straight ahead.
-  const chest = useMemo(() => lay.chest && paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], 0.4]), [lump, lay.chest]);
+  // The chest: painted on the front, from straight ahead, its top arched.
+  const chest = useMemo(() => lay.chest && paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], 0.4], { arch: true }), [lump, lay.chest]);
   useEffect(() => () => chest?.dispose(), [chest]);
 
   // A tabby's stripes, painted on: bands across the back, each projected
