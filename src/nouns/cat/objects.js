@@ -49,22 +49,28 @@ export function coatOf(coat) {
 // leg tucked under and the tail laid along its side.
 export const CAT_POSES = ["standing", "sitting", "loaf"];
 
-// A toy cat: one lump of clay (see lump.js) — the head and body a single
-// continuous form, the legs pulled down out of it to feet on the ground
-// — with a lighter patch painted on the chest, two pointed ears (a pink
-// triangle in each), a small muzzle bump with a triangle nose and a line
-// of a mouth drawn down from it, two bead eyes,
-// three whiskers a side, and a long tail that curls up at the tip. It
-// stands on the ground facing +z, about 1.2 tall at the head.
+// A toy cat: one lump of clay (see lump.js) — the body a rounded block,
+// the head another grown out of its front so the two are one continuous
+// form, the legs slimmer blocks pulled straight down out of the body to
+// the ground, and the tail out of the rump the same way, curling up at
+// the tip — with a lighter patch painted on the chest, two pointed ears
+// (a pink triangle painted on each), a small muzzle bump with a triangle
+// nose and a line of a mouth drawn down from it, two bead eyes and three
+// whiskers a side. It stands on the ground facing +z, about 1.2 tall at
+// the head.
 //
 //   size    the whole cat scaled; 1 is a house cat beside the furniture
 //   coat    one of CAT_COATS, see above: its colours and markings, under
 //           whatever this config says itself
 //   pose    one of CAT_POSES, see above
 //   swish   how much the tail swings, 0 still to 1 a full swish
-//   body    `radius` of the balls the body is poured round
-//   head    `radius` of the head's ball
-//   legs    `radius` of the feet; the legs taper down to them from thicker
+//   body    the block: `width` across, `height`, `length` nose to rump,
+//           `round` how far its edges are rounded off
+//   head    the block: `width`, `height`, `depth`, `round`; `blend` how
+//           wide a fillet it makes with the body — wide, and the two
+//           flow into each other
+//   legs    `thickness` of each, `round` of its edges, `blend` how wide
+//           a fillet it makes with the belly
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   stripes bands of `markings` painted across the back and round the tail
 //   paws    a white sock on every foot
@@ -76,10 +82,10 @@ export const CAT = {
   coat: "orange tabby",
   pose: "standing",
   swish: 0.6,
-  body: { radius: 0.32 },
-  head: { radius: 0.3 },
-  legs: { radius: 0.055 },
-  resolution: 72,
+  body: { width: 0.54, height: 0.46, length: 0.86, round: 0.1 },
+  head: { width: 0.5, height: 0.44, depth: 0.44, round: 0.12, blend: 0.2 },
+  legs: { thickness: 0.15, round: 0.04, blend: 0.08 },
+  resolution: 56,
   stripes: CAT_COATS["orange tabby"].stripes,
   paws: CAT_COATS["orange tabby"].paws,
   colors: {

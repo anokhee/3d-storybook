@@ -10,124 +10,103 @@ import { lumpOf } from "./lump.js";
 import { CAT, coatOf } from "./objects.js";
 
 // Where everything sits for each pose, at size 1. The cat is one lump
-// (see lump.js): `balls` are the metaballs it is poured round — the body
-// as a row of them, the head on a neck ball, each leg a chain pulled down
-// out of the body to a foot on the ground. `spine` is the body's balls in
-// order, for the stripes to ring; `feet` where the socks go; `chest` the
-// lighter patch painted on the front — projected onto the lump from
-// `at`, straight back along -z, `size` across and tall — or null. The tail is a curve of
-// `points` from where it leaves the rump to its tip, poured into the lump
-// too, `rootR` thick where it leaves and `tipR` at the tip; the swish
-// bends it from the root, `sway` scaling that, small when the tail lies
-// on the ground. `top` is how tall the cat stands, at the head.
-const LEG_SAMPLES = 8;
-const LEG_BLEND = 18;
+// (see lump.js): `parts` are the forms it is poured from — the body a
+// rounded block, the head another grown out of its front, each leg a
+// slimmer block pulled straight down out of the body to the ground, and
+// the tail a run of capsules out of the rump. `spine` is where the
+// stripes go, along the top of the back, with how wide; `feet` where the
+// socks go; `chest` the lighter patch painted on the front, projected
+// from `at` straight back along -z, `size` across and tall, or null;
+// `face` how far the face's front is from the head's middle. The tail is
+// a curve of `points` from where it leaves the rump to its tip, `rootR`
+// thick where it leaves and `tipR` at the tip; the swish bends it from
+// the root, `sway` scaling that, small when the tail lies on the ground.
+// `top` is how tall the cat stands, at the head.
 function layoutOf(C) {
   const B = C.body;
   const H = C.head;
   const L = C.legs;
-  // A leg: a thicker ball up in the body and the foot on the ground, with
-  // balls between them on a curve — thinning fast just under the body,
-  // then easing into an even shaft down to the foot — so the leg flares
-  // smoothly out of the belly instead of beading or coning. The leg's
-  // balls blend looser than the body's (LEG_BLEND), so where the leg
-  // enters the belly the two fillet into each other instead of creasing.
-  const leg = (x, z, top) =>
-    Array.from({ length: LEG_SAMPLES }, (_, i) => {
-      const u = i / (LEG_SAMPLES - 1);
-      const flare = (1 - u) * (1 - u);
-      return { at: [x, THREE.MathUtils.lerp(top, L.radius, u), z], r: L.radius * 0.9 + 0.03 * flare, subtract: LEG_BLEND };
-    });
+  const body = (at, half, tilt = 0) => ({ kind: "box", at, half, round: B.round, tilt, blend: 0 });
+  const head = (at) => ({ kind: "box", at, half: [H.width / 2 - H.round, H.height / 2 - H.round, H.depth / 2 - H.round], round: H.round, blend: H.blend });
+  // A leg: a slim block from up inside the body straight down to the
+  // ground, its edges rounded, filleting into the belly by L.blend.
+  const leg = (x, z, top) => ({ kind: "box", at: [x, top / 2, z], half: [L.thickness / 2 - L.round, top / 2 - L.round, L.thickness / 2 - L.round], round: L.round, blend: L.blend });
+  const face = H.depth / 2;
   if (C.pose === "sitting") {
-    const spine = [
-      { at: [0, 0.38, -0.2], r: B.radius + 0.02 },
-      { at: [0, 0.62, -0.08], r: B.radius - 0.02 },
-      { at: [0, 0.84, 0.08], r: B.radius - 0.07 },
-    ];
-    const head = [0, 1.05, 0.3];
-    const feet = [[-0.16, L.radius, 0.3], [0.16, L.radius, 0.3]];
+    const headAt = [0, 1.06, 0.3];
+    const feet = [[-0.16, 0, 0.3], [0.16, 0, 0.3]];
     return {
-      balls: [
-        ...spine,
-        { at: [0, 0.95, 0.2], r: 0.2 }, // the neck
-        { at: head, r: H.radius },
-        { at: [-0.2, 0.26, -0.2], r: 0.25 }, // the haunches
-        { at: [0.2, 0.26, -0.2], r: 0.25 },
-        { at: [-0.2, 0.1, 0.1], r: 0.1 }, // the hind feet, toes forward
-        { at: [0.2, 0.1, 0.1], r: 0.1 },
-        ...leg(-0.16, 0.3, 0.6),
-        ...leg(0.16, 0.3, 0.6),
+      parts: [
+        body([0, 0.58, -0.08], [B.width / 2 - B.round, 0.42 - B.round, B.length / 2 - 0.2 - B.round], -0.45),
+        head(headAt),
+        { kind: "sphere", at: [-0.2, 0.24, -0.18], r: 0.22, blend: 0.08 }, // the haunches
+        { kind: "sphere", at: [0.2, 0.24, -0.18], r: 0.22, blend: 0.08 },
+        { kind: "box", at: [-0.2, 0.06, 0.08], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 }, // the hind feet, toes forward
+        { kind: "box", at: [0.2, 0.06, 0.08], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.04 },
+        leg(-0.16, 0.3, 0.62),
+        leg(0.16, 0.3, 0.62),
       ],
-      spine,
+      spine: [{ at: [0, 0.7, -0.3], r: 0.2 }, { at: [0, 0.86, -0.1], r: 0.2 }],
       feet,
-      chest: { at: [0, 0.66, 0.5], size: [0.32, 0.42] },
-      head,
+      chest: { at: [0, 0.62, 0.7], size: [0.3, 0.42] },
+      head: headAt,
+      face,
       // Out of the rump low down and round the feet along the ground.
       tail: {
-        points: [[0.1, 0.3, -0.42], [0.3, 0.1, -0.5], [0.48, 0.08, -0.2], [0.42, 0.08, 0.2], [0.15, 0.08, 0.45]],
-        rootR: 0.1,
-        tipR: 0.06,
+        points: [[0.1, 0.26, -0.4], [0.3, 0.1, -0.5], [0.48, 0.08, -0.2], [0.42, 0.08, 0.2], [0.15, 0.08, 0.45]],
+        rootR: 0.09,
+        tipR: 0.055,
         sway: 0.25,
       },
-      top: head[1] + H.radius,
+      top: headAt[1] + H.height / 2,
     };
   }
   if (C.pose === "loaf") {
-    const spine = [
-      { at: [0, 0.3, -0.35], r: B.radius - 0.02 },
-      { at: [0, 0.32, -0.05], r: B.radius + 0.01 },
-      { at: [0, 0.3, 0.2], r: B.radius - 0.02 },
-    ];
-    const head = [0, 0.6, 0.35];
-    const feet = [[-0.15, 0.08, 0.5], [0.15, 0.08, 0.5]];
+    const headAt = [0, 0.58, 0.38];
+    const feet = [[-0.15, 0.06, 0.38], [0.15, 0.06, 0.38]];
     return {
-      balls: [
-        ...spine,
-        { at: [0, 0.5, 0.3], r: 0.2 }, // the neck
-        { at: head, r: H.radius },
-        { at: feet[0], r: 0.09 }, // the paws, peeking out
-        { at: feet[1], r: 0.09 },
+      parts: [
+        body([0, 0.28, -0.1], [B.width / 2 + 0.03 - B.round, 0.26 - B.round, B.length / 2 - B.round]),
+        head(headAt),
+        { kind: "box", at: feet[0], half: [0.03, 0.02, 0.06], round: 0.035, blend: 0.05 }, // the paws, peeking out
+        { kind: "box", at: feet[1], half: [0.03, 0.02, 0.06], round: 0.035, blend: 0.05 },
       ],
-      spine,
+      spine: [{ at: [0, 0.5, -0.38], r: 0.24 }, { at: [0, 0.52, -0.1], r: 0.24 }, { at: [0, 0.5, 0.16], r: 0.22 }],
       feet,
-      chest: { at: [0, 0.36, 0.7], size: [0.3, 0.26] },
-      head,
+      chest: null,
+      head: headAt,
+      face,
       // Out of the rump and laid along the side.
       tail: {
-        points: [[0.1, 0.22, -0.56], [0.3, 0.09, -0.65], [0.42, 0.08, -0.3], [0.4, 0.08, 0.15], [0.28, 0.08, 0.5]],
-        rootR: 0.1,
-        tipR: 0.06,
+        points: [[0.1, 0.2, -0.54], [0.28, 0.09, -0.62], [0.36, 0.08, -0.3], [0.35, 0.08, 0.12], [0.26, 0.08, 0.42]],
+        rootR: 0.09,
+        tipR: 0.055,
         sway: 0.2,
       },
-      top: head[1] + H.radius,
+      top: headAt[1] + H.height / 2,
     };
   }
-  const spine = [
-    { at: [0, 0.66, -0.3], r: B.radius - 0.05 },
-    { at: [0, 0.68, 0.0], r: B.radius - 0.02 },
-    { at: [0, 0.66, 0.26], r: B.radius - 0.06 },
-  ];
-  const head = [0, 0.96, 0.52];
-  const feet = [[-0.2, L.radius, 0.3], [0.2, L.radius, 0.3], [-0.2, L.radius, -0.3], [0.2, L.radius, -0.3]];
+  const headAt = [0, 0.98, 0.5];
+  const feet = [[-0.18, 0, 0.3], [0.18, 0, 0.3], [-0.18, 0, -0.3], [0.18, 0, -0.3]];
   return {
-    balls: [
-      ...spine,
-      { at: [0, 0.84, 0.4], r: 0.17 }, // the neck
-      { at: head, r: H.radius },
-      ...feet.flatMap(([x, , z]) => leg(x, z, 0.5)),
+    parts: [
+      body([0, 0.64, -0.03], [B.width / 2 - B.round, B.height / 2 - B.round, B.length / 2 - B.round]),
+      head(headAt),
+      ...feet.map(([x, , z]) => leg(x, z, 0.5)),
     ],
-    spine,
+    spine: [{ at: [0, 0.86, -0.3], r: 0.22 }, { at: [0, 0.87, -0.04], r: 0.22 }, { at: [0, 0.86, 0.2], r: 0.2 }],
     feet,
-    chest: { at: [0, 0.5, 0.66], size: [0.3, 0.36] },
-    head,
+    chest: { at: [0, 0.52, 0.5], size: [0.3, 0.26] },
+    head: headAt,
+    face,
     // Out of the top of the rump, dipping, then curling up.
     tail: {
-      points: [[0, 0.78, -0.46], [0, 0.72, -0.68], [0, 0.82, -0.84], [0, 1.02, -0.9], [0, 1.2, -0.82]],
-      rootR: 0.1,
-      tipR: 0.06,
+      points: [[0, 0.8, -0.44], [0, 0.74, -0.66], [0, 0.84, -0.82], [0, 1.04, -0.88], [0, 1.2, -0.8]],
+      rootR: 0.09,
+      tipR: 0.055,
       sway: 1,
     },
-    top: head[1] + H.radius,
+    top: headAt[1] + H.height / 2,
   };
 }
 
@@ -152,15 +131,37 @@ const whiskerDir = (s, fan) =>
 const FANS = [-0.16, 0, 0.16];
 const MUZZLE_R = 0.11;
 const EAR_BASE = 0.13, EAR_H = 0.3;
+
+// The pink of an ear: a triangle lying flat on the pyramid's front face.
+// The pyramid (a four-sided cone turned an eighth) has that face from a
+// base edge EAR_BASE / √2 forward of its axis up to the apex, so the face
+// leans back by `tilt`; the triangle is the face shrunk toward its
+// middle, set EAR_PROUD off it along its normal.
+const EAR_PROUD = 0.004;
+function earPaint() {
+  const d = EAR_BASE / Math.SQRT2; // the front edge, forward of the axis
+  const L = Math.hypot(EAR_H, d); // the face, base to apex
+  const tilt = Math.atan2(d, EAR_H);
+  const w = 2 * d * 0.6, h = L * 0.6;
+  const t = new THREE.Shape();
+  t.moveTo(-w / 2, 0);
+  t.lineTo(w / 2, 0);
+  t.lineTo(0, h);
+  t.closePath();
+  const up = new THREE.Vector3(0, EAR_H, -d).divideScalar(L); // along the face, base to apex
+  const out = new THREE.Vector3(0, d, EAR_H).divideScalar(L); // the face's normal
+  const at = new THREE.Vector3(0, -EAR_H / 2, d).addScaledVector(up, (L - h) * 0.45).addScaledVector(out, EAR_PROUD);
+  return { geo: new THREE.ShapeGeometry(t), at: at.toArray(), tilt };
+}
 const EYE_X = 0.15, EYE_Y = 0.05, EYE_R = 0.038;
 
 // A turn that points local z along `dir`, as an Euler for a mesh.
 const Z = new THREE.Vector3(0, 0, 1);
 const along = (dir) => new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(Z, dir.clone().normalize())).toArray().slice(0, 3);
 
-// The tail as metaballs: TAIL_SAMPLES along its curve, thinning from the
-// root to the tip. The first sits inside the rump, so the tail swells out
-// of it with no seam.
+// The tail: TAIL_SAMPLES points along its curve, thinning from the root
+// to the tip, and the capsules between them for the lump. The first point
+// sits inside the rump, so the tail grows out of it with no seam.
 const TAIL_SAMPLES = 14;
 function tailBalls(tail) {
   const curve = new THREE.CatmullRomCurve3(tail.points.map((p) => new THREE.Vector3(...p)));
@@ -169,6 +170,8 @@ function tailBalls(tail) {
     return { at: curve.getPointAt(u).toArray(), r: THREE.MathUtils.lerp(tail.rootR, tail.tipR, u), u };
   });
 }
+const tailParts = (samples) =>
+  samples.slice(1).map((b, i) => ({ kind: "capsule", a: samples[i].at, b: b.at, ra: samples[i].r, rb: b.r, blend: i === 0 ? 0.1 : 0.02 }));
 
 // Which of the lump's vertices are tail, and how far along it: each is
 // given the `u` of the nearest tail ball if it lies within reach of it,
@@ -218,7 +221,6 @@ export default function Cat({ config }) {
   const C = useMemo(() => merge(merge(CAT, coatOf(config?.coat ?? CAT.coat)), config), [config]);
   const lay = useMemo(() => layoutOf(C), [C]);
   const H = C.head;
-  const L = C.legs;
   const paint = C.colors;
 
   // The lump: head, body, legs and tail as one, poured round the pose's
@@ -226,24 +228,24 @@ export default function Cat({ config }) {
   // which are tail, for the swish to bend.
   const tail = useMemo(() => tailBalls(lay.tail), [lay]);
   const lump = useMemo(() => {
-    const geo = lumpOf([...lay.balls, ...tail], { resolution: C.resolution });
+    const geo = lumpOf([...lay.parts, ...tailParts(tail)], { resolution: C.resolution });
     const rest = { position: geo.attributes.position.array.slice(), normal: geo.attributes.normal.array.slice() };
     return { geo, rest, ...tailWeights(geo, tail), root: new THREE.Vector3(...lay.tail.points[0]) };
   }, [lay, tail, C.resolution]);
   useEffect(() => () => lump.geo.dispose(), [lump]);
 
   // The chest: painted on the front, from straight ahead.
-  const chest = useMemo(() => lay.chest && paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], 0.5]), [lump, lay.chest]);
+  const chest = useMemo(() => lay.chest && paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], 0.4]), [lump, lay.chest]);
   useEffect(() => () => chest?.dispose(), [chest]);
 
   // A tabby's stripes, painted on: bands across the back, each projected
-  // straight down over one ball of the spine; and bands round the tail,
+  // straight down over one point of the spine; and bands round the tail,
   // each projected in from the side, square across the tail where it is.
   // The tail's carry the same weights as the lump's tail, so the swish
   // bends them with it.
   const stripes = useMemo(() => {
     if (!C.stripes) return null;
-    const backs = lay.spine.map((b) => paintOn(lump.geo, new THREE.Vector3(b.at[0], b.at[1] + 0.1, b.at[2]), new THREE.Euler(-Math.PI / 2, 0, 0), [b.r * 1.6, 0.07, 0.6]));
+    const backs = lay.spine.map((b) => paintOn(lump.geo, new THREE.Vector3(b.at[0], b.at[1] + 0.1, b.at[2]), new THREE.Euler(-Math.PI / 2, 0, 0), [b.r * 2, 0.07, 0.6]));
     const tails = [5, 8, 11].map((k) => {
       const at = new THREE.Vector3(...tail[k].at);
       const t = new THREE.Vector3(...tail[k + 1].at).sub(new THREE.Vector3(...tail[k - 1].at)).normalize();
@@ -291,7 +293,10 @@ export default function Cat({ config }) {
   const fur = unlitMat(paint.fur);
   const belly = unlitMat(paint.belly);
   const markings = unlitMat(paint.markings);
-  const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, H.radius * 0.84));
+  const F = lay.face;
+  const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, F + 0.02));
+  const earPink = useMemo(() => earPaint(), []);
+  useEffect(() => () => earPink.geo.dispose(), [earPink]);
   const noseGeo = useMemo(() => {
     const t = new THREE.Shape();
     t.moveTo(-0.04, 0.02);
@@ -317,38 +322,37 @@ export default function Cat({ config }) {
       {/* Socks: a foot again, a hair bigger, in white, on a tuxedo. */}
       {C.paws &&
         lay.feet.map((at, i) => (
-          <mesh key={i} position={at} castShadow material={belly}>
-            <sphereGeometry args={[L.radius + 0.012, 12, 8]} />
+          <mesh key={i} position={[at[0], at[1] + C.legs.thickness / 2, at[2]]} castShadow material={belly}>
+            <sphereGeometry args={[C.legs.thickness / 2 + 0.014, 12, 8]} />
           </mesh>
         ))}
       {/* The face, on the head. */}
       <group position={lay.head}>
         {/* Ears: four-sided pyramids, turned so a face looks forward,
             their feet down in the head so they meet it along its curve;
-            a smaller pink pyramid pushed forward out of the front face. */}
+            the pink painted on that front face, a flat triangle lying
+            on it a hair proud. */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * 0.17, H.radius * 0.72 + EAR_H / 2, -0.02]} rotation-z={-s * 0.3}>
+          <group key={s} position={[s * 0.15, H.height / 2 - 0.08 + EAR_H / 2, -0.04]} rotation-z={-s * 0.3}>
             <mesh rotation-y={Math.PI / 4} castShadow receiveShadow material={fur}>
               <coneGeometry args={[EAR_BASE, EAR_H, 4]} />
             </mesh>
-            <mesh position={[0, -0.05, EAR_BASE * 0.7]} rotation-y={Math.PI / 4} castShadow material={unlitMat(paint.ear)}>
-              <coneGeometry args={[EAR_BASE * 0.55, EAR_H * 0.6, 4]} />
-            </mesh>
+            <mesh geometry={earPink.geo} position={earPink.at} rotation-x={-earPink.tilt} material={unlitMat(paint.ear)} />
           </group>
         ))}
         {/* The muzzle bump, in the belly colour; the nose, a little
             triangle point-down on its front; and the mouth, a line drawn
             down from the nose like a decal, leaning back with the bump. */}
-        <mesh position={[0, -0.08, H.radius * 0.84]} castShadow receiveShadow material={belly}>
+        <mesh position={[0, -0.08, F + 0.02]} castShadow receiveShadow material={belly}>
           <sphereGeometry args={[MUZZLE_R, 16, 12]} />
         </mesh>
-        <mesh geometry={noseGeo} position={[0, -0.03, H.radius * 0.84 + MUZZLE_R - 0.012]} castShadow material={unlitMat(paint.nose)} />
-        <mesh position={[0, -0.095, H.radius * 0.84 + MUZZLE_R - 0.018]} rotation-x={0.5} material={unlitMat(paint.pupil)}>
+        <mesh geometry={noseGeo} position={[0, -0.03, F + 0.02 + MUZZLE_R - 0.012]} castShadow material={unlitMat(paint.nose)} />
+        <mesh position={[0, -0.095, F + 0.02 + MUZZLE_R - 0.018]} rotation-x={0.5} material={unlitMat(paint.pupil)}>
           <boxGeometry args={[0.012, 0.075, 0.012]} />
         </mesh>
         {/* Eyes: a dark bead with the iris set in its front. */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * EYE_X, EYE_Y, Math.sqrt(H.radius * H.radius - EYE_X * EYE_X - EYE_Y * EYE_Y) + 0.012]}>
+          <group key={s} position={[s * EYE_X, EYE_Y, F + 0.004]}>
             <mesh castShadow material={unlitMat(paint.pupil)}>
               <sphereGeometry args={[EYE_R, 12, 8]} />
             </mesh>

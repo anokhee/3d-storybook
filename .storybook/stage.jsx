@@ -149,6 +149,9 @@ const shadowBox = (reach) => ({
   "shadow-camera-near": 1,
   "shadow-camera-far": 90 + reach * 2,
   "shadow-bias": -0.0002,
+  // ...and the sample pushed along the surface's normal, so a smooth
+  // form does not shadow itself in streaks where the light grazes it
+  "shadow-normalBias": 0.04,
 });
 // 20 units round the origin for one object; the whole grid for "wide".
 export const SHADOW = shadowBox(20);
