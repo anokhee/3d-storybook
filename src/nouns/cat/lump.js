@@ -14,10 +14,10 @@ import { mergeVertices } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 //
 //   parts  each { kind, blend?, ...its own fields }, in the object's units:
 //          sphere   { at, r }
-//          box      { at, half, round, tilt? }  a box `half` each way from
-//                   `at`, every edge rounded by `round` (so it is
-//                   half + round overall), leant back `tilt` radians
-//                   about x
+//          box      { at, half, round, tilt?, yaw? }  a box `half` each
+//                   way from `at`, every edge rounded by `round` (so it
+//                   is half + round overall), turned `yaw` radians about
+//                   y and leant back `tilt` radians about x
 //          capsule  { a, b, ra, rb }  from `a` to `b`, `ra` thick at one
 //                   end and `rb` at the other
 //          `blend` is how wide a fillet this part makes with what it
@@ -44,6 +44,11 @@ function distance(part, x, y, z) {
   }
   if (part.kind === "box") {
     q.set(x - part.at[0], y - part.at[1], z - part.at[2]);
+    if (part.yaw) {
+      const c = Math.cos(-part.yaw), s = Math.sin(-part.yaw);
+      const qx = q.x * c + q.z * s, qz = -q.x * s + q.z * c;
+      q.x = qx; q.z = qz;
+    }
     if (part.tilt) {
       const c = Math.cos(-part.tilt), s = Math.sin(-part.tilt);
       const qy = q.y * c - q.z * s, qz = q.y * s + q.z * c;

@@ -67,6 +67,11 @@ export const CAT_POSES = ["standing", "sitting", "loaf"];
 //           to rump, `round` how far its edges are rounded off
 //   legs    `thickness` of each, `round` of its edges, `blend` how wide
 //           a fillet it makes with the belly
+//   sitting the sitting pose's legs: `legForward` how far the front legs'
+//           faces stand proud of the chest, `legSpacing` between the two
+//           front legs, middle to middle, `footYaw` how far each hind
+//           foot turns out, in degrees, `footOut` how much of a hind foot
+//           shows past the front of the base
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   stripes bands of `markings` painted across the back and round the tail
 //   paws    a white sock on every foot
@@ -80,6 +85,7 @@ export const CAT = {
   swish: 0.6,
   body: { width: 0.5, height: 0.58, length: 0.96, round: 0.12 },
   legs: { thickness: 0.14, round: 0.04, blend: 0.02 },
+  sitting: { legForward: 0.06, legSpacing: 0.3, footYaw: 35, footOut: 0.1 },
   resolution: 56,
   stripes: CAT_COATS["orange tabby"].stripes,
   paws: CAT_COATS["orange tabby"].paws,
@@ -98,4 +104,8 @@ export const CAT_KNOBS = [
   { label: "pose", path: "pose", options: CAT_POSES },
   { label: "size", path: "size", step: 0.1, min: 0.3, max: 3 },
   { label: "swish", path: "swish", step: 0.1, min: 0, max: 1 },
+  { label: "sit: legs forward", path: "sitting.legForward", step: 0.01, min: -0.05, max: 0.2 },
+  { label: "sit: legs apart", path: "sitting.legSpacing", step: 0.02, min: 0.16, max: 0.5 },
+  { label: "sit: hind feet turn", path: "sitting.footYaw", step: 5, min: 0, max: 60 },
+  { label: "sit: hind feet out", path: "sitting.footOut", step: 0.01, min: 0, max: 0.2 },
 ];

@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { DecalGeometry } from "three/examples/jsm/geometries/DecalGeometry.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 import { lumpOf } from "./lump.js";
 import { CAT, coatOf } from "./objects.js";
@@ -17,7 +18,9 @@ import { CAT, coatOf } from "./objects.js";
 // middle of it, on the front surface, and `lean` how the front leans
 // back (the eyes, muzzle and ears go with it); `ears` where the two ears
 // stand, from `face`. `spine` is where the stripes go, along the top,
-// with how wide; `feet` where the socks go; `chest` the lighter patch
+// with how wide; `socks` the feet a tuxedo's socks cover, each a box
+// `at` with its `half` sizes (and `yaw`) or a sphere `at` with its `r`,
+// a hair bigger than the foot it is on; `chest` the lighter patch
 // painted on the front, projected from `at` straight back along -z,
 // `size` across and tall, or null. The tail is a curve of `points` from
 // where it leaves the rear to its tip, `rootR` thick where it leaves and
@@ -32,36 +35,46 @@ function layoutOf(C) {
   // ground, its edges rounded, filleting into the belly by L.blend.
   const leg = (x, z, top) => ({ kind: "box", at: [x, top / 2, z], half: [L.thickness / 2 - L.round, top / 2 - L.round, L.thickness / 2 - L.round], round: L.round, blend: L.blend });
   if (C.pose === "sitting") {
-    // The block stood on end and tipped back to rest on its bottom rear
-    // edge, so its front lifts off the ground; the front legs hang from
-    // the raised front corners down to the ground, and the hind toes peek
-    // out under it at the sides. No haunches of its own: the block's
-    // base is the seat.
-    const lean = -0.35;
-    const sw = B.width * 0.9, sh = 0.9, sl = B.length * 0.55;
-    const lx = sw / 2 - L.thickness / 2 - 0.01;
-    const feet = [[-lx, 0, 0.28], [lx, 0, 0.28]];
+    // The block stood on end, its base on the ground as the seat (no
+    // haunches of its own), leant back a little. The front legs are
+    // straight columns set into its lower front, their front faces a
+    // little proud of the chest, from inside the block down to the
+    // ground, with a paw block at the foot of each nudged forward. The
+    // hind feet are flat blocks under the block's base at either side,
+    // near the front, the back half tucked under and the front half out,
+    // turned out so the toes point to the sides, and a little outboard
+    // of the front legs. See CAT.sitting for the knobs.
+    const S = C.sitting;
+    const lean = -0.12;
+    const sw = B.width * 0.9, sh = 0.96, sl = B.length * 0.52;
+    const at = [0, 0.52, -0.1];
+    // Where the block's front face is at a height, leaning as it does
+    const frontAt = (y) => at[2] + (y - at[1]) * Math.sin(lean) + (sl / 2) * Math.cos(lean);
+    const legTop = 0.5, legZ = frontAt(legTop / 2) + S.legForward - L.thickness / 2;
+    const lx = S.legSpacing / 2;
+    const feet = [[-lx, 0, legZ], [lx, 0, legZ]];
+    const footLen = 0.22, footZ = frontAt(0) - footLen / 2 + S.footOut, footX = sw / 2 - 0.01;
+    const yaw = THREE.MathUtils.degToRad(S.footYaw);
     return {
       parts: [
-        block([0, 0.64, -0.06], [sw, sh, sl], lean),
-        { kind: "box", at: [-0.2, 0.05, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.03 }, // the hind toes
-        { kind: "box", at: [0.2, 0.05, 0.1], half: [0.03, 0.02, 0.07], round: 0.035, blend: 0.03 },
-        leg(-lx, 0.28, 0.45),
-        leg(lx, 0.28, 0.45),
+        block(at, [sw, sh, sl], lean),
+        ...feet.map(([x, , z]) => ({ kind: "box", at: [x, legTop / 2, z], half: [L.thickness / 2 - L.round, legTop / 2 - L.round, L.thickness / 2 - L.round], round: L.round, blend: 0.03 })),
+        ...feet.map(([x, , z]) => ({ kind: "box", at: [x, 0.045, z + 0.04], half: [L.thickness / 2 - 0.03, 0.015, 0.045], round: 0.03, blend: 0.02 })), // the paws
+        ...[-1, 1].map((side) => ({ kind: "box", at: [side * footX, 0.04, footZ], half: [0.02, 0.01, footLen / 2 - 0.03], round: 0.03, yaw: side * yaw, blend: 0.02 })), // the hind feet
       ],
-      face: [0, 0.96, 0.1],
+      face: [0, 0.86, frontAt(0.86)],
       lean,
-      ears: [0.15, 0.2, -0.14],
-      spine: [{ at: [0, 1.0, -0.32], r: 0.18 }, { at: [0, 1.0, -0.12], r: 0.18 }],
-      feet,
-      chest: { at: [0, 0.62, 0.4], size: [0.26, 0.4] },
+      ears: [0.15, 0.14, -0.14],
+      spine: [{ at: [0, 1.0, -0.3], r: 0.18 }, { at: [0, 1.0, -0.1], r: 0.18 }],
+      socks: feet.map(([x, , z]) => ({ at: [x, 0.045, z + 0.04], half: [L.thickness / 2 + 0.008, 0.045, 0.075 + 0.008] })),
+      chest: { at: [0, 0.68, frontAt(0.68) + 0.2], size: [0.24, 0.28] },
       tail: {
-        points: [[0.1, 0.2, -0.26], [0.3, 0.1, -0.4], [0.46, 0.08, -0.1], [0.4, 0.08, 0.25], [0.12, 0.08, 0.42]],
+        points: [[0.1, 0.2, -0.3], [0.3, 0.1, -0.44], [0.48, 0.08, -0.14], [0.44, 0.08, 0.26], [0.16, 0.08, 0.48]],
         rootR: 0.09,
         tipR: 0.055,
         sway: 0.25,
       },
-      top: 1.18,
+      top: 1.05,
     };
   }
   if (C.pose === "loaf") {
@@ -78,7 +91,7 @@ function layoutOf(C) {
       lean: 0,
       ears: [0.15, 0.14, -0.14],
       spine: [{ at: [0, 0.6, -0.36], r: 0.26 }, { at: [0, 0.6, -0.1], r: 0.26 }, { at: [0, 0.6, 0.16], r: 0.24 }],
-      feet,
+      socks: feet.map((at) => ({ at, half: [0.065 + 0.006, 0.055 + 0.006, 0.095 + 0.006] })),
       chest: null,
       tail: {
         points: [[0.1, 0.2, -0.5], [0.3, 0.09, -0.6], [0.4, 0.08, -0.3], [0.38, 0.08, 0.1], [0.28, 0.08, 0.42]],
@@ -101,7 +114,7 @@ function layoutOf(C) {
     lean: 0,
     ears: [0.15, 0.12, -0.16],
     spine: [{ at: [0, top, -0.3], r: 0.22 }, { at: [0, top, -0.05], r: 0.22 }, { at: [0, top, 0.2], r: 0.2 }],
-    feet,
+    socks: feet.map(([x, , z]) => ({ at: [x, L.thickness / 2, z], r: L.thickness / 2 + 0.014 })),
     chest: { at: [0, 0.41, B.length / 2 + 0.02], size: [0.26, 0.24] },
     tail: {
       points: [[0, top - 0.12, -B.length / 2 + 0.06], [0, top - 0.18, -B.length / 2 - 0.18], [0, top - 0.06, -B.length / 2 - 0.34], [0, top + 0.14, -B.length / 2 - 0.4], [0, top + 0.3, -B.length / 2 - 0.32]],
@@ -161,6 +174,7 @@ function earPaint() {
   return { geo: new THREE.ShapeGeometry(t), at: at.toArray(), tilt };
 }
 const EYE_X = 0.15, EYE_Y = 0.05, EYE_R = 0.038, IRIS_SPREAD = 0.8;
+const SOCK_ROUND = 0.035; // a paw's own corners
 
 // A turn that points local z along `dir`, as an Euler for a mesh.
 const Z = new THREE.Vector3(0, 0, 1);
@@ -359,6 +373,8 @@ export default function Cat({ config }) {
   const markings = unlitMat(paint.markings);
   const F = 0; // the face's middle is on the front surface
   const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, F + 0.02));
+  const socks = useMemo(() => lay.socks.map((sock) => (sock.r ? new THREE.SphereGeometry(sock.r, 12, 8) : new RoundedBoxGeometry(sock.half[0] * 2, sock.half[1] * 2, sock.half[2] * 2, 2, SOCK_ROUND))), [lay]);
+  useEffect(() => () => socks.forEach((g) => g.dispose()), [socks]);
   const earPink = useMemo(() => earPaint(), []);
   useEffect(() => () => earPink.geo.dispose(), [earPink]);
   // The iris: a cap of the bead's sphere, the front IRIS_SPREAD of it
@@ -388,12 +404,11 @@ export default function Cat({ config }) {
       {stripes?.tails.map((t, i) => (
         <mesh key={i} geometry={t.geo} receiveShadow material={markings} />
       ))}
-      {/* Socks: a foot again, a hair bigger, in white, on a tuxedo. */}
+      {/* Socks: each foot again, a hair bigger, in white, on a tuxedo —
+          a ball on a standing leg's foot, a rounded block on a paw. */}
       {C.paws &&
-        lay.feet.map((at, i) => (
-          <mesh key={i} position={[at[0], at[1] + C.legs.thickness / 2, at[2]]} castShadow material={belly}>
-            <sphereGeometry args={[C.legs.thickness / 2 + 0.014, 12, 8]} />
-          </mesh>
+        lay.socks.map((sock, i) => (
+          <mesh key={i} geometry={socks[i]} position={sock.at} rotation-y={sock.yaw ?? 0} castShadow material={belly} />
         ))}
       {/* The face, drawn on the block's front, leaning back with it. */}
       <group position={lay.face} rotation-x={lay.lean}>
