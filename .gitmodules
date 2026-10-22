@@ -1,4 +1,0 @@
-[submodule "projects/wooden-dollies"]
-	path = projects/wooden-dollies
-	url = https://github.com/anokhee/wooden-dollies.git
-	branch = dolly-grid-refactor

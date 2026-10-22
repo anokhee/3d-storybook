@@ -2,12 +2,7 @@
 # Pages at https://anokhee.github.io/3d-storybook/
 #
 # One-time setup in the 3d-storybook repo on github.com:
-#   1. Settings → Pages → Source: "GitHub Actions".
-#   2. Settings → Secrets and variables → Actions → New repository secret
-#      named PROJECTS_TOKEN. Its value is a fine-grained personal access
-#      token (github.com → Settings → Developer settings) with read-only
-#      "Contents" access to the private project repos (wooden-dollies).
-#      The checkout step below uses it to clone the submodules.
+#   Settings → Pages → Source: "GitHub Actions". That is all.
 name: Deploy Storybook
 
 on:
@@ -29,9 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-          token: ${{ secrets.PROJECTS_TOKEN }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22

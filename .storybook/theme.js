@@ -1,4 +1,4 @@
-// THEME: the colours and fonts of the Storybook shell (sidebar, toolbar,
+// THEME: the colors and fonts of the Storybook shell (sidebar, toolbar,
 // Controls panel, docs pages). This is the file to edit for look and feel.
 //
 // Every key is a Storybook theme variable. The full list is at
@@ -16,7 +16,7 @@ export const storyTheme = create({
   base: "light",            // "light" or "dark": sets sensible defaults
 
   // Top-left title and where clicking it goes.
-  brandTitle: "object library",
+  brandTitle: "object catalog",
   brandUrl: "https://github.com/anokhee/3d-storybook",
   // brandImage: "logo.svg",   // uncomment to show a logo instead of text
 
@@ -29,7 +29,7 @@ export const storyTheme = create({
   // The three big surfaces: sidebar, panels, and the frame round the preview.
   appBg: "#DFE6EB",
   appContentBg: "#EEF2F5",
-  appPreviewBg: "#DDE4EA",   // matches SKY in stage.jsx
+  appPreviewBg: "#DDE4EA",   // matches the toon look's light sky in stage.jsx
   appBorderColor: "#C3CED7",
   appBorderRadius: 4,
 
