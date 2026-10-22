@@ -4,6 +4,8 @@ import { useFrame } from "@react-three/fiber";
 
 import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
+import { DecalGeometry } from "three/examples/jsm/geometries/DecalGeometry.js";
+
 import { lumpOf } from "./lump.js";
 import { CAT, coatOf } from "./objects.js";
 
@@ -12,20 +14,27 @@ import { CAT, coatOf } from "./objects.js";
 // as a row of them, the head on a neck ball, each leg a chain pulled down
 // out of the body to a foot on the ground. `spine` is the body's balls in
 // order, for the stripes to ring; `feet` where the socks go; `chest` the
-// lighter patch pressed on the front, or null. The tail is a curve of
+// lighter patch painted on the front — projected onto the lump from
+// `at`, straight back along -z, `size` across and tall — or null. The tail is a curve of
 // `points` from where it leaves the rump to its tip, poured into the lump
 // too, `rootR` thick where it leaves and `tipR` at the tip; the swish
 // bends it from the root, `sway` scaling that, small when the tail lies
 // on the ground. `top` is how tall the cat stands, at the head.
+const LEG_SAMPLES = 8;
 function layoutOf(C) {
   const B = C.body;
   const H = C.head;
   const L = C.legs;
-  const leg = (x, z, top) => [
-    { at: [x, top, z], r: L.radius + 0.03 },
-    { at: [x, (top + L.radius) / 2, z], r: L.radius + 0.01 },
-    { at: [x, L.radius, z], r: L.radius },
-  ];
+  // A leg: a thicker ball up in the body and the foot on the ground, with
+  // balls between them on a curve — thinning fast just under the body,
+  // then easing into an even shaft down to the foot — so the leg flares
+  // smoothly out of the belly instead of beading or coning.
+  const leg = (x, z, top) =>
+    Array.from({ length: LEG_SAMPLES }, (_, i) => {
+      const u = i / (LEG_SAMPLES - 1);
+      const flare = (1 - u) * (1 - u);
+      return { at: [x, THREE.MathUtils.lerp(top, L.radius, u), z], r: L.radius + 0.035 * flare };
+    });
   if (C.pose === "sitting") {
     const spine = [
       { at: [0, 0.38, -0.2], r: B.radius + 0.02 },
@@ -48,7 +57,7 @@ function layoutOf(C) {
       ],
       spine,
       feet,
-      chest: { at: [0, 0.68, 0.3], scale: [0.75, 1.1, 0.45], r: 0.2 },
+      chest: { at: [0, 0.66, 0.5], size: [0.32, 0.42] },
       head,
       // Out of the rump low down and round the feet along the ground.
       tail: {
@@ -78,7 +87,7 @@ function layoutOf(C) {
       ],
       spine,
       feet,
-      chest: { at: [0, 0.38, 0.5], scale: [0.7, 0.7, 0.4], r: 0.2 },
+      chest: { at: [0, 0.36, 0.7], size: [0.3, 0.26] },
       head,
       // Out of the rump and laid along the side.
       tail: {
@@ -106,7 +115,7 @@ function layoutOf(C) {
     ],
     spine,
     feet,
-    chest: { at: [0, 0.52, 0.46], scale: [0.8, 1.0, 0.45], r: 0.2 },
+    chest: { at: [0, 0.5, 0.66], size: [0.3, 0.36] },
     head,
     // Out of the top of the rump, dipping, then curling up.
     tail: {
@@ -138,6 +147,36 @@ const whiskerTurn = (s, fan) => [0, s * WHISKER_SWEEP, -s * (Math.PI / 2 - fan)]
 const whiskerDir = (s, fan) =>
   new THREE.Vector3(s * Math.cos(fan) * Math.cos(WHISKER_SWEEP), Math.sin(fan), -Math.cos(fan) * Math.sin(WHISKER_SWEEP));
 const FANS = [-0.16, 0, 0.16];
+const MUZZLE_R = 0.11;
+
+// An ear, its foot at y = 0 and its front at z = 0: a triangle EAR_W
+// across the foot and EAR_H tall. The front is flat — a rim EAR_RIM wide
+// and EAR_LIP deep round the pink inner, which lies at the back of that
+// rim, set in — and behind it the ear is a pyramid, its three back faces
+// drawing in to a point EAR_DEPTH behind the front.
+const EAR_W = 0.24, EAR_H = 0.27, EAR_RIM = 0.035, EAR_LIP = 0.03, EAR_DEPTH = 0.12;
+const triangle = (w, h, lift = 0) => {
+  const t = new THREE.Shape();
+  t.moveTo(-w / 2, lift);
+  t.lineTo(w / 2, lift);
+  t.lineTo(0, lift + h);
+  t.closePath();
+  return t;
+};
+function earGeometry() {
+  const innerW = EAR_W - 2 * EAR_RIM * 1.7, innerH = EAR_H - EAR_RIM * 3.4;
+  const outer = triangle(EAR_W, EAR_H);
+  outer.holes.push(triangle(innerW, innerH, EAR_RIM));
+  const rim = new THREE.ExtrudeGeometry(outer, { depth: EAR_LIP, bevelEnabled: false }).translate(0, 0, -EAR_LIP);
+  const pink = new THREE.ExtrudeGeometry(triangle(innerW, innerH, EAR_RIM), { depth: 0.01, bevelEnabled: false }).translate(0, 0, -EAR_LIP);
+  // The pyramid: the front triangle's three corners at the rim's back,
+  // and an apex behind them, a third of the way up; three faces between.
+  const a = [-EAR_W / 2, 0, -EAR_LIP], b = [EAR_W / 2, 0, -EAR_LIP], c = [0, EAR_H, -EAR_LIP], d = [0, EAR_H * 0.35, -EAR_LIP - EAR_DEPTH];
+  const back = new THREE.BufferGeometry();
+  back.setAttribute("position", new THREE.Float32BufferAttribute([...a, ...d, ...b, ...b, ...d, ...c, ...c, ...d, ...a, ...a, ...b, ...c], 3));
+  back.computeVertexNormals();
+  return { rim, back, inner: pink };
+}
 
 // A turn that points local z along `dir`, as an Euler for a mesh.
 const Z = new THREE.Vector3(0, 0, 1);
@@ -204,6 +243,20 @@ export default function Cat({ config }) {
   }, [lay, tail, C.resolution]);
   useEffect(() => () => lump.geo.dispose(), [lump]);
 
+  // The chest: the lump's own surface where the patch falls, copied and
+  // lifted a hair off it along its normals, in the belly colour — paint,
+  // not a bump.
+  const chest = useMemo(() => {
+    if (!lay.chest) return null;
+    const onto = new THREE.Mesh(lump.geo);
+    onto.updateMatrixWorld();
+    const geo = new DecalGeometry(onto, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), new THREE.Vector3(lay.chest.size[0], lay.chest.size[1], 0.5));
+    const p = geo.attributes.position.array, n = geo.attributes.normal.array;
+    for (let i = 0; i < p.length; i++) p[i] += n[i] * 0.006;
+    return geo;
+  }, [lump, lay.chest]);
+  useEffect(() => () => chest?.dispose(), [chest]);
+
   // A tabby's stripes: half-rings of the markings colour over the back,
   // one round each ball of the spine, turned to sit square across it;
   // and full rings round the tail, square across it where they are,
@@ -263,18 +316,23 @@ export default function Cat({ config }) {
   const belly = unlitMat(paint.belly);
   const markings = unlitMat(paint.markings);
   const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, H.radius * 0.84));
-  const earBase = 0.17;
-  const earHeight = 0.38;
+  const ear = useMemo(() => earGeometry(), []);
+  useEffect(() => () => { ear.rim.dispose(); ear.back.dispose(); ear.inner.dispose(); }, [ear]);
+  const noseGeo = useMemo(() => {
+    const t = new THREE.Shape();
+    t.moveTo(-0.04, 0.02);
+    t.lineTo(0.04, 0.02);
+    t.lineTo(0, -0.04);
+    t.closePath();
+    return new THREE.ExtrudeGeometry(t, { depth: 0.02, bevelEnabled: false });
+  }, []);
+  useEffect(() => () => noseGeo.dispose(), [noseGeo]);
   return (
     <group scale={C.size}>
       {/* The lump: head, body and legs, one form. */}
       <mesh geometry={lump.geo} castShadow receiveShadow material={fur} />
-      {/* The chest: a lighter patch pressed onto the front. */}
-      {lay.chest && (
-        <mesh position={lay.chest.at} scale={lay.chest.scale} castShadow receiveShadow material={belly}>
-          <sphereGeometry args={[lay.chest.r, 16, 12]} />
-        </mesh>
-      )}
+      {/* The chest: a lighter patch painted on the front. */}
+      {chest && <mesh geometry={chest} receiveShadow material={belly} />}
       {/* Stripes over the back, on a tabby. */}
       {stripes?.backs.map((b, i) => (
         <mesh key={i} geometry={b.geo} position={b.at} rotation={b.turn} castShadow material={markings} />
@@ -288,24 +346,25 @@ export default function Cat({ config }) {
         ))}
       {/* The face, on the head. */}
       <group position={lay.head}>
-        {/* Ears: four-sided cones turned so a face looks forward, with
-            a smaller pink cone pushed forward out of that face. */}
+        {/* Ears: a triangle each, standing up from the head and tilted
+            outward — a flat front, a rim of fur round a pink inner set
+            back inside it, and a pyramid drawing to a point behind. */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * 0.19, H.radius * 0.82, -0.02]} rotation-z={-s * 0.32}>
-            <mesh rotation-y={Math.PI / 4} castShadow receiveShadow material={fur}>
-              <coneGeometry args={[earBase, earHeight, 4]} />
-            </mesh>
-            <mesh position={[0, -0.05, 0.1]} rotation-y={Math.PI / 4} castShadow material={unlitMat(paint.ear)}>
-              <coneGeometry args={[earBase * 0.55, earHeight * 0.6, 4]} />
-            </mesh>
+          <group key={s} position={[s * 0.17, H.radius * 0.8, -0.04]} rotation={[0, s * 0.3, -s * 0.32]}>
+            <mesh geometry={ear.rim} castShadow receiveShadow material={fur} />
+            <mesh geometry={ear.back} castShadow receiveShadow material={fur} />
+            <mesh geometry={ear.inner} material={unlitMat(paint.ear)} />
           </group>
         ))}
-        {/* The muzzle bump, in the belly colour, and the nose on it. */}
+        {/* The muzzle bump, in the belly colour; the nose, a little
+            triangle point-down on its front; and the mouth, a line drawn
+            down from the nose like a decal, leaning back with the bump. */}
         <mesh position={[0, -0.08, H.radius * 0.84]} castShadow receiveShadow material={belly}>
-          <sphereGeometry args={[0.14, 16, 12]} />
+          <sphereGeometry args={[MUZZLE_R, 16, 12]} />
         </mesh>
-        <mesh position={[0, -0.03, H.radius * 0.84 + 0.125]} castShadow material={unlitMat(paint.nose)}>
-          <sphereGeometry args={[0.04, 10, 8]} />
+        <mesh geometry={noseGeo} position={[0, -0.03, H.radius * 0.84 + MUZZLE_R - 0.012]} castShadow material={unlitMat(paint.nose)} />
+        <mesh position={[0, -0.095, H.radius * 0.84 + MUZZLE_R - 0.018]} rotation-x={0.5} material={unlitMat(paint.pupil)}>
+          <boxGeometry args={[0.012, 0.075, 0.012]} />
         </mesh>
         {/* Eyes: a dark bead with the iris set in its front. */}
         {[-1, 1].map((s) => (
@@ -323,7 +382,7 @@ export default function Cat({ config }) {
           sides of the muzzle. */}
       {[-1, 1].map((s) =>
         FANS.map((fan, i) => {
-          const at = whiskerDir(s, fan).multiplyScalar(0.22).add(muzzle).add(new THREE.Vector3(s * 0.08, 0, 0));
+          const at = whiskerDir(s, fan).multiplyScalar(0.2).add(muzzle).add(new THREE.Vector3(s * 0.06, 0, 0));
           return (
             <mesh key={`${s}${i}`} position={at.toArray()} rotation={whiskerTurn(s, fan)} material={belly}>
               <cylinderGeometry args={[0.006, 0.006, 0.42, 4]} />
