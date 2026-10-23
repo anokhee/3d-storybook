@@ -13,12 +13,14 @@ import { buildBlobGeometry } from "./blob.js";
 
 const FROG = {
   bodyR: 1.0,
-  bodyShape: new THREE.Vector3(0.9, 1.15, 0.88), // the same upright egg as the chicken, a touch slimmer
-  headR: 0.6,
+  bodyShape: new THREE.Vector3(0.95, 1.0, 0.95), // rounder and squatter than the chicken's egg
+  headR: 0.5,
   headShape: new THREE.Vector3(1.2, 0.72, 1.15),  // broad and flat
-  neckLen: 0.2,
-  neckDir: new THREE.Vector3(0.12, 1, 0).normalize(),
-  resolution: 30,
+  neckLen: 0.18, // a frog has barely any neck: a short thick one, leaving high up the egg...
+  neckDir: new THREE.Vector3(0.35, 1, 0).normalize(), // ...and leaning forward, so the head sits up and ahead of the belly rather than on top of it
+  cutFrac: 0.85,
+  resolution: 44, // finer than the chicken's, so the shoulder bumps come out round
+  shoulderR: 0.22, // the shoulder: a swelling of the body the arm grows out of (a bump in the torso's field)
   warts: 40,
   lid: 0.55, // how far down the eyelids hang at rest: 0 = wide open, about 1.7 = shut
   blink: [3, 8], // seconds between blinks
@@ -46,8 +48,9 @@ export function buildFrog(finish = standard) {
   };
 
   // --- legs: the same rig as the chicken (hip pivots at legH), frog-shaped ---
-  const shankLen = 0.75, shankTilt = 0.12, toeR = 0.035;
+  const shankLen = 0.6, shankTilt = 0.12, toeR = 0.035;
   const legH = toeR * 2 + shankLen * Math.cos(shankTilt);
+  const KNEE = -0.4, SIT_THIGH = 1.35; // the knee's height below the hip; driving, the hip's turn forward
   const foot = (size) => { // the toad's foot: a flat pad with four splayed toes, toes along +x
     const f = new THREE.Group();
     blob(f, skin, 0.55 * size, 0.2 * size, 0.5 * size, 0.05 * size, 0.1 * size, 0);
@@ -66,19 +69,33 @@ export function buildFrog(finish = standard) {
     hip.userData.side = side;
     group.add(hip);
     blob(hip, skin, 0.22, 0.34, 0.24, 0, -0.28, 0); // thigh
+    // the knee: straight when standing; driving, the thigh lies forward over
+    // the seat and the shin drops over its edge
+    const knee = new THREE.Group();
+    knee.position.set(0, KNEE, 0);
+    hip.add(knee);
+    hip.userData.knee = knee;
+    blob(knee, skin, 0.13, 0.13, 0.13, 0, 0, 0);
     const shin = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, shankLen * 0.6, 10), skin));
-    shin.position.set(0, -shankLen * 0.68, 0);
-    hip.add(shin);
+    shin.position.set(0, -shankLen * 0.68 - KNEE, 0);
+    knee.add(shin);
     const f = foot(0.55);
-    f.position.set(0.02, -shankLen - toeR, 0);
+    f.position.set(0.02, -shankLen - toeR - KNEE, 0);
     f.rotation.z = -shankTilt; // keep the foot flat
-    hip.add(f);
+    knee.add(f);
     return hip;
   });
 
   // --- torso: the shared blob ---
   const bodyCenter = new THREE.Vector3(0, legH + T.bodyR * T.bodyShape.y * 0.9, 0);
-  const r = buildBlobGeometry({ bodyR: T.bodyR, bodyShape: T.bodyShape, headR: T.headR, headShape: T.headShape, neckDir: T.neckDir, neckLen: T.neckLen, resolution: T.resolution });
+  // the shoulders: on the egg's skin high on each side, pulled a little toward
+  // its center, melted into the body as a round swelling (see the arms below)
+  const shoulderUp = 0.58, shoulderFwd = -0.06, shoulderSide = Math.sqrt(1 - shoulderUp * shoulderUp - shoulderFwd * shoulderFwd);
+  const shoulderOffset = (side) => new THREE.Vector3(shoulderFwd * T.bodyShape.x, shoulderUp * T.bodyShape.y, side * shoulderSide * T.bodyShape.z).multiplyScalar(T.bodyR * 0.92);
+  const r = buildBlobGeometry({
+    bodyR: T.bodyR, bodyShape: T.bodyShape, headR: T.headR, headShape: T.headShape, neckDir: T.neckDir, neckLen: T.neckLen, cutFrac: T.cutFrac, resolution: T.resolution,
+    bumps: [-1, 1].map((side) => ({ at: shoulderOffset(side), r: T.shoulderR, blend: 0.3 })),
+  });
   const body = shadowed(new THREE.Mesh(r.geometry, skin));
   body.position.copy(bodyCenter);
   torso.add(body);
@@ -86,24 +103,49 @@ export function buildFrog(finish = standard) {
   const H = new THREE.Vector3(T.headShape.x, T.headShape.y, T.headShape.z).multiplyScalar(T.headR); // head half-sizes: x forward, y up, z sideways
   const onHead = (fwd, up, side) => headCenter.clone().add(new THREE.Vector3(fwd * H.x, up * H.y, side * H.z)); // unit-ellipsoid coords -> world
 
-  // --- arms: shoulder pivots on the egg's sides, a limb down to a hand (a small foot hanging fingers-down) ---
-  const shoulderUp = 0.6, shoulderOut = T.bodyR * T.bodyShape.z * Math.sqrt(1 - shoulderUp * shoulderUp);
+  // --- arms: a jointed chain, shoulder -> elbow -> wrist -> hand. The egg
+  // is widest at its equator, so a limb hung straight from the shoulder runs
+  // inside the belly; here the upper arm leaves the shoulder down and OUT,
+  // elbows out like a frog's, and the forearm comes forward and down to a
+  // hand hanging fingers-down beside the belly. The shoulder itself is part
+  // of the torso (a swelling melted into its field), the upper arm's root
+  // sits inside it and tapers out of it, and the elbow and wrist are balls
+  // a hair bigger than the tube ends meeting them, so the bends read as one
+  // smooth limb rather than cylinders poking through each other.
+  const segment = (parent, from, to, r0, r1) => { // a tapered tube from one point to another
+    const d = to.clone().sub(from);
+    const m = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(r1, r0, 1, 12), skin));
+    m.position.copy(from).addScaledVector(d, 0.5);
+    m.scale.y = d.length();
+    m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.clone().normalize());
+    parent.add(m);
+    return m;
+  };
+  const ARM_ROOT_R = 0.15, ELBOW_R = 0.1, WRIST_R = 0.08, JOINT = 1.08; // the balls a hair over the tube ends, so the two skins never coincide
+  const HAND = 0.4, HEEL = 0.12; // the hand's size; how far below the wrist the palm's center hangs: the wrist ball nests in the palm's top, so the forearm flows into the hand
   const arms = [-1, 1].map((side) => {
-    const shoulder = new THREE.Group();
-    shoulder.position.set(bodyCenter.x - 0.05, bodyCenter.y + T.bodyR * T.bodyShape.y * shoulderUp, side * shoulderOut);
+    const shoulder = new THREE.Group(); // the pivot, at the center of the torso's shoulder swelling
+    shoulder.position.copy(bodyCenter).add(shoulderOffset(side));
     shoulder.userData.side = side;
     torso.add(shoulder);
-    const wrist = new THREE.Vector3(0.05, -0.85, side * 0.12);
-    const limb = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 1, 10), skin));
-    limb.position.copy(wrist).multiplyScalar(0.5);
-    limb.scale.y = wrist.length();
-    limb.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), wrist.clone().normalize());
-    shoulder.add(limb);
-    const hand = foot(0.4);
-    hand.position.copy(wrist);
-    hand.rotation.z = -Math.PI / 2; // toes along +x -> hanging down
-    hand.rotation.y = side * 0.2;
-    shoulder.add(hand);
+    const elbowAt = new THREE.Vector3(-0.13, -0.36, side * 0.36); // down and out, a touch back
+    const wristAt = new THREE.Vector3(0.17, -0.82, side * 0.32); // forward and down from the elbow, drifting back in
+    segment(shoulder, new THREE.Vector3(), elbowAt, ARM_ROOT_R, ELBOW_R); // upper arm: its wide root buried in the shoulder, tapering to the elbow
+    const elbow = new THREE.Group(); // bends fore and aft, for the wheel
+    elbow.position.copy(elbowAt);
+    shoulder.add(elbow);
+    shoulder.userData.elbow = elbow;
+    blob(elbow, skin, ELBOW_R * JOINT, ELBOW_R * JOINT, ELBOW_R * JOINT, 0, 0, 0);
+    const wrist = wristAt.clone().sub(elbowAt);
+    segment(elbow, new THREE.Vector3(), wrist, ELBOW_R, WRIST_R); // forearm
+    blob(elbow, skin, WRIST_R * JOINT, WRIST_R * JOINT, WRIST_R * JOINT, wrist.x, wrist.y, wrist.z);
+    // the hand hangs from the wrist: the palm's top round the wrist ball, the
+    // fingers on below it (toes along +x -> down, then the splay turned mostly
+    // fore-and-aft so the palm faces the body)
+    const hand = foot(HAND);
+    hand.rotation.set(0, side * 1.1, -Math.PI / 2);
+    hand.position.copy(wrist).add(new THREE.Vector3(0, -HEEL, 0));
+    elbow.add(hand);
     return shoulder;
   });
 
@@ -166,7 +208,8 @@ export function buildFrog(finish = standard) {
   // ---- animation ----
   let nextBlink = 2, blinkT = -1, walkPhase = 0, squash = 1, wasGrounded = true;
   const lerp = (a, b, t) => a + (b - a) * Math.min(1, t);
-  // state: { moving, grounded, gliding, vy }
+  // state: { moving, grounded, gliding, vy, driving }: `driving` holds the
+  // arms out ahead, as if on a steering wheel, and the legs bent over the seat
   function animate(state, dt) {
     // blinking
     if (blinkT < 0 && (nextBlink -= dt) <= 0) blinkT = 0;
@@ -184,12 +227,17 @@ export function buildFrog(finish = standard) {
     for (const hip of legs) {
       const ph = walkPhase + (hip.userData.side > 0 ? Math.PI : 0);
       const target = shankTilt + (walking ? 0.55 * Math.sin(ph) : !state.grounded ? -0.35 : 0); // trail back in the air
-      hip.rotation.z = lerp(hip.rotation.z, target, 12 * dt);
+      hip.rotation.z = lerp(hip.rotation.z, state.driving ? SIT_THIGH : target, 12 * dt);
+      const knee = hip.userData.knee;
+      knee.rotation.z = lerp(knee.rotation.z, state.driving ? shankTilt - SIT_THIGH : 0, 12 * dt);
     }
     for (const shoulder of arms) {
       const ph = walkPhase + (shoulder.userData.side > 0 ? Math.PI : 0);
-      const target = walking ? -0.4 * Math.sin(ph) : !state.grounded ? 1.0 : 0; // arms up in the air
+      const target = state.driving ? 1.1 : walking ? -0.4 * Math.sin(ph) : !state.grounded ? 1.0 : 0; // out to the wheel; arms up in the air
       shoulder.rotation.z = lerp(shoulder.rotation.z, target, 12 * dt);
+      const elbow = shoulder.userData.elbow; // the forearm bends up to the wheel when driving, swings a little with the stride
+      const bend = state.driving ? 0.5 : walking ? 0.15 - 0.15 * Math.sin(ph) : 0;
+      elbow.rotation.z = lerp(elbow.rotation.z, bend, 12 * dt);
     }
     const bob = walking ? 0.05 * (1 - Math.cos(2 * walkPhase)) / 2 : 0;
     torso.position.y = lerp(torso.position.y, bob, 15 * dt);

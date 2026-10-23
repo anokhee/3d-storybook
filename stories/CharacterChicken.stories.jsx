@@ -1,16 +1,20 @@
-// Chicken: the chicken from the Car project (and chickens3d before it), a
-// blob torso under a scalloped icing cap, with bent-plate wings, walking
-// on the spot (src/car/chicken.js). See stories/helpers/car.jsx.
-import { Chicken } from "./helpers/car.jsx";
+// Chicken: the anthropomorphic Chicken in a T-pose, with a beak, comb, wattle and tail feathers on bare orange legs. One continuous lump with
+// the shared body of the other characters (src/nouns/anthro/Anthro.jsx);
+// its defaults and knobs live in src/nouns/anthro/objects.js.
+import Anthro from "../src/nouns/anthro/Anthro.jsx";
+import { CHICKEN, ANTHRO_KNOBS } from "../src/nouns/anthro/objects.js";
+import { knobStory } from "./helpers/knobs.js";
+
+const K = knobStory(CHICKEN, ANTHRO_KNOBS, CHICKEN, {});
 
 export default {
   title: "Characters/Chicken",
-  argTypes: {
-    walking: { control: "boolean" },
-    wingRaise: { control: { type: "range", min: 0, max: 1, step: 0.05 }, name: "wings raised" },
-  },
-  args: { walking: true, wingRaise: 0.35 },
-  render: (a) => <Chicken walking={a.walking} wingRaise={a.wingRaise} />,
+  component: Anthro,
+  argTypes: K.argTypes,
+  args: K.args,
+  render: (a) => <Anthro config={K.configOf(a)} />,
 };
 
+// The pose knob switches the T-pose to walking, running or jumping, and
+// the animate knob plays those as a loop.
 export const Default = {};

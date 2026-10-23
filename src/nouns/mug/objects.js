@@ -35,7 +35,7 @@ export const MUG = {
 export const MUG_KNOBS = [
   { label: "height", path: "height", step: 0.05, min: 0.15, max: 1.2 },
   { label: "radius", path: "radius", step: 0.02, min: 0.08, max: 0.5 },
-  { label: "full", path: "full", step: 0.05, min: 0, max: 1 },
+  { label: "coffee", path: "full", bool: true, on: MUG.full, off: 0 },
   { label: "mug", path: "colors.mug.hex", color: true },
   { label: "drink", path: "colors.drink.hex", color: true },
 ];

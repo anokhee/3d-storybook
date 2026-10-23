@@ -16,6 +16,3 @@ export default {
 };
 
 export const Default = {};
-
-// The lid raised up against the tank.
-export const LidUp = { args: { lid: 1 } };

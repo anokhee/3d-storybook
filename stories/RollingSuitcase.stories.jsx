@@ -17,6 +17,3 @@ export default {
 };
 
 export const Default = {};
-
-// The handle pushed down into the case.
-export const HandleDown = { args: { handle: 0 } };

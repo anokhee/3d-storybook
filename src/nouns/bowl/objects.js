@@ -37,7 +37,7 @@ export const BOWL_KNOBS = [
   { label: "depth", path: "depth", step: 0.02, min: 0.1, max: 0.8 },
   { label: "flare", path: "flare", step: 0.1, min: 0, max: 1 },
   { label: "colour", path: "colors.bowl.hex", color: true },
-  { label: "fruit", path: "fruit.count", step: 1, min: 0, max: 6 },
+  { label: "fruit", path: "fruit.count", bool: true, on: BOWL.fruit.count, off: 0 },
   { label: "fruit a", path: "colors.fruitA.hex", color: true },
   { label: "fruit b", path: "colors.fruitB.hex", color: true },
 ];

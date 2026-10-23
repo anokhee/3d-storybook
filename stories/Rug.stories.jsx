@@ -79,11 +79,4 @@ export default {
   ),
 };
 
-// PRESETS: each a named rug in the sidebar. An empty one is the defaults.
 export const Default = {};
-// A long runner with a ring of stars just inside its edge.
-export const Runner = { args: { width: 10, length: 3, cornerRadius: 1.4, layout: "border", spacing: 0.9, sides: 10, inner: 0.5, radius: 0.24 } };
-// Rings of small round dots, in to the middle.
-export const Rings = { args: { layout: "rings", spacing: 0.7, inset: 0.4, sides: 12, radius: 0.14, dots: 2 } };
-// A plain rug, no pattern.
-export const Plain = { args: { layout: "none", color: "#8FA3C4" } };

@@ -16,6 +16,3 @@ export default {
 };
 
 export const Default = {};
-
-// The round kind: a flattened ball.
-export const Round = { args: { shape: "round" } };

@@ -31,5 +31,3 @@ export default {
 };
 
 export const Default = {};
-
-export const Running = { args: { run: true } };

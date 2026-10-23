@@ -16,6 +16,3 @@ export default {
 };
 
 export const Default = {};
-
-// A single: narrow, with one pillow.
-export const Single = { args: { width: 2.2, pillowsCount: 1 } };

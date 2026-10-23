@@ -55,9 +55,8 @@ export const BED = {
 // What can be changed on a bed, from the panel.
 // The catalog shows these, and the game's edit panel can (stories/helpers/knobs.js).
 export const BED_KNOBS = [
-  { label: "width", path: "width", step: 0.2, min: 1.6, max: 6 },
   { label: "length", path: "length", step: 0.2, min: 2.5, max: 7 },
-  { label: "pillows", path: "pillows.count", step: 1, min: 1, max: 2 },
+  { label: "single bed", path: "pillows.count", bool: true, on: 1, off: BED.pillows.count, also: { width: (single) => (single ? 2.2 : BED.width) } },
   { label: "mattress", path: "mattress.height", step: 0.05, min: 0.2, max: 1.2 },
   { label: "frame", path: "colors.frame.hex", color: true },
   { label: "duvet", path: "colors.duvet.hex", color: true },

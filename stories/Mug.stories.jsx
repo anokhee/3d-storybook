@@ -16,5 +16,3 @@ export default {
 };
 
 export const Default = {};
-
-export const Empty = { args: { full: 0 } };

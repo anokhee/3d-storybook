@@ -1,6 +1,6 @@
 import { solid } from "../../world/palette.js";
 
-// The dog's own colours: a tan coat with brown ears and saddle, a red
+// The dog's own colours: a tan coat with brown ears and spots, a red
 // collar with a brass tag, and a dark nose and eyes. The story's knobs
 // write over these.
 const paint = {
@@ -12,38 +12,51 @@ const paint = {
   eyes: solid("#2A2230"),
 };
 
-// The poses a dog holds: standing on all fours, or sitting up on its
-// haunches with the front legs straight.
-export const DOG_POSES = ["standing", "sitting"];
+// The poses a dog holds: standing on all fours, sitting up on its
+// haunches with the front legs straight, or loafed with every leg
+// tucked under and the tail laid along its side.
+export const DOG_POSES = ["standing", "sitting", "loaf"];
 
-// A toy dog from the same kit as the cat: a longer rounded body, a round
-// head with a snout out front ending in a dark bead nose, two floppy
-// ears hanging each side, bead eyes, four short legs, a tail curving up
-// and a collar with a tag. The ears and a saddle over the back take the
-// patch colour. It stands on the ground facing +z, about 1.6 tall at
-// the head.
+// A toy dog on the cat's frame (see cat/objects.js): one lump of clay
+// (see world/lump.js) — ONE rounded block for the head and body
+// together, the face drawn on its front with a smaller block of a snout
+// out of it ending in a dark bead nose, two floppy ears hanging down
+// the sides of the head, bead eyes, the legs slimmer blocks pulled
+// straight down out of the block to the ground, and the tail out of its
+// rear the same way, curling up at the tip — with round spots painted
+// over the back and flanks and, if it wears one, a collar painted across the front
+// under the snout, a brass tag hung off it. It stands on the ground facing +z, about 1 tall.
 //
 //   size    the whole dog scaled; 1 is a small dog beside the furniture
 //   pose    one of DOG_POSES, see above
 //   wag     how much the tail wags, 0 still to 1 a full wag
-//   saddle  whether the patch over the back is painted (the ears always are)
-//   body    the capsule: `radius` through it, `length` of its straight middle
-//   head    `radius` of the ball
-//   snout   `radius` of the capsule out front and `length` of its middle
-//   legs    `radius` of each capsule and `length` of its straight middle
-//   tail    `radius` of the tube
-//   colors  `coat`; `patch` the ears and saddle; `collar` and its `tag`;
+//   spots   whether the spots are painted on (the ears always are)
+//   collar  whether it wears its collar and tag
+//   body    the block: `width` across, `height` (standing), `length` nose
+//           to rump, `round` how far its edges are rounded off
+//   legs    `thickness` of each, `round` of its edges, `blend` how wide
+//           a fillet it makes with the belly
+//   sitting the sitting pose's chest and legs: `chestDepth` how far the
+//           chest block stands out from the body (how deep the notch
+//           under it the front legs sit in), `legForward` how far the
+//           front legs' faces stand proud of the chest's (0 flush, a
+//           little back of it below), `legSpacing` between the two front
+//           legs, middle to middle, `footYaw` how far each hind foot
+//           turns out, in degrees, `footBack` how far back from the
+//           front of the base each hind foot's front sits
+//   resolution  the lump's grid, cells a side: more is smoother, slower
+//   colors  `coat`; `patch` the ears and spots; `collar` and its `tag`;
 //           `nose` and `eyes`
 export const DOG = {
   size: 1,
   pose: "standing",
   wag: 0.6,
-  saddle: true,
-  body: { radius: 0.36, length: 0.7 },
-  head: { radius: 0.32 },
-  snout: { radius: 0.15, length: 0.16 },
-  legs: { radius: 0.11, length: 0.32 },
-  tail: { radius: 0.07 },
+  spots: true,
+  collar: true,
+  body: { width: 0.56, height: 0.62, length: 1.1, round: 0.14 },
+  legs: { thickness: 0.16, round: 0.045, blend: 0.02 },
+  sitting: { chestDepth: 0.16, legForward: 0.01, legSpacing: 0.32, footYaw: 35, footBack: 0.28 },
+  resolution: 56,
   colors: {
     coat: paint.coat,
     patch: paint.patch,
@@ -62,6 +75,12 @@ export const DOG_KNOBS = [
   { label: "wag", path: "wag", step: 0.1, min: 0, max: 1 },
   { label: "coat", path: "colors.coat.hex", color: true },
   { label: "patch", path: "colors.patch.hex", color: true },
-  { label: "saddle", path: "saddle", bool: true, on: true, off: false },
-  { label: "collar", path: "colors.collar.hex", color: true },
+  { label: "spots", path: "spots", bool: true, on: true, off: false },
+  { label: "collar", path: "collar", bool: true, on: true, off: false },
+  { label: "collar colour", path: "colors.collar.hex", color: true },
+  { label: "sit: chest depth", path: "sitting.chestDepth", step: 0.01, min: 0.04, max: 0.3 },
+  { label: "sit: legs forward", path: "sitting.legForward", step: 0.01, min: -0.05, max: 0.1 },
+  { label: "sit: legs apart", path: "sitting.legSpacing", step: 0.02, min: 0.16, max: 0.5 },
+  { label: "sit: hind feet turn", path: "sitting.footYaw", step: 5, min: 0, max: 60 },
+  { label: "sit: hind feet back", path: "sitting.footBack", step: 0.02, min: -0.1, max: 0.5 },
 ];

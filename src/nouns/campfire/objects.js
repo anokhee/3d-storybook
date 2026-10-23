@@ -73,8 +73,7 @@ export const CAMPFIRE = {
 // The catalog shows these, and the game's edit panel can (stories/helpers/knobs.js).
 export const CAMPFIRE_KNOBS = [
   { label: "radius", path: "ring.radius", step: 0.1, min: 0.8, max: 3 },
-  { label: "flame height", path: "flames.height", step: 0.1, min: 0.1, max: 4 },
-  { label: "flicker", path: "flames.flicker", step: 0.05, min: 0, max: 1 },
+  { label: "embers only", path: "flames.height", bool: true, on: 0.5, off: CAMPFIRE.flames.height, also: { "flames.flicker": (low) => (low ? 0.2 : CAMPFIRE.flames.flicker) } },
   { label: "stones", path: "ring.stones", step: 1, min: 4, max: 16 },
   { label: "flame colour", path: "colors.flame.hex", color: true },
   { label: "log colour", path: "colors.log.hex", color: true },

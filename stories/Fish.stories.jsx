@@ -1,22 +1,20 @@
-// Fish Head: the fish that pop up out of the sand as the steel drums are
-// played, gulping (src/xylophone/fish.js). One, risen as far as it comes:
-// the game's own animation is run to the top of its rise and held there.
-// `color` tints the body with a note's color, as a note would.
-import { Built } from "./helpers/xylophone.jsx";
-import { makeFishHeads, FISH_HEADS } from "../src/xylophone/fish.js";
-import { COLOR_PALETTE } from "../src/xylophone/palette.js";
+// Fish: a toy fish swimming in the air just off the ground, nose to +z:
+// its tail beats, its body sways, its side fins paddle and it bobs. Its
+// code lives in src/nouns/fish/ (Fish.jsx, defaults and knobs in
+// objects.js). The steel drums' fish heads, popping up out of the sand,
+// stay the game's own (src/xylophone/fish.js).
+import Fish from "../src/nouns/fish/Fish.jsx";
+import { FISH, FISH_KNOBS } from "../src/nouns/fish/objects.js";
+import { knobStory } from "./helpers/knobs.js";
 
-const one = (color) => (scene, tools) => {
-  const fish = makeFishHeads(scene, tools);
-  const f = fish.sprout(0, 0, 0, color, FISH_HEADS.sizeByPitch[0], 0);
-  for (let t = 0; t < FISH_HEADS.rise; t += 1 / 60) fish.update(f, 1 / 60);
-};
+const K = knobStory(FISH, FISH_KNOBS, {}, {});
 
 export default {
-  title: "Animals/Fish Head",
-  argTypes: { color: { control: "color", name: "note color" } },
-  args: { color: COLOR_PALETTE.fish },
-  render: (a) => <Built build={one(a.color)} />,
+  title: "Animals/Fish",
+  component: Fish,
+  argTypes: K.argTypes,
+  args: K.args,
+  render: (a) => <Fish config={K.configOf(a)} />,
 };
 
 export const Default = {};

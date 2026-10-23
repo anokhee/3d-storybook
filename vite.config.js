@@ -78,6 +78,29 @@ function codePanelServer() {
           }).catch((e) => Object.assign(retake, { running: false, log: String(e), done: new Date().toISOString() }));
           return json(202, { started: true });
         }
+        // POST /__library/meta {id, patch}: an entry's description, tags and status
+        // (.storybook/meta.js), merged into public/library-meta.json; empty fields are dropped
+        if (url.pathname === "/__library/meta" && req.method === "POST") {
+          let body = "";
+          req.on("data", (c) => (body += c));
+          req.on("end", () => {
+            try {
+              const { id, patch } = JSON.parse(body);
+              if (typeof id !== "string" || !id || typeof patch !== "object" || !patch) return json(400, { error: "needs an id and a patch" });
+              const file = path.join(ROOT, "public/library-meta.json");
+              const all = fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8") || "{}") : {};
+              const next = { ...all[id] };
+              if (typeof patch.description === "string") next.description = patch.description.trim();
+              if (Array.isArray(patch.tags)) next.tags = patch.tags.filter((t) => typeof t === "string" && t.trim()).map((t) => t.trim());
+              if (typeof patch.status === "string") next.status = patch.status;
+              for (const k of Object.keys(next)) if (!next[k] || (Array.isArray(next[k]) && !next[k].length)) delete next[k];
+              if (Object.keys(next).length) all[id] = next; else delete all[id];
+              fs.writeFileSync(file, JSON.stringify(Object.fromEntries(Object.entries(all).sort(([a], [b]) => a.localeCompare(b))), null, 2) + "\n");
+              json(200, { ok: true, meta: all[id] ?? {} });
+            } catch (e) { json(400, { error: String(e) }); }
+          });
+          return;
+        }
         // POST /__library/save {file, content}: written back; Vite sees the change and hot-reloads
         if (url.pathname === "/__library/save" && req.method === "POST") {
           let body = "";

@@ -1,4 +1,4 @@
-// CAR: the characters of the Car project (Desktop/Car/3d), the toad and
+// CAR: the characters of the Car project (Desktop/Car/3d), the frog and
 // the chicken: plain three.js builders that return a group and an
 // `animate(state, dt)` that walks, blinks and flaps. Each is built once
 // and walked on the spot: the game's own animation, told it is on the
@@ -11,6 +11,7 @@ import { buildFrog } from "../../src/car/frog.js";
 import { buildChicken } from "../../src/car/chicken.js";
 import { buildCar, CAR } from "../../src/car/car.js";
 import { toon } from "../../src/adjectives/unlit/toon.js";
+import { Driver } from "./driver.jsx";
 
 // The builders take a `finish(color, extra)` that makes every lit
 // material; this is the project's own: matte, standard.
@@ -23,9 +24,9 @@ function Walker({ built, walking }) {
   return <primitive object={built.group} />;
 }
 
-// The toad: the chicken's blob torso with the xylophone toad's features,
+// The frog: the chicken's blob torso with the xylophone toad's features,
 // on wide flat feet. Faces +x.
-export function Toad({ walking = true }) {
+export function Frog({ walking = true }) {
   const built = useMemo(() => buildFrog(standard), []);
   return <Walker built={built} walking={walking} />;
 }
@@ -40,10 +41,16 @@ export function Chicken({ walking = true, wingRaise = 0.35 }) {
 
 // The car: the roadster, in the stage's toon (the game's is its own
 // toon), facing +x, its wheels turning as if driving at `speed` world
-// units a second. `body`, `trim` and `wheel` are its colors.
-export function Car({ speed = 6, body = CAR.body, trim = CAR.trim, wheel = CAR.wheel }) {
+// units a second. `body`, `trim` and `wheel` are its colors; `driver`
+// who sits in it ("none", or a character, see driver.jsx).
+export function Car({ speed = 6, body = CAR.body, trim = CAR.trim, wheel = CAR.wheel, driver = "none" }) {
   const built = useMemo(() => buildCar((color, extra) => toon(new THREE.Color(color), extra), { ...CAR, body, trim, wheel }), [body, trim, wheel]);
   useEffect(() => () => built.group.traverse((o) => o.geometry?.dispose?.()), [built]);
   useFrame((_, dt) => built.roll(Math.min(dt, 0.05), speed));
-  return <primitive object={built.group} />;
+  return (
+    <>
+      <primitive object={built.group} />
+      <Driver kind={driver} seat={built.seat} scale={CAR.scale} />
+    </>
+  );
 }

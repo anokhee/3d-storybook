@@ -10,9 +10,11 @@
 
    `finish(color, extra)` makes every material, so a page can hand in its
    own (the game's toon, or the stage's). `roll(dt, speed)` turns the
-   wheels as the game does for a car going `speed` world units a second.
+   wheels as the game does for a car going `speed` world units a second;
+   `seat` is the top of the driver's cushion, in the car's own units.
    ============================================================ */
 import * as THREE from "three";
+import { seatHeadrest } from "./seat.js";
 
 export const CAR = {
   scale: 1.6, // built about 2.9 long; the game scales it up to fit a driver
@@ -63,10 +65,12 @@ export function buildCar(finish, C = CAR) {
   // the sills: the well is cut clean through, so these are the doors' height
   for (const z of [-WIDTH / 2 + 0.06, WIDTH / 2 - 0.06]) box(COWL - BOOT, 0.4, 0.12, C.body, (COWL + BOOT) / 2, FLOOR + 0.2, z);
 
-  // the dashboard, under the cowl, and the steering wheel before the left seat
+  // the dashboard, under the cowl, and the steering wheel before the left
+  // (driver's, -z) seat: its face toward the cabin, raked like the
+  // windshield, on a short column into the dashboard's face
   box(0.22, 0.2, WIDTH - 0.24, C.dash, COWL - 0.11, 0.88, 0);
-  const RAKE = 0.35, DRIVER = 0.34;
-  const wheelAt = new THREE.Vector3(0.1, 0.98, DRIVER);
+  const RAKE = 0.35, DRIVER = -0.34;
+  const wheelAt = new THREE.Vector3(0.14, 0.88, DRIVER);
   const rim = new THREE.TorusGeometry(0.16, 0.025, 10, 28).rotateY(Math.PI / 2).rotateZ(RAKE);
   add(rim, C.dash, wheelAt.x, wheelAt.y, wheelAt.z);
   const spoke = new THREE.BoxGeometry(0.03, 0.3, 0.04).rotateZ(RAKE); // one up and down
@@ -74,17 +78,20 @@ export function buildCar(finish, C = CAR) {
   const spokeAcross = new THREE.BoxGeometry(0.03, 0.04, 0.3).rotateZ(RAKE); // and one side to side
   add(spokeAcross, C.dash, wheelAt.x, wheelAt.y, wheelAt.z);
   const axis = new THREE.Vector3(Math.cos(RAKE), Math.sin(RAKE), 0); // the wheel's normal, toward the dash
-  const column = new THREE.CylinderGeometry(0.03, 0.03, 0.4, 10).rotateZ(-(Math.PI / 2 - RAKE));
-  const columnAt = wheelAt.clone().addScaledVector(axis, 0.2);
+  const STEM = 0.18; // from the hub into the dash's face, 0.075 behind the rim
+  const column = new THREE.CylinderGeometry(0.03, 0.03, STEM, 10).rotateZ(-(Math.PI / 2 - RAKE));
+  const columnAt = wheelAt.clone().addScaledVector(axis, STEM / 2);
   add(column, C.dash, columnAt.x, columnAt.y, columnAt.z);
 
-  // two bucket seats: a cushion and a backrest leaning back, on the floor
+  // two bucket seats, against the back of the well: a cushion and a
+  // backrest leaning back, its top at the well's rear wall, with a
+  // headrest over the boot's edge
+  const SEAT = BOOT + 0.37; // the cushion's centre
   for (const z of [-DRIVER, DRIVER]) {
-    box(0.46, 0.14, 0.5, C.trim, -0.28, FLOOR + 0.07, z);
-    const back = box(0.12, 0.5, 0.5, C.trim, -0.54, FLOOR + 0.36, z);
+    box(0.46, 0.26, 0.5, C.trim, SEAT, FLOOR + 0.13, z);
+    const back = box(0.12, 0.5, 0.5, C.trim, SEAT - 0.26, FLOOR + 0.48, z);
     back.rotation.z = 0.22;
-    const rest = box(0.1, 0.14, 0.26, C.trim, -0.65, FLOOR + 0.66, z); // headrest
-    rest.rotation.z = 0.22;
+    seatHeadrest(add, box, C.trim, [SEAT - 0.26, FLOOR + 0.48], z, 0.26); // the headrest, straight over the backrest, on two metal posts
   }
 
   // the windshield: a pane in a frame, raked back from the cowl
@@ -118,5 +125,6 @@ export function buildCar(finish, C = CAR) {
   const roll = (dt, speed) => {
     for (const w of wheels) w.rotation.z -= (speed * dt) / C.wheelR;
   };
-  return { group, wheels, roll };
+  const seat = [SEAT, FLOOR + 0.26, DRIVER]; // the top of the driver's cushion, for a driver to sit on
+  return { group, wheels, roll, seat };
 }

@@ -4,14 +4,13 @@ import { useFrame } from "@react-three/fiber";
 
 import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
-import { DecalGeometry } from "three/examples/jsm/geometries/DecalGeometry.js";
-import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
-import { lumpOf } from "./lump.js";
+import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
+import { paintOn } from "../../world/paint.js";
 import { CAT, coatOf } from "./objects.js";
 
 // Where everything sits for each pose, at size 1. The cat is one lump
-// (see lump.js): `parts` are the forms it is poured from — ONE rounded
+// (see world/lump.js): `parts` are the forms it is poured from — ONE rounded
 // block for head and body together, each leg a slimmer block pulled
 // straight down out of it to the ground, and the tail a run of capsules
 // out of its rear. The face is drawn on the block's front: `face` is the
@@ -19,14 +18,27 @@ import { CAT, coatOf } from "./objects.js";
 // back (the eyes, muzzle and ears go with it); `ears` where the two ears
 // stand, from `face`. `spine` is where the stripes go, along the top,
 // with how wide; `socks` the feet a tuxedo's socks cover, each a box
-// `at` with its `half` sizes (and `yaw`) or a sphere `at` with its `r`,
-// a hair bigger than the foot it is on; `chest` the lighter patch
+// round the foot, `at` and `size` across, tall and deep (turned `yaw`),
+// that the sock is painted within; `chest` the lighter patch
 // painted on the front, projected from `at` straight back along -z,
-// `size` across and tall, or null. The tail is a curve of `points` from
+// `size` across and tall, `depth` how far back it reaches, its top
+// arched and its bottom corners rounded off by `radius`, or null;
+// `belly` the same paint carried on down the gap between the front legs
+// when sitting, a box the same way, or null; `collar`
+// the band painted across the front under the muzzle, a box `at`,
+// turned `turn`, `size` across, tall and deep, thin top to bottom and
+// reaching back round the front corners. The tail is a curve of `points` from
 // where it leaves the rear to its tip, `rootR` thick where it leaves and
 // `tipR` at the tip; the swish bends it from the root, `sway` scaling
 // that, small when the tail lies on the ground. `top` is how tall the
 // cat stands.
+//
+// Sitting, the chest slab (see there) runs from the front legs' tops up
+// to the top of the head; the legs' tops run up into it past its
+// rounded bottom edge and CHEST_EMBED beyond, their backs LEG_EMBED into
+// the block, and the slab itself back to the block's middle, all so
+// nothing meets at a seam.
+const CHEST_EMBED = 0.03, LEG_EMBED = 0.03;
 function layoutOf(C) {
   const B = C.body;
   const L = C.legs;
@@ -36,45 +48,89 @@ function layoutOf(C) {
   const leg = (x, z, top) => ({ kind: "box", at: [x, top / 2, z], half: [L.thickness / 2 - L.round, top / 2 - L.round, L.thickness / 2 - L.round], round: L.round, blend: L.blend });
   if (C.pose === "sitting") {
     // The block stood on end, its base on the ground as the seat (no
-    // haunches of its own), leant back a little. The front legs are
-    // straight columns set into its lower front, their front faces a
-    // little proud of the chest, from inside the block down to the
-    // ground, with a paw block at the foot of each nudged forward. The
+    // haunches of its own), leant back a little. A CHEST slab stands on
+    // its front from the tops of the front legs right up to the top of
+    // the head: as wide, flush with the top, leaning with it, its front
+    // S.chestDepth forward of the block's own, and run back into the
+    // block so there is no seam — so the neck and face sit straight over
+    // the collar, and the block's lower front, between the front legs,
+    // is set back under the chest as the belly. The
+    // front legs are columns from up inside the chest slab down to the
+    // ground, leaning back with it so their fronts lie in its front's
+    // own plane (or S.legForward proud of it) and their backs run into
+    // the block's front, with a paw block at the foot of each nudged
+    // forward. The
     // hind feet are flat blocks under the block's base at either side,
-    // near the front, the back half tucked under and the front half out,
-    // turned out so the toes point to the sides, and a little outboard
-    // of the front legs. See CAT.sitting for the knobs.
+    // well back of the front legs under the rear of the seat, their
+    // fronts S.footBack behind the base's front, turned out so the toes
+    // point to the sides, and a little outboard of the front legs. See CAT.sitting for the knobs.
     const S = C.sitting;
     const lean = -0.12;
-    const sw = B.width * 0.9, sh = 0.96, sl = B.length * 0.52;
-    const at = [0, 0.52, -0.1];
+    const sw = B.width * 0.9, sh = 0.78, sl = B.length * 0.52;
+    const at = [0, sh / 2 + 0.04, -0.1];
+    const top = at[1] + sh / 2, faceY = top - 0.14, chin = faceY - 0.08, collarY = faceY - 0.215;
     // Where the block's front face is at a height, leaning as it does
     const frontAt = (y) => at[2] + (y - at[1]) * Math.sin(lean) + (sl / 2) * Math.cos(lean);
-    const legTop = 0.5, legZ = frontAt(legTop / 2) + S.legForward - L.thickness / 2;
+    // A point `dy` up and `dz` forward of the block's middle, in its own leaning frame
+    const onBlock = (dy, dz) => [0, at[1] + dy * Math.cos(lean) - dz * Math.sin(lean), at[2] + dy * Math.sin(lean) + dz * Math.cos(lean)];
+    // ...and `dy` up it so that the point lands at height `y` with `dz` forward
+    const upTo = (y, dz) => (y - at[1] + dz * Math.sin(lean)) / Math.cos(lean);
+    // The chest slab: from low over the belly — down over the top
+    // quarter of the front legs — up to the block's top, from its middle
+    // out past its front, its edges rounded the same as the block's so
+    // the two tops and sides run as one
+    const chestBottom = 0.33;
+    const cd = S.chestDepth + sl / 2, cz = cd / 2; // forward of the block's middle
+    const cBottom = upTo(chestBottom, sl / 2), ch = sh / 2 - cBottom, cy = (sh / 2 + cBottom) / 2; // up it
+    const cr = Math.min(B.round, ch / 2 - 0.03, cd / 2 - 0.03);
+    const chestFront = (y) => frontAt(y) + S.chestDepth;
+    // The front legs: up into the slab past its rounded bottom edge, so
+    // their fronts carry straight on up into the slab's flat front —
+    // leaning with it, so the two lie in one plane and nothing bulges
+    // where they meet — and their backs run LEG_EMBED into the block
+    // (and never slimmer front to back than across)
+    const legTop = chestBottom + cr + CHEST_EMBED;
+    const legDepth = Math.max(S.chestDepth + S.legForward + LEG_EMBED, L.thickness);
+    const legFrontAt = (y) => chestFront(y) + S.legForward; // where a leg's front is at a height
+    const legZ = legFrontAt(legTop / 2) - legDepth / 2;
+    const pawZ = legFrontAt(0.05) + 0.045 - 0.075; // the paw's front a hair proud of the leg's
     const lx = S.legSpacing / 2;
     const feet = [[-lx, 0, legZ], [lx, 0, legZ]];
-    const footLen = 0.22, footZ = frontAt(0) - footLen / 2 + S.footOut, footX = sw / 2 - 0.01;
+    const footLen = 0.22, footZ = frontAt(0) - footLen / 2 - S.footBack, footX = sw / 2 - 0.01;
     const yaw = THREE.MathUtils.degToRad(S.footYaw);
+    const bibW = 0.3, stripW = S.legSpacing - L.thickness - 0.02; // the chest and belly patches across
     return {
       parts: [
         block(at, [sw, sh, sl], lean),
-        ...feet.map(([x, , z]) => ({ kind: "box", at: [x, legTop / 2, z], half: [L.thickness / 2 - L.round, legTop / 2 - L.round, L.thickness / 2 - L.round], round: L.round, blend: 0.03 })),
-        ...feet.map(([x, , z]) => ({ kind: "box", at: [x, 0.045, z + 0.04], half: [L.thickness / 2 - 0.03, 0.015, 0.045], round: 0.03, blend: 0.02 })), // the paws
+        { kind: "box", at: onBlock(cy, cz), half: [sw / 2 - cr, ch / 2 - cr, cd / 2 - cr], round: cr, tilt: lean, blend: 0 }, // the chest
+        ...feet.map(([x, , z]) => ({ kind: "box", at: [x, legTop / 2, z], half: [L.thickness / 2 - L.round, legTop / 2 - L.round, legDepth / 2 - L.round], round: L.round, tilt: lean, blend: 0 })),
+        ...feet.map(([x]) => ({ kind: "box", at: [x, 0.045, pawZ], half: [L.thickness / 2 - 0.03, 0.015, 0.045], round: 0.03, blend: 0.02 })), // the paws
         ...[-1, 1].map((side) => ({ kind: "box", at: [side * footX, 0.04, footZ], half: [0.02, 0.01, footLen / 2 - 0.03], round: 0.03, yaw: side * yaw, blend: 0.02 })), // the hind feet
       ],
-      face: [0, 0.86, frontAt(0.86)],
+      face: [0, faceY, chestFront(faceY)],
       lean,
       ears: [0.15, 0.14, -0.14],
-      spine: [{ at: [0, 1.0, -0.3], r: 0.18 }, { at: [0, 1.0, -0.1], r: 0.18 }],
-      socks: feet.map(([x, , z]) => ({ at: [x, 0.045, z + 0.04], half: [L.thickness / 2 + 0.008, 0.045, 0.075 + 0.008] })),
-      chest: { at: [0, 0.68, frontAt(0.68) + 0.2], size: [0.24, 0.28] },
+      spine: [{ at: [0, top, -0.3], r: 0.18 }, { at: [0, top, -0.1], r: 0.18 }],
+      socks: [
+        ...feet.map(([x]) => ({ at: [x, 0.05, pawZ], size: [L.thickness + 0.04, 0.1, 0.15 + 0.04] })),
+        ...[-1, 1].map((side) => ({ at: [side * footX, 0.04, footZ], size: [0.1 + 0.04, 0.09, footLen + 0.04], yaw: side * yaw })),
+      ],
+      // The chest patch: a bib up the chest's front to the chin from its
+      // bottom edge, over the tops of the legs, its bottom corners
+      // rounded off so its shoulders run into the belly patch, which
+      // carries it on down the gap between the front legs — from up
+      // under that edge, where it meets the bib, down to the base's
+      // bottom edge — as wide as the gap, short of the legs' inner faces
+      chest: { at: [0, (chestBottom - 0.01 + chin) / 2, chestFront((chestBottom + chin) / 2) + 0.12], size: [bibW, chin - chestBottom + 0.01], depth: 0.3, radius: (bibW - stripW) / 2 },
+      belly: { at: [0, (0.04 + chestBottom + 0.14) / 2, chestFront(chestBottom) + 0.05], size: [stripW, chestBottom + 0.14 - 0.04], depth: 0.4 },
+      collar: { at: [0, collarY, chestFront(collarY) - 0.1], turn: [lean, 0, 0], size: [sw + 0.1, 0.07, 0.3] }, // under the muzzle, round the chest's front
       tail: {
-        points: [[0.1, 0.2, -0.3], [0.3, 0.1, -0.44], [0.48, 0.08, -0.14], [0.44, 0.08, 0.26], [0.16, 0.08, 0.48]],
+        points: [[0.1, 0.2, -0.3], [0.3, 0.1, -0.44], [0.46, 0.08, -0.2], [0.46, 0.08, 0.02]], // out the back and round to lie beside the right hind foot
         rootR: 0.09,
         tipR: 0.055,
         sway: 0.25,
       },
-      top: 1.05,
+      top: top + 0.05,
     };
   }
   if (C.pose === "loaf") {
@@ -91,8 +147,13 @@ function layoutOf(C) {
       lean: 0,
       ears: [0.15, 0.14, -0.14],
       spine: [{ at: [0, 0.6, -0.36], r: 0.26 }, { at: [0, 0.6, -0.1], r: 0.26 }, { at: [0, 0.6, 0.16], r: 0.24 }],
-      socks: feet.map((at) => ({ at, half: [0.065 + 0.006, 0.055 + 0.006, 0.095 + 0.006] })),
-      chest: null,
+      socks: feet.map(([x, y]) => ({ at: [x, y, 0.485], size: [0.14, 0.12, 0.09] })), // what shows of each paw, ahead of the block
+      // The chest patch: a bib on the front from under the muzzle all
+      // the way down to the floor, round the block's bottom edge, between
+      // the paws
+      chest: { at: [0, (-0.01 + 0.32) / 2, 0.45 + 0.12], size: [0.3, 0.32 + 0.01], depth: 0.3 },
+      belly: null,
+      collar: { at: [0, 0.17, 0.35], turn: [0, 0, 0], size: [B.width + 0.16, 0.07, 0.3] }, // under the muzzle, above the paws, over the bib
       tail: {
         points: [[0.1, 0.2, -0.5], [0.3, 0.09, -0.6], [0.4, 0.08, -0.3], [0.38, 0.08, 0.1], [0.28, 0.08, 0.42]],
         rootR: 0.09,
@@ -114,8 +175,10 @@ function layoutOf(C) {
     lean: 0,
     ears: [0.15, 0.12, -0.16],
     spine: [{ at: [0, top, -0.3], r: 0.22 }, { at: [0, top, -0.05], r: 0.22 }, { at: [0, top, 0.2], r: 0.2 }],
-    socks: feet.map(([x, , z]) => ({ at: [x, L.thickness / 2, z], r: L.thickness / 2 + 0.014 })),
+    socks: feet.map(([x, , z]) => ({ at: [x, L.thickness / 2, z], size: [L.thickness + 0.04, L.thickness, L.thickness + 0.04] })),
     chest: { at: [0, 0.41, B.length / 2 + 0.02], size: [0.26, 0.24] },
+    belly: null,
+    collar: { at: [0, top - 0.18 - 0.08 - MUZZLE_R - 0.04, B.length / 2 - 0.1], turn: [0, 0, 0], size: [B.width + 0.1, 0.07, 0.3] }, // under the muzzle
     tail: {
       points: [[0, top - 0.12, -B.length / 2 + 0.06], [0, top - 0.18, -B.length / 2 - 0.18], [0, top - 0.06, -B.length / 2 - 0.34], [0, top + 0.14, -B.length / 2 - 0.4], [0, top + 0.3, -B.length / 2 - 0.32]],
       rootR: 0.09,
@@ -174,123 +237,11 @@ function earPaint() {
   return { geo: new THREE.ShapeGeometry(t), at: at.toArray(), tilt };
 }
 const EYE_X = 0.15, EYE_Y = 0.05, EYE_R = 0.038, IRIS_SPREAD = 0.8;
-const SOCK_ROUND = 0.035; // a paw's own corners
 
 // A turn that points local z along `dir`, as an Euler for a mesh.
 const Z = new THREE.Vector3(0, 0, 1);
 const along = (dir) => new THREE.Euler().setFromQuaternion(new THREE.Quaternion().setFromUnitVectors(Z, dir.clone().normalize())).toArray().slice(0, 3);
 
-// The tail: TAIL_SAMPLES points along its curve, thinning from the root
-// to the tip, and the capsules between them for the lump. The first point
-// sits inside the rump, so the tail grows out of it with no seam.
-const TAIL_SAMPLES = 14;
-function tailBalls(tail) {
-  const curve = new THREE.CatmullRomCurve3(tail.points.map((p) => new THREE.Vector3(...p)));
-  return Array.from({ length: TAIL_SAMPLES }, (_, i) => {
-    const u = i / (TAIL_SAMPLES - 1);
-    return { at: curve.getPointAt(u).toArray(), r: THREE.MathUtils.lerp(tail.rootR, tail.tipR, u), u };
-  });
-}
-const tailParts = (samples) =>
-  samples.slice(1).map((b, i) => ({ kind: "capsule", a: samples[i].at, b: b.at, ra: samples[i].r, rb: b.r, blend: i === 0 ? 0.1 : 0.02 }));
-
-// Which of the lump's vertices are tail, and how far along it: each is
-// given the `u` of the nearest tail ball if it lies within reach of it,
-// eased so the root barely moves and the tip moves fully, or 0 for the
-// rest of the cat. The swish then bends the tail about a vertical axis
-// through the root, every vertex by its own share of the angle, so the
-// tail curls from where it leaves the rump rather than hinging.
-function tailWeights(geo, balls) {
-  const pos = geo.attributes.position.array;
-  const n = pos.length / 3;
-  const weights = new Float32Array(n);
-  const index = [];
-  const v = new THREE.Vector3();
-  for (let i = 0; i < n; i++) {
-    v.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
-    let best = -1, bestD = Infinity;
-    for (let k = 1; k < balls.length; k++) {
-      const b = balls[k];
-      const d = v.distanceTo(new THREE.Vector3(...b.at));
-      if (d < b.r * 1.8 && d < bestD) { bestD = d; best = k; }
-    }
-    if (best < 0) continue;
-    const u = balls[best].u;
-    weights[i] = u * u * (3 - 2 * u);
-    index.push(i);
-  }
-  return { weights, index: Int32Array.from(index) };
-}
-
-// Paint on the lump: its own surface where a box at `at`, turned `turn`
-// and `size` across, tall and deep, falls on it, copied out as a decal
-// and lifted a hair along its normals so it sits on the fur. `arch`
-// rounds the patch's top off into a half-circle as wide as the patch:
-// the decal's triangles are trimmed against a fan of planes tangent to
-// that circle, in the box's own frame, the way the decal itself was
-// trimmed to the box.
-function paintOn(geo, at, turn, size, { arch = false } = {}) {
-  const onto = new THREE.Mesh(geo);
-  onto.updateMatrixWorld();
-  let decal = new DecalGeometry(onto, at, turn, new THREE.Vector3(...size));
-  if (arch) decal = archTop(decal, at, turn, size);
-  const p = decal.attributes.position.array, n = decal.attributes.normal.array;
-  for (let i = 0; i < p.length; i++) p[i] += n[i] * 0.006;
-  return decal;
-}
-
-// A triangle clipped to the half-space n·p <= d (Sutherland–Hodgman),
-// as a polygon of { p, n } corners, each new corner interpolated along
-// the edge it cuts.
-function clipPolygon(poly, normal, d) {
-  const out = [];
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i], b = poly[(i + 1) % poly.length];
-    const da = a.p.dot(normal) - d, db = b.p.dot(normal) - d;
-    if (da <= 0) out.push(a);
-    if ((da <= 0) !== (db <= 0)) {
-      const t = da / (da - db);
-      out.push({ p: a.p.clone().lerp(b.p, t), n: a.n.clone().lerp(b.n, t).normalize() });
-    }
-  }
-  return out;
-}
-
-const ARCH_PLANES = 9;
-function archTop(decal, at, turn, size) {
-  const frame = new THREE.Matrix4().makeRotationFromEuler(turn).setPosition(at);
-  const into = frame.clone().invert();
-  const r = size[0] / 2, cy = size[1] / 2 - r; // the circle: as wide as the patch, at its top
-  const planes = Array.from({ length: ARCH_PLANES }, (_, k) => {
-    const a = (Math.PI * (k + 1)) / (ARCH_PLANES + 1);
-    const normal = new THREE.Vector3(Math.cos(a), Math.sin(a), 0);
-    return { normal, d: normal.y * cy + r };
-  });
-  const pos = decal.attributes.position, nor = decal.attributes.normal;
-  const outP = [], outN = [];
-  const rot = new THREE.Matrix3().setFromMatrix4(into), back = new THREE.Matrix3().setFromMatrix4(frame);
-  for (let i = 0; i < pos.count; i += 3) {
-    let poly = [0, 1, 2].map((k) => ({
-      p: new THREE.Vector3().fromBufferAttribute(pos, i + k).applyMatrix4(into),
-      n: new THREE.Vector3().fromBufferAttribute(nor, i + k).applyMatrix3(rot),
-    }));
-    for (const { normal, d } of planes) {
-      poly = clipPolygon(poly, normal, d);
-      if (poly.length < 3) break;
-    }
-    for (let k = 1; k + 1 < poly.length; k++) {
-      for (const c of [poly[0], poly[k], poly[k + 1]]) {
-        outP.push(...c.p.clone().applyMatrix4(frame).toArray());
-        outN.push(...c.n.clone().applyMatrix3(back).toArray());
-      }
-    }
-  }
-  decal.dispose();
-  const geo = new THREE.BufferGeometry();
-  geo.setAttribute("position", new THREE.Float32BufferAttribute(outP, 3));
-  geo.setAttribute("normal", new THREE.Float32BufferAttribute(outN, 3));
-  return geo;
-}
 const Y = new THREE.Vector3(0, 1, 0);
 
 // One cat, standing on the ground at y = 0 facing +z. `config` overrides
@@ -307,14 +258,19 @@ export default function Cat({ config }) {
   const tail = useMemo(() => tailBalls(lay.tail), [lay]);
   const lump = useMemo(() => {
     const geo = lumpOf([...lay.parts, ...tailParts(tail)], { resolution: C.resolution });
-    const rest = { position: geo.attributes.position.array.slice(), normal: geo.attributes.normal.array.slice() };
-    return { geo, rest, ...tailWeights(geo, tail), root: new THREE.Vector3(...lay.tail.points[0]) };
+    return { geo, rest: restOf(geo), ...tailWeights(geo, tail), root: new THREE.Vector3(...lay.tail.points[0]) };
   }, [lay, tail, C.resolution]);
   useEffect(() => () => lump.geo.dispose(), [lump]);
 
-  // The chest: painted on the front, from straight ahead, its top arched.
-  const chest = useMemo(() => lay.chest && paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], 0.4], { arch: true }), [lump, lay.chest]);
+  // The chest: painted on the front, from straight ahead, its top arched;
+  // projected `depth` deep (0.4 unless the layout says), no further, so
+  // it stays on the front it is meant for.
+  const chest = useMemo(() => lay.chest && paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], lay.chest.depth ?? 0.4], { arch: true, radius: lay.chest.radius ?? 0 }), [lump, lay.chest]);
   useEffect(() => () => chest?.dispose(), [chest]);
+  // The belly: the same paint carried on down between the front legs,
+  // sitting, projected the same way
+  const bellyPatch = useMemo(() => lay.belly && paintOn(lump.geo, new THREE.Vector3(...lay.belly.at), new THREE.Euler(0, 0, 0), [lay.belly.size[0], lay.belly.size[1], lay.belly.depth]), [lump, lay.belly]);
+  useEffect(() => () => bellyPatch?.dispose(), [bellyPatch]);
 
   // A tabby's stripes, painted on: bands across the back, each projected
   // straight down over one point of the spine; and bands round the tail,
@@ -324,7 +280,7 @@ export default function Cat({ config }) {
   const stripes = useMemo(() => {
     if (!C.stripes) return null;
     const backs = lay.spine.map((b) => paintOn(lump.geo, new THREE.Vector3(b.at[0], b.at[1] + 0.1, b.at[2]), new THREE.Euler(-Math.PI / 2, 0, 0), [b.r * 2, 0.07, 0.6]));
-    const tails = [5, 8, 11].map((k) => {
+    const tails = [0.38, 0.62, 0.85].map((f) => Math.round(f * (tail.length - 1))).map((k) => { // how far down the tail each ring goes
       const at = new THREE.Vector3(...tail[k].at);
       const t = new THREE.Vector3(...tail[k + 1].at).sub(new THREE.Vector3(...tail[k - 1].at)).normalize();
       const side = new THREE.Vector3().crossVectors(t, Y).normalize();
@@ -332,7 +288,7 @@ export default function Cat({ config }) {
       const across = new THREE.Vector3().crossVectors(t, side);
       const turn = new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeBasis(across, t, side));
       const geo = paintOn(lump.geo, at, turn, [tail[k].r * 4, 0.045, tail[k].r * 4]);
-      return { geo, ...tailWeights(geo, tail), rest: { position: geo.attributes.position.array.slice(), normal: geo.attributes.normal.array.slice() } };
+      return { geo, ...tailWeights(geo, tail), rest: restOf(geo) };
     });
     return { backs, tails };
   }, [C.stripes, lay, lump, tail]);
@@ -342,29 +298,12 @@ export default function Cat({ config }) {
   // its weight, the normals turned with it — the lump's, and the painted
   // stripes' on it.
   const clock = useRef(0);
-  const q = useMemo(() => new THREE.Quaternion(), []);
-  const v = useMemo(() => new THREE.Vector3(), []);
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
     clock.current += dt;
     const angle = Math.sin(clock.current * 2.6) * 0.5 * C.swish * lay.tail.sway;
-    const root = lump.root;
-    const bend = ({ geo, rest, weights, index }) => {
-      const pos = geo.attributes.position.array;
-      const nor = geo.attributes.normal.array;
-      for (let j = 0; j < index.length; j++) {
-        const i = index[j], o = i * 3;
-        q.setFromAxisAngle(Y, angle * weights[i]);
-        v.set(rest.position[o] - root.x, rest.position[o + 1] - root.y, rest.position[o + 2] - root.z).applyQuaternion(q);
-        pos[o] = v.x + root.x; pos[o + 1] = v.y + root.y; pos[o + 2] = v.z + root.z;
-        v.set(rest.normal[o], rest.normal[o + 1], rest.normal[o + 2]).applyQuaternion(q);
-        nor[o] = v.x; nor[o + 1] = v.y; nor[o + 2] = v.z;
-      }
-      geo.attributes.position.needsUpdate = true;
-      geo.attributes.normal.needsUpdate = true;
-    };
-    bend(lump);
-    stripes?.tails.forEach(bend);
+    bendTail(lump, lump.root, angle);
+    stripes?.tails.forEach((t) => bendTail(t, lump.root, angle));
   });
 
   const head = new THREE.Vector3(...lay.face);
@@ -373,7 +312,13 @@ export default function Cat({ config }) {
   const markings = unlitMat(paint.markings);
   const F = 0; // the face's middle is on the front surface
   const muzzle = head.clone().add(new THREE.Vector3(0, -0.08, F + 0.02));
-  const socks = useMemo(() => lay.socks.map((sock) => (sock.r ? new THREE.SphereGeometry(sock.r, 12, 8) : new RoundedBoxGeometry(sock.half[0] * 2, sock.half[1] * 2, sock.half[2] * 2, 2, SOCK_ROUND))), [lay]);
+  // The collar, if it wears one: a band painted across the front under
+  // the muzzle, over the chest patch where they meet.
+  const collar = useMemo(() => (C.collar ? paintOn(lump.geo, new THREE.Vector3(...lay.collar.at), new THREE.Euler(...lay.collar.turn), lay.collar.size, { lift: 0.009 }) : null), [C.collar, lump, lay.collar]);
+  useEffect(() => () => collar?.dispose(), [collar]);
+  // Socks, on a tuxedo: each foot painted white, the lump's surface
+  // wherever it falls within a box round the foot.
+  const socks = useMemo(() => (C.paws ? lay.socks.map((sock) => paintOn(lump.geo, new THREE.Vector3(...sock.at), new THREE.Euler(0, sock.yaw ?? 0, 0), sock.size)) : []), [C.paws, lump, lay.socks]);
   useEffect(() => () => socks.forEach((g) => g.dispose()), [socks]);
   const earPink = useMemo(() => earPaint(), []);
   useEffect(() => () => earPink.geo.dispose(), [earPink]);
@@ -397,6 +342,7 @@ export default function Cat({ config }) {
       <mesh geometry={lump.geo} castShadow receiveShadow material={fur} />
       {/* The chest: a lighter patch painted on the front. */}
       {chest && <mesh geometry={chest} receiveShadow material={belly} />}
+      {bellyPatch && <mesh geometry={bellyPatch} receiveShadow material={belly} />}
       {/* Stripes painted over the back and round the tail, on a tabby. */}
       {stripes?.backs.map((g, i) => (
         <mesh key={i} geometry={g} receiveShadow material={markings} />
@@ -404,12 +350,12 @@ export default function Cat({ config }) {
       {stripes?.tails.map((t, i) => (
         <mesh key={i} geometry={t.geo} receiveShadow material={markings} />
       ))}
-      {/* Socks: each foot again, a hair bigger, in white, on a tuxedo —
-          a ball on a standing leg's foot, a rounded block on a paw. */}
-      {C.paws &&
-        lay.socks.map((sock, i) => (
-          <mesh key={i} geometry={socks[i]} position={sock.at} rotation-y={sock.yaw ?? 0} castShadow material={belly} />
-        ))}
+      {/* The collar, a band under the muzzle. */}
+      {collar && <mesh geometry={collar} receiveShadow material={unlitMat(paint.collar)} />}
+      {/* Socks painted round every foot, on a tuxedo. */}
+      {socks.map((g, i) => (
+        <mesh key={i} geometry={g} receiveShadow material={belly} />
+      ))}
       {/* The face, drawn on the block's front, leaning back with it. */}
       <group position={lay.face} rotation-x={lay.lean}>
         {/* Ears: four-sided pyramids with the point taken off, turned so

@@ -1,10 +1,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
 <style>
   /* object-library sidebar: the search box is in the toolbar, so the sidebar's goes;
-     "Create a new story" sits at the right of the heading; the sidebar's own tag
+     "Create a new story" goes; the sidebar's own tag
      filter button goes too (the toolbar has one). */
   form:has(#storybook-explorer-searchfield), label:has(#storybook-explorer-searchfield), #storybook-explorer-searchfield { display: none !important; }
   button[aria-label="Tag filters"], button[aria-label$="tag filters"], button[aria-label$="tag filter"] { display: none !important; }
-  :has(> button[aria-label="Create a new story"]) { display: flex; }
-  button[aria-label="Create a new story"] { margin-left: auto; order: 99; }
+  button[aria-label="Create a new story"] { display: none !important; }
+  /* the sidebar's "Find components  ⌘K" bar (the whole box, not just the input) and the
+     "Show new and modified stories" link both go. */
+  :has(> #storybook-explorer-searchfield) { display: none !important; }
+  :has(> button[aria-label$="since last commit"]), button[aria-label$="since last commit"] { display: none !important; }
+  /* the settings button goes, the tree/list toggle (manager.js) takes its place in the
+     header; the sidebar's stacked pieces lose their gaps so the list starts right under it. */
+  .sidebar-header button[aria-label="Settings"] { display: none !important; }
+  :has(> #storybook-explorer-menu) { gap: 0 !important; padding-top: 12px !important; }
+  :has(> #storybook-explorer-menu) > label { display: none !important; }
 </style>

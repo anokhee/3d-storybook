@@ -49,7 +49,7 @@ export const UMBRELLA = {
 // The catalog shows these, and the game's edit panel can (stories/helpers/knobs.js).
 export const UMBRELLA_KNOBS = [
   { label: "radius", path: "radius", step: 0.1, min: 0.5, max: 3 },
-  { label: "open", path: "open", step: 0.05, min: 0, max: 1 },
+  { label: "open", path: "open", bool: true, on: 1, off: 0 },
   { label: "panels", path: "panels", step: 1, min: 4, max: 16 },
   { label: "canopy", path: "colors.canopyA.hex", color: true },
   { label: "canopy alt", path: "colors.canopyB.hex", color: true },

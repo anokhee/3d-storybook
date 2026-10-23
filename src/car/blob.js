@@ -14,7 +14,9 @@ import { MarchingCubes } from "three/addons/objects/MarchingCubes.js";
 const smin = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.min(a, b) - h * h * k * 0.25; };
 let mc = null, mcRes = 0; // the grid is sized at construction, so it's remade when the resolution changes
 
-// o: { bodyR, bodyShape, headR, headShape, neckDir, neckLen, resolution, cutFrac?, cap?: { scallops, drip, thick } }
+// o: { bodyR, bodyShape, headR, headShape, neckDir, neckLen, resolution, cutFrac?, cap?: { scallops, drip, thick }, bumps? }
+// bumps: [{ at: Vector3 (from the body's center), r, blend }], spheres melted
+// into the body with their own fillet width: a shoulder the arm grows out of.
 // All geometry comes back relative to the body's center.
 export function buildBlobGeometry(o) {
   const cutFrac = o.cutFrac ?? 0.75; // the neck leaves the egg this far up it (fraction of the half-height)
@@ -27,7 +29,9 @@ export function buildBlobGeometry(o) {
 
   // --- the field --- the grid spans -1..1, scaled by E; margin because the outermost layer isn't polygonized
   const headReach = headR * Math.max(HS.x, HS.y, HS.z);
-  const E = Math.max(bodyR * BS.y, bodyCutDist + o.neckLen + headReach) * 1.12 + 0.1;
+  const bumps = o.bumps ?? [];
+  const bumpReach = bumps.reduce((m, b) => Math.max(m, b.at.length() + b.r), 0);
+  const E = Math.max(bodyR * BS.y, bodyCutDist + o.neckLen + headReach, bumpReach) * 1.12 + 0.1;
   const A = DIR.clone().multiplyScalar(bodyR * 0.6); // neck capsule starts inside the body...
   const B = headCenter;                               // ...and ends at the head's center
   const AB = B.clone().sub(A), ab2 = AB.lengthSq(), AdotAB = A.dot(AB);
@@ -45,7 +49,9 @@ export function buildBlobGeometry(o) {
     q.copy(A).addScaledVector(AB, t);
     const rN = (rNeck0 + (rNeck1 - rNeck0) * t) * (1 - 0.1 * Math.sin(Math.PI * t)); // tapered, slightly pinched
     const dNeck = p.distanceTo(q) - rN;
-    field[z * size * size + y * size + x] = -smin(smin(dBody, dNeck, k), dHead, k); // positive inside
+    let d = smin(smin(dBody, dNeck, k), dHead, k);
+    for (const b of bumps) d = smin(d, p.distanceTo(b.at) - b.r, b.blend);
+    field[z * size * size + y * size + x] = -d; // positive inside
   }
   mc.update();
 

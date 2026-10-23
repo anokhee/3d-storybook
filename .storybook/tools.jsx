@@ -1,8 +1,7 @@
 // THE TOOLBARS. The main one, above the viewport, keeps what is about the
 // whole catalog:
 //
-//   Search       a box; type an object's name and pick it to open its entry
-//   Tag filters  a menu of the entries' tags; the sidebar shows only those
+//   (The search box and the category/tag filter live in the sidebar, in manager.js.)
 //   Camera       (at the right) retakes the pictures of whatever changed
 //
 // The OBJECT BAR, a second row under it that is there only while a single
@@ -42,88 +41,6 @@ const GridIcon = () => (
     <rect x="1.5" y="8.5" width="4" height="4" /><rect x="8.5" y="8.5" width="4" height="4" />
   </svg>
 );
-
-// Every object in the index, as "Section / Name" (and " · variant" past
-// the Default), for the search box's suggestions
-function useObjects() {
-  const { index } = useStorybookState();
-  return React.useMemo(() => {
-    if (!index) return [];
-    return Object.values(index)
-      .filter((e) => e.type === "story" && e.id !== GRID_STORY)
-      .map((e) => ({ id: e.id, label: e.title.split("/").join(" / ") + (e.name === "Default" ? "" : ` · ${e.name}`) }))
-      .sort((a, b) => a.label.localeCompare(b.label));
-  }, [index]);
-}
-
-function SearchTool() {
-  const api = useStorybookApi();
-  const objects = useObjects();
-  const [text, setText] = React.useState("");
-  const go = (value) => {
-    const q = value.trim().toLowerCase();
-    if (!q) return;
-    // the suggestion picked, or else the first object whose name has what was typed
-    const hit = objects.find((o) => o.label.toLowerCase() === q) ?? objects.find((o) => o.label.toLowerCase().includes(q));
-    if (!hit) return;
-    api.selectStory(hit.id);
-    setText("");
-  };
-  return (
-    <label title="Search the objects" style={{ display: "flex", alignItems: "center", padding: "0 6px" }}>
-      <input
-        type="search"
-        list="object-search"
-        placeholder="Search objects…"
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          if (objects.some((o) => o.label === e.target.value)) go(e.target.value); // a suggestion picked
-        }}
-        onKeyDown={(e) => e.key === "Enter" && go(text)}
-        style={{ width: 200, font: "inherit", fontSize: 12, padding: "3px 8px", border: "1px solid #C3CED7", borderRadius: 3, background: "#F6F8FA", color: "#2B3A47" }}
-      />
-      <datalist id="object-search">
-        {objects.map((o) => <option key={o.id} value={o.label} />)}
-      </datalist>
-    </label>
-  );
-}
-
-// Tag filters: the tags the entries carry (their own, not Storybook's
-// housekeeping ones), each a switch; the sidebar then shows only the
-// entries with every tag that is on.
-const HOUSEKEEPING = new Set(["dev", "test", "manifest", "autodocs", "docs", "story", "unattached-mdx", "attached-mdx", "play-fn", "vitest"]);
-function TagTool() {
-  const api = useStorybookApi();
-  const { index } = useStorybookState();
-  const tags = React.useMemo(() => [...new Set(Object.values(index ?? {}).flatMap((e) => e.tags ?? []))].filter((t) => !HOUSEKEEPING.has(t)).sort(), [index]);
-  const [on, setOn] = React.useState([]);
-  React.useEffect(() => {
-    api.experimental_setFilters({ "object-library/tags": (item) => on.every((t) => item.tags?.includes(t)) });
-  }, [api, on]);
-  if (!tags.length) return null;
-  return (
-    <WithTooltip
-      placement="top"
-      closeOnOutsideClick
-      tooltip={() => (
-        <TooltipLinkList
-          links={tags.map((t) => ({
-            id: t,
-            title: t,
-            active: on.includes(t),
-            onClick: () => setOn((list) => (list.includes(t) ? list.filter((x) => x !== t) : [...list, t])),
-          }))}
-        />
-      )}
-    >
-      <IconButton title="Tag filters: show only the entries with these tags" active={on.length > 0}>
-        <span style={{ fontSize: 12 }}>Tag filters{on.length ? ` · ${on.length}` : ""}</span>
-      </IconButton>
-    </WithTooltip>
-  );
-}
 
 // The camera: retakes the catalog's pictures for every entry whose source
 // has changed since its picture (or that has none), off the running dev
@@ -295,18 +212,6 @@ function ObjectBar({ children }) {
 
 addons.register("object-library/tools", () => {
   const onStories = ({ viewMode }) => viewMode === "story";
-  addons.add("object-library/search", {
-    type: types.TOOL,
-    title: "Search",
-    match: onStories,
-    render: () => <SearchTool />,
-  });
-  addons.add("object-library/tags", {
-    type: types.TOOL,
-    title: "Tag filters",
-    match: onStories,
-    render: () => <TagTool />,
-  });
   // The object bar, wrapped round the canvas (see ObjectBar)
   addons.add("object-library/object-bar", {
     type: types.PREVIEW,

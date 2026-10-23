@@ -48,7 +48,7 @@ export const TOILET = {
 // The catalog shows these, and the game's edit panel can (stories/helpers/knobs.js).
 export const TOILET_KNOBS = [
   { label: "size", path: "size", step: 0.1, min: 0.4, max: 2.5 },
-  { label: "lid", path: "lid", step: 0.05, min: 0, max: 1 },
+  { label: "lid up", path: "lid", bool: true, on: 1, off: 0 },
   { label: "porcelain", path: "colors.porcelain.hex", color: true },
   { label: "seat", path: "colors.seat.hex", color: true },
   { label: "water", path: "colors.water.hex", color: true },

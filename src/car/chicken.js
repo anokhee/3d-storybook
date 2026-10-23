@@ -67,6 +67,7 @@ export function buildChicken(overrides = {}, finish = standard) {
   // shank, leaving the belly at a forward angle, with the foot flat below it
   const toeLen = 0.38, toeR = 0.035;
   const shankLen = 0.75, shankTilt = 0.12; // radians forward of vertical
+  const SIT_THIGH = 1.35; // driving: the hip's turn, forward from hanging straight down
   const legH = toeR * 2 + shankLen * Math.cos(shankTilt); // hip height: shank bottom sits on the toes
   // everything above the hips sits in the torso, which bobs when walking and
   // pitches in the air; the legs hang from hip pivots directly on the chicken
@@ -246,11 +247,20 @@ export function buildChicken(overrides = {}, finish = standard) {
     hip.rotation.z = shankTilt;
     hip.userData.side = side;
     chicken.add(hip);
-    addMesh(hip, new THREE.CylinderGeometry(0.055, 0.05, shankLen, 8), legMat, new THREE.Vector3(0, -shankLen / 2, 0));
+    // the leg is two halves with a knee between, straight (as before) unless
+    // the chicken is driving, when the upper half lies forward over the seat
+    // and the lower half drops over its edge
+    addMesh(hip, new THREE.CylinderGeometry(0.055, 0.0525, shankLen / 2, 8), legMat, new THREE.Vector3(0, -shankLen / 4, 0));
+    const knee = new THREE.Group();
+    knee.position.set(0, -shankLen / 2, 0);
+    hip.add(knee);
+    addMesh(knee, new THREE.SphereGeometry(0.056, 8, 6), legMat, new THREE.Vector3());
+    addMesh(knee, new THREE.CylinderGeometry(0.0525, 0.05, shankLen / 2, 8), legMat, new THREE.Vector3(0, -shankLen / 4, 0));
+    hip.userData.knee = knee;
     const foot = new THREE.Group();
-    foot.position.set(0, -shankLen, 0);
+    foot.position.set(0, -shankLen / 2, 0);
     foot.rotation.z = -shankTilt;
-    hip.add(foot);
+    knee.add(foot);
     // three toes fanning forward from the base of the shank, plus a shorter back talon
     const toeGeo = new THREE.CylinderGeometry(toeR, toeR * 0.8, toeLen, 6).translate(0, toeLen / 2, 0); // base at origin
     for (const spread of [-1, 0, 1]) {
@@ -320,7 +330,8 @@ export function buildChicken(overrides = {}, finish = standard) {
   // opposite their leg while walking.
   let flapT = 0, walkPhase = 0;
   const lerpTo = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, rate * dt);
-  // state: { moving, grounded, gliding, vy }
+  // state: { moving, grounded, gliding, vy, driving }: `driving` holds the
+  // wings out ahead, as if on a steering wheel, and the legs bent over the seat
   function animate(state, dt) {
     let raise = params.wingRaise;
     if (!state.grounded) {
@@ -335,12 +346,15 @@ export function buildChicken(overrides = {}, finish = standard) {
       let swing = 0, splay = 0;
       if (walking) swing = side * 0.55 * Math.sin(walkPhase);
       else if (!state.grounded) { swing = state.gliding ? -0.45 : -0.2; splay = -side * (state.gliding ? 0.4 : 0.12); }
-      hip.rotation.z = lerpTo(hip.rotation.z, shankTilt + swing, 12, dt);
+      // driving: the thigh forward and a touch down, the shin back to its usual slant
+      hip.rotation.z = lerpTo(hip.rotation.z, state.driving ? SIT_THIGH : shankTilt + swing, 12, dt);
       hip.rotation.x = lerpTo(hip.rotation.x, splay, 8, dt);
+      const knee = hip.userData.knee;
+      knee.rotation.z = lerpTo(knee.rotation.z, state.driving ? shankTilt - SIT_THIGH : 0, 12, dt);
     }
     for (const { pivot } of wings) {
       const side = pivot.userData.side;
-      const target = walking ? -side * 0.45 * Math.sin(walkPhase) : 0;
+      const target = state.driving ? 1.4 : walking ? -side * 0.45 * Math.sin(walkPhase) : 0;
       pivot.rotation.z = lerpTo(pivot.rotation.z, target, 12, dt);
     }
     const bob = walking ? 0.05 * (1 - Math.cos(2 * walkPhase)) / 2 : 0; // two small bobs per stride

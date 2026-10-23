@@ -19,6 +19,7 @@ import { toId, storyNameFromExport } from "storybook/internal/csf";
 // (the list of story modules is in helpers/entries.js)
 
 import { modules } from "./helpers/entries.js";
+import { STATUSES, statusOf, loadMeta, saveMeta, tagsOf } from "../.storybook/meta.js";
 
 // Each entry: its sidebar name, section, story id (the picture's name),
 // tags (the object's and the story's own: "polymorphic" earns a pill), and
@@ -60,20 +61,22 @@ const open = (id) => addons.getChannel().emit("selectStory", { storyId: id });
 
 const mono = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
-// A polymorphic object (one dealt from many knobs: the dolly, the statue
-// head) wears a pill on its picture's top right corner.
+// An entry's status (set in the drawer, kept in public/library-meta.json)
+// wears a pill on its picture's top right corner; a polymorphic object
+// (one dealt from many knobs: the dolly, the statue head) one on the top left.
 const PILL = { position: "absolute", top: 8, right: 8, padding: "3px 7px", borderRadius: 3, fontSize: 9, letterSpacing: "0.04em", textTransform: "uppercase", color: "#FFFFFF", background: "#3D7BD9", pointerEvents: "none" };
 
 // A card: the picture with the name under it; the picked one outlined.
 // (The list form of the catalog is the sidebar, each entry with its picture:
 // .storybook/manager.js renderLabel.)
-function Card({ entry, picked, onPick }) {
-  const pill = entry.tags.includes("polymorphic");
+function Card({ entry, meta, picked, onPick }) {
+  const poly = entry.tags.includes("polymorphic");
+  const status = statusOf(meta?.status);
   const frame = { position: "relative", display: "block", outline: picked ? "2px solid #3D7BD9" : "none", outlineOffset: 2, borderRadius: 4 };
   return (
     <button
       onClick={() => onPick(entry)}
-      title={`Look at ${entry.name}`}
+      title={meta?.description ? `${entry.name}: ${meta.description}` : `Look at ${entry.name}`}
       style={{ all: "unset", cursor: "pointer", display: "flex", flexDirection: "column", gap: 8 }}
     >
       <span style={frame}>
@@ -83,7 +86,8 @@ function Card({ entry, picked, onPick }) {
           loading="lazy"
           style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: 4, background: "#DDE4EA", display: "block" }}
         />
-        {pill && <span style={PILL}>Very Customizable</span>}
+        {status.color && <span style={{ ...PILL, background: status.color }}>{status.label}</span>}
+        {poly && <span style={{ ...PILL, right: "auto", left: 8 }}>Very Customizable</span>}
       </span>
       <span style={{ fontSize: 12, color: "#2B3A47" }}>{entry.name}</span>
       <span style={{ fontSize: 10, color: "#66788A", marginTop: -4 }}>{entry.section}</span>
@@ -118,7 +122,32 @@ function Knob({ name, type, value, onChange }) {
 // (the message a manager sends its preview), so the frame never reloads
 // and the object just moves.
 const CHANNEL = "storybook-channel";
-function Drawer({ entry, globals, onClose }) {
+// The entry's notes: a description, tags and a status, saved as they are
+// changed (to public/library-meta.json, through the dev server).
+function Notes({ id, meta, onSaved }) {
+  const [text, setText] = useState(meta?.description ?? "");
+  const [tags, setTags] = useState((meta?.tags ?? []).join(", "));
+  const [note, setNote] = useState("");
+  useEffect(() => { setText(meta?.description ?? ""); setTags((meta?.tags ?? []).join(", ")); setNote(""); }, [id]);
+  const save = (patch) => saveMeta(id, patch).then((m) => { onSaved(id, m); setNote("saved"); setTimeout(() => setNote(""), 1200); }).catch(() => setNote("not saved: only the dev server can save"));
+  const field = { font: "inherit", fontSize: 11, padding: "4px 6px", border: "1px solid #C3CED7", borderRadius: 3, background: "#FFFFFF", color: "#2B3A47", boxSizing: "border-box", width: "100%" };
+  const label = { fontSize: 10, letterSpacing: "0.04em", textTransform: "uppercase", color: "#66788A" };
+  return (
+    <section style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <span style={label}>Description</span>
+      <textarea rows={3} value={text} placeholder="What is it, what's left to do…" onChange={(e) => setText(e.target.value)} onBlur={() => text.trim() !== (meta?.description ?? "") && save({ description: text })} style={{ ...field, resize: "vertical" }} />
+      <span style={label}>Tags</span>
+      <input type="text" value={tags} placeholder="comma, separated" onChange={(e) => setTags(e.target.value)} onBlur={() => tagsOf(tags).join(",") !== (meta?.tags ?? []).join(",") && save({ tags: tagsOf(tags) })} style={field} />
+      <span style={label}>Status</span>
+      <select value={meta?.status ?? ""} onChange={(e) => save({ status: e.target.value })} style={field}>
+        {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+      </select>
+      <span style={{ fontSize: 10, color: note.startsWith("not") ? "#C9504A" : "#66788A", minHeight: 12 }}>{note}</span>
+    </section>
+  );
+}
+
+function Drawer({ entry, meta, onSaved, globals, onClose }) {
   const frame = useRef(null);
   const [args, setArgs] = useState(entry.args);
   useEffect(() => setArgs(entry.args), [entry]);
@@ -137,6 +166,7 @@ function Drawer({ entry, globals, onClose }) {
         <button style={btn} onClick={onClose} title="Close">×</button>
       </header>
       <iframe ref={frame} title={entry.name} src={src} style={{ width: "100%", aspectRatio: "1 / 1", border: 0, borderRadius: 4, background: "#DDE4EA" }} />
+      <Notes id={entry.id} meta={meta} onSaved={onSaved} />
       {knobs.length ? (
         <section style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           {knobs.map(([name, type]) => <Knob key={name} name={name} type={type} value={args[name]} onChange={(v) => setArgs((a) => ({ ...a, [name]: v }))} />)}
@@ -156,6 +186,9 @@ const savePlace = (patch) => { try { sessionStorage.setItem(PLACE, JSON.stringif
 
 function Catalog({ globals = {} }) {
   const entries = useMemo(entriesOf, []);
+  const [metas, setMetas] = useState({});
+  useEffect(() => { loadMeta().then(setMetas); }, []);
+  const saved = (id, m) => setMetas((all) => ({ ...all, [id]: m }));
   const place = useMemo(savedPlace, []);
   const [picked, setPicked] = useState(() => entries.find((e) => e.id === place.picked) ?? null);
   // Back where you were: the scroll, once the cards are laid out (and once
@@ -207,9 +240,9 @@ function Catalog({ globals = {} }) {
       </nav>
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
         <section style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "20px 16px" }}>
-          {shown.map((e) => <Card key={e.id} entry={e} picked={picked?.id === e.id} onPick={setPicked} />)}
+          {shown.map((e) => <Card key={e.id} entry={e} meta={metas[e.id]} picked={picked?.id === e.id} onPick={setPicked} />)}
         </section>
-        {picked && <Drawer entry={picked} globals={globals} onClose={() => setPicked(null)} />}
+        {picked && <Drawer entry={picked} meta={metas[picked.id]} onSaved={saved} globals={globals} onClose={() => setPicked(null)} />}
       </div>
     </main>
   );

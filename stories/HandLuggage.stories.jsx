@@ -17,6 +17,3 @@ export default {
 };
 
 export const Default = {};
-
-// Laid down on its back, the handle edge toward you.
-export const LyingFlat = { args: { pose: "flat" } };

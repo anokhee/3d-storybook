@@ -1,6 +1,9 @@
-// Snail: a toy snail crawling along the ground facing +z, its shell a
-// tube wound along a logarithmic spiral, its eye stalks waving. Its code
-// lives in src/nouns/snail/ (Snail.jsx, defaults and knobs in objects.js).
+// Snail: the snail car (Vehicles/Car/Snail) without the car, crawling
+// along the ground facing +z: a big coiled shell with a raised spiral on
+// each flank, over a soft foot rising into a smiling head with rosy
+// cheeks and two long swaying eyestalks, a streak of slime under it. Its
+// code lives in src/nouns/snail/ (Snail.jsx, defaults and knobs in
+// objects.js), built from the car's own snail (src/car/snailcar.js).
 import Snail from "../src/nouns/snail/Snail.jsx";
 import { SNAIL, SNAIL_KNOBS } from "../src/nouns/snail/objects.js";
 import { knobStory } from "./helpers/knobs.js";
@@ -16,8 +19,3 @@ export default {
 };
 
 export const Default = {};
-
-// A garden snail: a brown shell on a paler foot.
-export const Garden = {
-  args: { colorsShell: "#8B5E3C", colorsFoot: "#F2E9DC" },
-};

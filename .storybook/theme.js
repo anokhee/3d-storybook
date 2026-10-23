@@ -16,7 +16,7 @@ export const storyTheme = create({
   base: "light",            // "light" or "dark": sets sensible defaults
 
   // Top-left title and where clicking it goes.
-  brandTitle: "object catalog",
+  brandTitle: "Object Catalog",
   brandUrl: "https://github.com/anokhee/3d-storybook",
   // brandImage: "logo.svg",   // uncomment to show a logo instead of text
 
