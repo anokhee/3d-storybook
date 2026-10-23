@@ -134,3 +134,4 @@ Pages once in the repo settings (Settings → Pages → Source: GitHub Actions).
 
 To build locally: `npm run build-storybook` writes a static site to
 `storybook-static/`. Any static host can serve it.
+# 3d-storybook
