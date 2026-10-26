@@ -19,10 +19,10 @@ import { toId, storyNameFromExport } from "storybook/internal/csf";
 // (the list of story modules is in helpers/entries.js)
 
 import { modules } from "./helpers/entries.js";
-import { STATUSES, statusOf, loadMeta, saveMeta, tagsOf } from "../.storybook/meta.js";
+import { STATUSES, statusOf, loadMeta, saveMeta, tagsOf, SPECIAL_TAGS } from "../.storybook/meta.js";
 
 // Each entry: its sidebar name, section, story id (the picture's name),
-// tags (the object's and the story's own: "polymorphic" earns a pill), and
+// tags (the object's and the story's own), and
 // its knobs (argTypes) with their starting values (args), for the drawer.
 function entriesOf() {
   const out = [];
@@ -62,21 +62,25 @@ const open = (id) => addons.getChannel().emit("selectStory", { storyId: id });
 const mono = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
 
 // An entry's status (set in the drawer, kept in public/library-meta.json)
-// wears a pill on its picture's top right corner; a polymorphic object
-// (one dealt from many knobs: the dolly, the statue head) one on the top left.
+// wears a pill on its picture's top right corner; its tags (set there
+// too, or in bulk) go under its category, as small chips, the special
+// ones (SPECIAL_TAGS in .storybook/meta.js: "polymorphic") in their colour.
 const PILL = { position: "absolute", top: 8, right: 8, padding: "3px 7px", borderRadius: 3, fontSize: 9, letterSpacing: "0.04em", textTransform: "uppercase", color: "#FFFFFF", background: "#3D7BD9", pointerEvents: "none" };
 
 // A card: the picture with the name under it; the picked one outlined.
+// In bulk mode (`selecting`) a click ticks it instead, and a ticked card
+// wears a check in its bottom left corner.
 // (The list form of the catalog is the sidebar, each entry with its picture:
 // .storybook/manager.js renderLabel.)
-function Card({ entry, meta, picked, onPick }) {
-  const poly = entry.tags.includes("polymorphic");
+function Card({ entry, meta, picked, onPick, selecting, selected }) {
+  const tags = meta?.tags ?? [];
   const status = statusOf(meta?.status);
-  const frame = { position: "relative", display: "block", outline: picked ? "2px solid #3D7BD9" : "none", outlineOffset: 2, borderRadius: 4 };
+  const frame = { position: "relative", display: "block", outline: picked || selected ? "2px solid #3D7BD9" : "none", outlineOffset: 2, borderRadius: 4 };
   return (
     <button
       onClick={() => onPick(entry)}
-      title={meta?.description ? `${entry.name}: ${meta.description}` : `Look at ${entry.name}`}
+      title={selecting ? `${selected ? "Untick" : "Tick"} ${entry.name}` : meta?.description ? `${entry.name}: ${meta.description}` : `Look at ${entry.name}`}
+      aria-pressed={selecting ? selected : undefined}
       style={{ all: "unset", cursor: "pointer", display: "flex", flexDirection: "column", gap: 8 }}
     >
       <span style={frame}>
@@ -84,13 +88,25 @@ function Card({ entry, meta, picked, onPick }) {
           src={`thumbs/${entry.id}.png`}
           alt={entry.name}
           loading="lazy"
-          style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: 4, background: "#DDE4EA", display: "block" }}
+          style={{ width: "100%", aspectRatio: "1 / 1", objectFit: "cover", borderRadius: 4, background: "#DDE4EA", display: "block", opacity: selecting && !selected ? 0.7 : 1 }}
         />
         {status.color && <span style={{ ...PILL, background: status.color }}>{status.label}</span>}
-        {poly && <span style={{ ...PILL, right: "auto", left: 8 }}>Very Customizable</span>}
+        {selecting && (
+          <span style={{ position: "absolute", bottom: 8, left: 8, width: 18, height: 18, borderRadius: 3, border: "1px solid #3D7BD9", background: selected ? "#3D7BD9" : "#FFFFFF", color: "#FFFFFF", fontSize: 12, lineHeight: "18px", textAlign: "center", pointerEvents: "none" }}>
+            {selected ? "✓" : ""}
+          </span>
+        )}
       </span>
       <span style={{ fontSize: 12, color: "#2B3A47" }}>{entry.name}</span>
       <span style={{ fontSize: 10, color: "#66788A", marginTop: -4 }}>{entry.section}</span>
+      {tags.length > 0 && (
+        <span style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: -2 }}>
+          {tags.map((t) => {
+            const special = SPECIAL_TAGS[t];
+            return <span key={t} style={{ fontSize: 9, padding: "1px 7px", borderRadius: 999, border: `1px solid ${special?.border ?? "#C3CED7"}`, background: special?.background ?? "#F6F8FA", color: special?.color ?? "#4F6E86" }}>{t}</span>;
+          })}
+        </span>
+      )}
     </button>
   );
 }
@@ -153,6 +169,21 @@ function Drawer({ entry, meta, onSaved, globals, onClose }) {
   useEffect(() => setArgs(entry.args), [entry]);
   const send = (type, payload) => frame.current?.contentWindow?.postMessage(JSON.stringify({ key: CHANNEL, event: { type, args: [payload], from: "manager" } }), "*");
   useEffect(() => { send("updateStoryArgs", { storyId: entry.id, updatedArgs: args }); }, [args]);
+  // And back: a story that changes its own args (the duck's kind paints
+  // it) tells its frame's shell; the knobs take those up, changed ones only
+  useEffect(() => {
+    const onMessage = (e) => {
+      if (e.source !== frame.current?.contentWindow || typeof e.data !== "string") return;
+      let msg;
+      try { msg = JSON.parse(e.data); } catch { return; }
+      const ev = msg?.key === CHANNEL ? msg.event : null;
+      const p = ev?.type === "storyArgsUpdated" ? ev.args?.[0] : null;
+      if (p?.storyId !== entry.id || !p.args) return;
+      setArgs((a) => (Object.keys(p.args).some((k) => p.args[k] !== a[k] && typeof p.args[k] !== "object") ? { ...a, ...p.args } : a));
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [entry.id]);
   useEffect(() => { send("updateGlobals", { globals: { lighting: globals.lighting ?? "toon", daylight: globals.daylight ?? 1 } }); }, [globals.lighting, globals.daylight]);
   // The address the frame opens at: the object as its entry has it, under the light and hour of the moment
   const src = useMemo(() => `iframe.html?id=${entry.id}&viewMode=story&globals=lighting:${globals.lighting ?? "toon"};daylight:${globals.daylight ?? 1}&args=${argsParam(entry.args)}`, [entry.id]);
@@ -174,6 +205,48 @@ function Drawer({ entry, meta, onSaved, globals, onClose }) {
         </section>
       ) : <span style={{ fontSize: 11, color: "#66788A" }}>No controls on this one.</span>}
     </aside>
+  );
+}
+
+// Bulk mode's bar: how many are ticked, ticking all shown or none, and
+// what to do to all of them at once: add or take away tags, or set a
+// status. Each entry is saved as the drawer saves one (saveMeta).
+function BulkBar({ ids, shownIds, metas, onSaved, onSelect }) {
+  const [tags, setTags] = useState("");
+  const [note, setNote] = useState("");
+  const apply = async (label, patchOf) => {
+    if (!ids.length) return;
+    try {
+      const saved = await Promise.all(ids.map((id) => saveMeta(id, patchOf(metas[id] ?? {})).then((m) => [id, m])));
+      saved.forEach(([id, m]) => onSaved(id, m));
+      setNote(`${label} on ${ids.length} object${ids.length === 1 ? "" : "s"}`);
+    } catch { setNote("not saved: only the dev server can save"); }
+    setTimeout(() => setNote(""), 2000);
+  };
+  const addTags = () => { const t = tagsOf(tags); if (t.length) apply(`added ${t.join(", ")}`, (m) => ({ tags: [...new Set([...(m.tags ?? []), ...t])] })).then(() => setTags("")); };
+  const removeTags = () => { const t = tagsOf(tags); if (t.length) apply(`removed ${t.join(", ")}`, (m) => ({ tags: (m.tags ?? []).filter((x) => !t.includes(x)) })).then(() => setTags("")); };
+  const field = { font: "inherit", fontSize: 11, padding: "4px 6px", border: "1px solid #C3CED7", borderRadius: 3, background: "#FFFFFF", color: "#2B3A47" };
+  const btn = { ...field, padding: "4px 9px", cursor: "pointer", background: "#F6F8FA" };
+  const off = !ids.length;
+  const allShown = shownIds.length > 0 && shownIds.every((id) => ids.includes(id));
+  return (
+    <section style={{ position: "sticky", top: 0, zIndex: 2, display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8, padding: "10px 12px", marginBottom: 20, background: "#F6F8FA", border: "1px solid #DDE4EA", borderRadius: 6 }}>
+      <span style={{ fontSize: 11, color: "#2B3A47", minWidth: 84 }}>{ids.length} selected</span>
+      <button style={btn} onClick={() => onSelect(allShown ? ids.filter((id) => !shownIds.includes(id)) : [...new Set([...ids, ...shownIds])])}>
+        {allShown ? "Untick shown" : "Tick all shown"}
+      </button>
+      <button style={btn} disabled={off} onClick={() => onSelect([])}>Clear</button>
+      <span style={{ width: 1, alignSelf: "stretch", background: "#DDE4EA" }} />
+      <input type="text" value={tags} placeholder="tags, comma separated" onChange={(e) => setTags(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addTags()} style={{ ...field, width: 180 }} />
+      <button style={btn} disabled={off || !tagsOf(tags).length} onClick={addTags}>Add tags</button>
+      <button style={btn} disabled={off || !tagsOf(tags).length} onClick={removeTags}>Remove tags</button>
+      <span style={{ width: 1, alignSelf: "stretch", background: "#DDE4EA" }} />
+      <select value="" disabled={off} onChange={(e) => { const s = statusOf(e.target.value); apply(`status "${s.label}"`, () => ({ status: s.value })); }} style={field}>
+        <option value="" disabled>Set status…</option>
+        {STATUSES.map((s) => <option key={s.value || "none"} value={s.value}>{s.label}</option>)}
+      </select>
+      <span style={{ fontSize: 10, color: note.startsWith("not") ? "#C9504A" : "#66788A" }}>{note}</span>
+    </section>
   );
 }
 
@@ -214,13 +287,33 @@ function Catalog({ globals = {} }) {
   const [tab, setTab] = useState(place.tab ?? "All");
   useEffect(() => savePlace({ tab }), [tab]);
   const shown = tab === "All" ? entries : entries.filter((e) => e.top === tab);
+  // Bulk mode: clicking a card ticks it; the ticked ones survive changing tab
+  const [bulk, setBulk] = useState(false);
+  const [selected, setSelected] = useState([]);
+  const toggleBulk = () => { setBulk((b) => !b); setSelected([]); setPicked(null); };
+  const tick = (e) => setSelected((s) => (s.includes(e.id) ? s.filter((id) => id !== e.id) : [...s, e.id]));
+  useEffect(() => {
+    if (!bulk) return;
+    const onKey = (e) => e.key === "Escape" && toggleBulk();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [bulk]);
   return (
     <main style={{ fontFamily: mono, background: "#EEF2F5", minHeight: "100vh", padding: "28px 32px 48px", boxSizing: "border-box" }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
         <h1 style={{ fontSize: 14, fontWeight: 600, margin: 0, color: "#2B3A47", letterSpacing: "0.04em", textTransform: "uppercase" }}>
           Object catalog
         </h1>
-        <span style={{ fontSize: 11, color: "#66788A" }}>{shown.length} of {entries.length} objects</span>
+        <span style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+          <span style={{ fontSize: 11, color: "#66788A" }}>{shown.length} of {entries.length} objects</span>
+          <button
+            onClick={toggleBulk}
+            title={bulk ? "Leave bulk mode (Esc)" : "Tick several objects and tag them or set their status at once"}
+            style={{ font: "inherit", fontSize: 11, padding: "4px 9px", borderRadius: 3, cursor: "pointer", border: "1px solid #C3CED7", background: bulk ? "#4F6E86" : "#F6F8FA", color: bulk ? "#EEF2F5" : "#2B3A47" }}
+          >
+            {bulk ? "Done" : "Bulk edit"}
+          </button>
+        </span>
       </header>
       <nav style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 20 }}>
         {tabs.map((name) => (
@@ -238,11 +331,12 @@ function Catalog({ globals = {} }) {
           </button>
         ))}
       </nav>
+      {bulk && <BulkBar ids={selected} shownIds={shown.map((e) => e.id)} metas={metas} onSaved={saved} onSelect={setSelected} />}
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
         <section style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "20px 16px" }}>
-          {shown.map((e) => <Card key={e.id} entry={e} meta={metas[e.id]} picked={picked?.id === e.id} onPick={setPicked} />)}
+          {shown.map((e) => <Card key={e.id} entry={e} meta={metas[e.id]} picked={!bulk && picked?.id === e.id} onPick={bulk ? tick : setPicked} selecting={bulk} selected={selected.includes(e.id)} />)}
         </section>
-        {picked && <Drawer entry={picked} meta={metas[picked.id]} onSaved={saved} globals={globals} onClose={() => setPicked(null)} />}
+        {picked && !bulk && <Drawer entry={picked} meta={metas[picked.id]} onSaved={saved} globals={globals} onClose={() => setPicked(null)} />}
       </div>
     </main>
   );

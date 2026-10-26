@@ -8,7 +8,7 @@ import { knobStory } from "./helpers/knobs.js";
 const K = knobStory(WATER, WATER_KNOBS, {}, {});
 
 export default {
-  title: "Nature/Water/Spring",
+  title: "Terrain/Water/Spring",
   parameters: { stage: { ground: "planet" } },
   argTypes: K.argTypes,
   args: K.args,

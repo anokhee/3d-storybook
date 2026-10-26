@@ -1,8 +1,8 @@
 import { solid } from "../../world/palette.js";
 
 // The fish's own colours, the steel drums' fish (src/xylophone/palette.js):
-// an orange body over a cream belly, coral fins, pink line lips, white bead
-// eyes with black pupils.
+// an orange body over a cream belly, coral fins, pink line lips, white
+// eyeballs with big black pupils.
 const paint = {
   body: solid("#F2A33A"),
   belly: solid("#FFF1D6"),
@@ -26,8 +26,8 @@ const paint = {
 //           (how tall each lobe is), `spread` (radians between them)
 //   fin     the flat fin down its back (`dorsal`) and the paddles at
 //           either side (`side`), each { length, height }
-//   eye     white beads of `radius` either side of the head, a pupil half
-//           their size set on each
+//   eye     white eyeballs of `radius` either side of the head, each with
+//           a big round pupil (world/eye.jsx)
 //   lips    the mouth, two lines `thick` round along the belly's top
 //           edge, one `gap` (radians) above the other, running `across`
 //           of a half turn round the nose

@@ -1,6 +1,6 @@
 import { PALETTE } from "../../../world/palette.js";
 import { merge } from "../../../world/merge.js";
-import { HOUSE } from "../objects.js";
+import { HOUSE, windowShapeKnobs } from "../objects.js";
 
 // A two-story house: the house (see HOUSE) grown a floor — its walls
 // stood taller, a second row of windows across the upper floor — with a
@@ -66,7 +66,7 @@ export const TWO_STORY_HOUSE_KNOBS = [
   { label: "garage width", path: "garage.width", step: 0.5, min: 1 },
   { label: "garage height", path: "garage.height", step: 0.2, min: 1 },
   { label: "door width", path: "door.width", step: 0.1, min: 0.5 },
-  { label: "door height", path: "door.height", step: 0.1, min: 1 },
+  ...windowShapeKnobs(),
   { label: "walls", path: "body.color.hex", color: true },
   { label: "roof", path: "roof.color.hex", color: true },
   { label: "door", path: "door.color.hex", color: true },

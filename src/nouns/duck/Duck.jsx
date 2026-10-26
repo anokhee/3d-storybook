@@ -3,6 +3,7 @@ import { useFrame } from "@react-three/fiber";
 
 import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
+import { Eye, AHEAD } from "../../world/eye.jsx";
 import { DUCK } from "./objects.js";
 
 // Where the body's middle sits off the ground: on its legs, or, for a
@@ -109,10 +110,10 @@ export default function Duck({ config }) {
         >
           <capsuleGeometry args={[C.bill.thickness / 2, C.bill.width - C.bill.thickness, 4, 12]} />
         </mesh>
+        {/* the eyes, white eyeballs either side of the head, looking out
+            the way the head's surface faces there, forward and out */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[(s * C.eye.apart) / 2, eyeY, eyeZ]} castShadow material={unlitMat(P.eye)}>
-            <sphereGeometry args={[C.eye.radius, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[(s * C.eye.apart) / 2, eyeY, eyeZ]} r={C.eye.radius} look={[s, 0, AHEAD]} face={[(s * C.eye.apart) / 2, eyeY, eyeZ]} pupil={P.eye} />
         ))}
       </group>
       {/* the legs and webbed feet, none on a rubber duck */}

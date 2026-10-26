@@ -23,13 +23,13 @@ const paint = {
 // block out of its front painted pink and two dark bead nostrils on it,
 // and a thin tail out of the top of the rump hanging down with a tuft
 // at its tip — with two short pale horns on top of the head pointing up
-// and out, two flat ears out to its sides, bead eyes, dark hooves
-// painted round the feet, a pink udder under the belly towards the
-// rear, big irregular patches painted over the back, flanks and head
-// (each two or three discs overlapping, so none is a plain spot) and,
-// if it wears one, a strap round the neck with a brass bell hung off
-// it. It stands on the ground facing +z, about 1.1 tall to the tips of
-// its horns and 1.5 long nose to tail.
+// and out, two flat ears out to its sides, white eyeballs with a dark
+// pupil, dark hooves painted round the feet, a pink udder under the
+// belly towards the rear, big irregular patches painted over the back,
+// flanks and head (each two or three discs overlapping, so none is a
+// plain spot) and, if it wears one, a strap round the neck with a
+// brass bell hung off it. It stands on the ground facing +z, about 1.1
+// tall to the tips of its horns and 1.5 long nose to tail.
 //
 //   size     the whole cow scaled; 1 is a small cow beside the furniture
 //   wag      how much the tail swings, 0 still to 1 a full swing

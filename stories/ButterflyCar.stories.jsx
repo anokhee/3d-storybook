@@ -5,7 +5,7 @@
 // flap as it drives, the wheels tucked under it (src/car/bugcar.js). See
 // stories/helpers/bugcar.jsx.
 import { useMemo } from "react";
-import { BugCar } from "./helpers/bugcar.jsx";
+import { BugCar, BUG_CAR_FRAME } from "./helpers/bugcar.jsx";
 import { DRIVERS } from "./helpers/driver.jsx";
 import { BUTTERFLY } from "../src/car/bugcar.js";
 
@@ -17,7 +17,8 @@ function Story({ speed, driver, wing, wingEdge, wingDot, shell, band, trim, whee
 }
 
 export default {
-  title: "Vehicles/Car/Butterfly",
+  title: "Vehicles/Bug Cars/Butterfly",
+  parameters: { stage: { frame: BUG_CAR_FRAME } },
   argTypes: {
     speed: { control: { type: "range", min: 0, max: 20, step: 0.5 }, name: "speed (wheels & wings)" },
     driver: { control: "select", options: DRIVERS },

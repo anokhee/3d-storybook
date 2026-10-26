@@ -130,6 +130,13 @@ function spotOf(position, { width, length }) {
 // along (for the grass to keep back), and `draw` how it goes on screen —
 // given, too, whether it is the edit view drawing (see Station's `edit`),
 // for what shows only there. A new noun is one entry here.
+// The houses are drawn scaled (their `scale`, so a door stands a cat tall),
+// so their size helpers, which measure the unscaled house, are scaled too.
+const scaledBy = (of) => (C, ...rest) => {
+  const v = of(C, ...rest), k = C.scale ?? 1;
+  return typeof v === "number" ? v * k : { ...v, x: v.x * k, z: v.z * k };
+};
+
 const NOUNS = {
   // Nothing, on a spot: only the edit view draws it, a flat disc on the
   // ground to pick and drag by.
@@ -235,32 +242,32 @@ const NOUNS = {
   },
   house: {
     defaults: HOUSE,
-    top: houseHeightOf,
-    footprint: houseFootprintOf,
+    top: scaledBy(houseHeightOf),
+    footprint: scaledBy(houseFootprintOf),
     draw: (H, key) => <House key={key} config={H} />,
   },
   twoStoryHouse: {
     defaults: TWO_STORY_HOUSE,
-    top: twoStoryHouseHeightOf,
-    footprint: twoStoryHouseFootprintOf,
+    top: scaledBy(twoStoryHouseHeightOf),
+    footprint: scaledBy(twoStoryHouseFootprintOf),
     draw: (H, key) => <TwoStoryHouse key={key} config={H} />,
   },
   mushroomHouse: {
     defaults: MUSHROOM_HOUSE,
-    top: mushroomHouseHeightOf,
-    footprint: mushroomHouseFootprintOf,
+    top: scaledBy(mushroomHouseHeightOf),
+    footprint: scaledBy(mushroomHouseFootprintOf),
     draw: (M, key) => <MushroomHouse key={key} config={M} />,
   },
   trailer: {
     defaults: TRAILER,
-    top: trailerHeightOf,
-    footprint: trailerFootprintOf,
+    top: scaledBy(trailerHeightOf),
+    footprint: scaledBy(trailerFootprintOf),
     draw: (T, key) => <Trailer key={key} config={T} />,
   },
   cupcake: {
     defaults: CUPCAKE,
-    top: cupcakeHeightOf,
-    footprint: cupcakeFootprintOf,
+    top: scaledBy(cupcakeHeightOf),
+    footprint: scaledBy(cupcakeFootprintOf),
     draw: (C, key) => <Cupcake key={key} config={C} />,
   },
   tree: {

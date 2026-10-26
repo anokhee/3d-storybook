@@ -6,6 +6,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye } from "../../world/eye.jsx";
 import { WOLF } from "./objects.js";
 
 // Where everything sits, at size 1: the dog's standing frame (see
@@ -36,7 +37,7 @@ import { WOLF } from "./objects.js";
 // tall and deep, its edges rounded `round`, its front `out` ahead of the
 // face, its middle `down` below the face's.
 const SNOUT = { size: [0.22, 0.18, 0.4], round: 0.06, out: 0.24, down: 0.07 };
-const EYE_X = 0.14, EYE_Y = 0.05, EYE_R = 0.04, PUPIL_R = 0.02;
+const EYE_X = 0.14, EYE_Y = 0.05, EYE_R = 0.048;
 function layoutOf(C) {
   const B = C.body;
   const L = C.legs;
@@ -228,17 +229,10 @@ export default function Wolf({ config }) {
         <mesh position={[0, -SNOUT.down + 0.03, SNOUT.out - 0.01]} castShadow material={unlitMat(paint.nose)}>
           <sphereGeometry args={[0.06, 12, 8]} />
         </mesh>
-        {/* Eyes: a pale amber bead either side above the snout, a
-            small dark bead of a pupil set on the front of each. */}
+        {/* Eyes: a white eyeball either side above the snout, a dark
+            pupil on the front of each (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * EYE_X, EYE_Y, 0.004]}>
-            <mesh castShadow material={unlitMat(paint.eyes)}>
-              <sphereGeometry args={[EYE_R, 12, 8]} />
-            </mesh>
-            <mesh position={[0, 0, EYE_R - PUPIL_R * 0.6]} material={unlitMat(paint.pupil)}>
-              <sphereGeometry args={[PUPIL_R, 10, 6]} />
-            </mesh>
-          </group>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, 0.004]} r={EYE_R} pupil={paint.pupil} />
         ))}
       </group>
     </group>

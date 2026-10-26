@@ -93,3 +93,67 @@ function trim(decal, at, turn, planes) {
   geo.setAttribute("normal", new THREE.Float32BufferAttribute(outN, 3));
   return geo;
 }
+
+// Paint on the lump wherever `mark(p)` is above zero, for markings no box
+// would make: stripes that wrap round and curve, a net of patches.
+// `mark` takes a point on the surface (a Vector3, in the lump's frame)
+// and gives about how far it is inside the marking, + in and - out, so a
+// triangle whose corners are all further from the edge than any of it
+// is from them lies wholly in or out of it. The rest are split in four, `split` times
+// over, and the smallest cut along where `mark` crosses zero, so the
+// outline runs smooth; lifted a hair along the normals as paintOn's is.
+export function paintWhere(geo, mark, { split = 1, lift = 0.006 } = {}) {
+  const pos = geo.attributes.position, nor = geo.attributes.normal, index = geo.index;
+  const corner = (i) => {
+    const p = new THREE.Vector3().fromBufferAttribute(pos, i);
+    return { p, n: new THREE.Vector3().fromBufferAttribute(nor, i), f: mark(p) };
+  };
+  const between = (a, b) => {
+    const p = a.p.clone().lerp(b.p, 0.5);
+    return { p, n: a.n.clone().add(b.n).normalize(), f: mark(p) };
+  };
+  const outP = [], outN = [];
+  const emit = (poly) => {
+    for (let k = 1; k + 1 < poly.length; k++) {
+      for (const c of [poly[0], poly[k], poly[k + 1]]) {
+        outP.push(c.p.x + c.n.x * lift, c.p.y + c.n.y * lift, c.p.z + c.n.z * lift);
+        outN.push(c.n.x, c.n.y, c.n.z);
+      }
+    }
+  };
+  // the part of a triangle where mark > 0, its new corners found along
+  // the edges where it crosses
+  const cut = (tri) => {
+    const out = [];
+    for (let i = 0; i < 3; i++) {
+      const a = tri[i], b = tri[(i + 1) % 3];
+      if (a.f > 0) out.push(a);
+      if ((a.f > 0) !== (b.f > 0)) {
+        const t = a.f / (a.f - b.f);
+        out.push({ p: a.p.clone().lerp(b.p, t), n: a.n.clone().lerp(b.n, t).normalize() });
+      }
+    }
+    if (out.length >= 3) emit(out);
+  };
+  const paint = (tri, depth) => {
+    const [a, b, c] = tri;
+    // no point of it is further from a corner than about this
+    const size = 0.6 * Math.max(a.p.distanceTo(b.p), b.p.distanceTo(c.p), c.p.distanceTo(a.p));
+    if (Math.min(a.f, b.f, c.f) > size) return emit(tri);
+    if (Math.max(a.f, b.f, c.f) < -size) return;
+    if (depth === 0) return cut(tri);
+    const ab = between(a, b), bc = between(b, c), ca = between(c, a);
+    for (const t of [[a, ab, ca], [ab, b, bc], [ca, bc, c], [ab, bc, ca]]) paint(t, depth - 1);
+  };
+  const corners = new Map();
+  const at = (i) => { if (!corners.has(i)) corners.set(i, corner(i)); return corners.get(i); };
+  const count = index ? index.count : pos.count;
+  for (let i = 0; i < count; i += 3) {
+    const k = index ? [index.getX(i), index.getX(i + 1), index.getX(i + 2)] : [i, i + 1, i + 2];
+    paint(k.map(at), split);
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.Float32BufferAttribute(outP, 3));
+  out.setAttribute("normal", new THREE.Float32BufferAttribute(outN, 3));
+  return out;
+}

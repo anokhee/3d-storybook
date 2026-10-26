@@ -10,7 +10,7 @@
    between the head and the tail like a cookie cutter, the back levelled
    round it so its rim is four straight, level lines; in it the
    roadster's two bucket seats, dashboard and steering wheel, and an
-   arched windshield standing upright on its front edge, just behind
+   arched windshield raked back from its front edge, just behind
    the head. Headlights low on the chest, tail lights under the tail,
    and four wheels with hubcaps on axles hung from a dark chassis beam
    under the hull. Faces +X; its origin on the ground under the axles.
@@ -28,7 +28,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // `body` the duck (the head and tuft too), `wing` its wings, `bill` the
 // bill, `eye` the whites of its eyes and their glints, `pupil` the
 // pupils, `cheek` its cheeks (and `cheeks` whether it has them), `trim`
-// the seats, hubcaps and windshield frame, `dash` the cockpit's floor,
+// the seats and hubcaps, `dash` the cockpit's floor,
 // walls and lip, the dashboard, the steering wheel, the chassis and the
 // axles, `lamp` the headlights, `tail` the tail lights.
 export const DUCKCAR = {

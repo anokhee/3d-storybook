@@ -16,10 +16,10 @@ import { storyTheme } from "./theme.js";
 // A "decorator" wraps every story. This one renders NOTHING of its own: it
 // makes sure the stage exists, puts the story's object on it along with
 // the toolbar's choices, and takes the object off when the story goes away.
-function OnStage({ story, storyId, lighting, daylight, view, ground, lights, backdrop }) {
+function OnStage({ story, storyId, lighting, daylight, view, ground, lights, backdrop, frame }) {
   useLayoutEffect(() => {
     ensureStage();
-    useStage.setState({ node: story, storyId, lighting, daylight, view, ground, lights, backdrop });
+    useStage.setState({ node: story, storyId, lighting, daylight, view, ground, lights, backdrop, frame });
   });
   useEffect(() => () => useStage.setState({ node: null, storyId: null }), []);
   return null;
@@ -52,7 +52,7 @@ const preview = {
           story={<Story />}
           // The stage refits its camera when this changes: the story, or the
           // view or ground the args asked for.
-          storyId={`${ctx.id}#${stage.view ?? ""}/${stage.ground ?? ""}`}
+          storyId={`${ctx.id}#${stage.view ?? ""}/${stage.ground ?? ""}/${stage.frame ?? ""}`}
           lighting={ctx.globals.lighting ?? "toon"}
           daylight={Number(ctx.globals.daylight ?? 1)}
           // A story may ask for a camera angle: parameters.stage.view is
@@ -65,6 +65,9 @@ const preview = {
           lights={stage.lights ?? "look"}
           // ...and a backdrop: "space" (dark, starless of itself, no ground) or the sky.
           backdrop={stage.backdrop ?? "sky"}
+          // ...and a frame: the size of a cube the camera fits to instead of
+          // the object, so stories sharing one come out equally zoomed.
+          frame={stage.frame ?? null}
         />
       );
     },

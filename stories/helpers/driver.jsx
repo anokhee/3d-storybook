@@ -9,12 +9,13 @@
 // is turned a quarter round to face the cars' +x. `kind` "none" draws
 // nothing.
 import Anthro from "../../src/nouns/anthro/Anthro.jsx";
-import { FROG, CHICKEN, CAT, DOG, DUCK, BLACK_CAT, HUMAN, WITCH, PUMPKIN, STATUE, FISH, ALIEN, VOODOO, SCARECROW, DOLL } from "../../src/nouns/anthro/objects.js";
+import { FROG, CHICKEN, CAT, DOG, DUCK, BLACK_CAT, HUMAN, WITCH, PUMPKIN, STATUE, FISH, ALIEN, VOODOO, SCARECROW, DOLL, CUPCAKE, DONUT, ROAST } from "../../src/nouns/anthro/objects.js";
 
 export const KINDS = {
   chicken: CHICKEN, frog: FROG, cat: CAT, dog: DOG, duck: DUCK,
   "black cat": BLACK_CAT, human: HUMAN, witch: WITCH, "pumpkin head": PUMPKIN, statue: STATUE, "fish head": FISH, alien: ALIEN,
   "voodoo doll": VOODOO, scarecrow: SCARECROW, doll: DOLL,
+  "cupcake head": CUPCAKE, "donut head": DONUT, "rotisserie chicken": ROAST,
 };
 export const DRIVERS = ["none", ...Object.keys(KINDS)];
 // How high every car's cushion stands over its floor, in its own units

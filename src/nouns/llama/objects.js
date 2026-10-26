@@ -17,7 +17,7 @@ const paint = {
 // head on top of the neck facing forward with a shorter block of a
 // muzzle out of its front, and a fluffy tail of a sphere or two out of
 // the top of the rump — with two banana ears standing up off the head,
-// bead eyes, the muzzle's tip painted dark, and, if it has them, brown
+// white eyeballs with a dark pupil, the muzzle's tip painted dark, and, if it has them, brown
 // patches painted over the body and neck. It stands on the ground facing
 // +z, about 1.5 tall.
 //

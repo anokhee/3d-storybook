@@ -15,9 +15,16 @@ export const STATUSES = [
   { value: "idea", label: "Idea", color: "#8A6FD1" },
   { value: "wip", label: "In progress", color: "#D9923D" },
   { value: "needs-work", label: "Needs work", color: "#C9504A" },
+  { value: "broken-mesh", label: "Broken mesh", color: "#5B5F6B" },
   { value: "done", label: "Done", color: "#3E9B63" },
 ];
 export const statusOf = (value) => STATUSES.find((s) => s.value === value) ?? STATUSES[0];
+
+// Tags that wear their own colour on a card, the others staying plain:
+// "polymorphic" is an object dealt from many knobs (the dolly, the statue head)
+export const SPECIAL_TAGS = {
+  polymorphic: { background: "#F4D46A", border: "#D9B23F", color: "#5A4510" },
+};
 
 // Every entry's metadata, afresh from the file (never from the cache)
 export const loadMeta = () =>

@@ -2,7 +2,7 @@ import { solid } from "../../world/palette.js";
 
 // The duck's own colours, candy tones that sit with the library: a
 // mallard's bottle-green head over a warm brown body, a cream neck ring,
-// a yellow bill, orange feet and bead eyes in dark plum.
+// a yellow bill, orange feet and white eyes with dark plum pupils.
 const paint = {
   body: solid("#A4785A"),
   head: solid("#3E8C5A"),
@@ -32,14 +32,14 @@ export const DUCK_KINDS = ["mallard", "white", "rubber"];
 //           radius) set `forward` of the body's middle, `lift` above it
 //   bill    the flat rounded bill: `width` across, `depth` out from the
 //           face, `thickness` through it
-//   eye     bead eyes of `radius`, set `apart` across the head
+//   eye     white eyeballs of `radius`, set `apart` across the head
 //   wing    a half-sphere of `radius` flattened to `thin` of it against
 //           either side of the body
 //   leg     short cylinders of `radius` and `height` under the body, set
 //           `apart`; `foot` the webbed foot, a flattened triangle of
 //           `reach` from its middle to the toe, `thick` thick
 //   colors  `body`, `head`, `ring` (the mallard's neck band), `bill`,
-//           `foot`, `eye`
+//           `foot`, `eye` (the pupils)
 export const DUCK = {
   kind: "mallard",
   size: 1,
@@ -47,7 +47,7 @@ export const DUCK = {
   body: { radius: 0.3, length: 1.3, height: 0.85, tail: { radius: 0.1, height: 0.26 } },
   head: { radius: 0.2, neck: 0.11, forward: 0.3, lift: 0.42 },
   bill: { width: 0.17, depth: 0.22, thickness: 0.06 },
-  eye: { radius: 0.035, apart: 0.26 },
+  eye: { radius: 0.042, apart: 0.26 },
   wing: { radius: 0.24, thin: 0.4 },
   leg: { radius: 0.035, height: 0.18, apart: 0.24, foot: { reach: 0.14, thick: 0.03 } },
   colors: {

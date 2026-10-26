@@ -1,1 +1,376 @@
-{}
+{
+  "animals-birds-duck--default": {
+    "status": "needs-work",
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-farm-alpaca--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "animals-farm-buffalo--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-farm-cow--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-farm-donkey--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-farm-goat--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-farm-horse--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-farm-llama--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "animals-farm-pig--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "animals-farm-sheep--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "animals-fish--default": {
+    "status": "idea"
+  },
+  "animals-forest-bear--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "animals-forest-deer--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-forest-wolf--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-pets-cat--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-pets-dog--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-safari-elephant--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-safari-giraffe--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-safari-lion--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "animals-safari-rhino--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-safari-tiger--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-safari-zebra--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "animals-snail--default": {
+    "status": "idea"
+  },
+  "animals-toad--default": {
+    "status": "idea"
+  },
+  "buildings-houses-cupcake-house--default": {
+    "tags": [
+      "enterable"
+    ]
+  },
+  "buildings-houses-mushroom-house--default": {
+    "tags": [
+      "enterable"
+    ]
+  },
+  "buildings-houses-single-story-house--default": {
+    "tags": [
+      "enterable"
+    ]
+  },
+  "buildings-houses-trailer--default": {
+    "tags": [
+      "enterable"
+    ]
+  },
+  "buildings-houses-two-story-house--default": {
+    "tags": [
+      "enterable"
+    ]
+  },
+  "buildings-skyscraper--default": {
+    "tags": [
+      "enterable"
+    ]
+  },
+  "characters-dolly--default": {
+    "tags": [
+      "polymorphic"
+    ]
+  },
+  "characters-anthropomorphic-witch--default": {
+    "status": "needs-work"
+  },
+  "monuments-head--default": {
+    "status": "done",
+    "tags": [
+      "polymorphic"
+    ]
+  },
+  "toys-teddy-bear--default": {
+    "status": "idea"
+  },
+  "vehicles-food-cars-carrot--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-food-cars-broccoli--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-food-cars-apple--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-food-cars-strawberry--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-food-cars-cereal-box--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-food-cars-banana--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-food-cars-burger--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-ball-cars-tennis-ball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-soccer-ball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-cricket-ball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-golf-ball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-whiffle-ball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-basketball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-bowling-ball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-pool-ball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-ball-cars-baseball--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-bug-cars-butterfly--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-car-car--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-car-cat--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-bug-cars-caterpillar--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-car-crocodile--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-fish-cars-anglerfish--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-fish-cars-fish--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-bug-cars-horned-beetle--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-food-cars-hot-dog--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-bug-cars-ladybug--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-bug-cars-longhorn-beetle--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-fish-cars-swordfish--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-fish-cars-shark--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-fish-cars-pufferfish--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-car-rubber-duck--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-car-snail--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-car-sneaker--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-bug-cars-spider--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  },
+  "vehicles-bug-cars-stag-beetle--default": {
+    "tags": [
+      "mountable"
+    ]
+  },
+  "vehicles-car-turtle--default": {
+    "tags": [
+      "mountable"
+    ],
+    "status": "idea"
+  }
+}

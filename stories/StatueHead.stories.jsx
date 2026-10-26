@@ -5,13 +5,13 @@
 // them. It is the stock head, as the knobs stand; flip "grid" and it is
 // the field's whole cast, each variant its own draw of the knobs, laid out
 // the way the lab's grid is (the sliders then do not apply). Tagged
-// `polymorphic`, so the sidebar can filter to objects like it.
+// "polymorphic" (in public/library-meta.json), so the sidebar can
+// filter to objects like it.
 import { StatueHead, HeadGrid, headArgTypes, headArgs } from "./helpers/albatross.jsx";
 
 export default {
   title: "Monuments/Head",
   component: StatueHead,
-  tags: ["polymorphic"],
   argTypes: { grid: { control: "boolean", name: "the whole cast" }, ...headArgTypes },
   args: { grid: false, ...headArgs },
   // The grid wants the wide ground and the top view (see preview.jsx).

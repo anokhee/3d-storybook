@@ -17,7 +17,7 @@ function Story({ speed, driver, bun, sausage, trim, wheel, mustard, ketchup }) {
 }
 
 export default {
-  title: "Vehicles/Car/Hot Dog",
+  title: "Vehicles/Food Cars/Hot Dog",
   argTypes: {
     speed: { control: { type: "range", min: 0, max: 20, step: 0.5 }, name: "speed (the wheels)" },
     driver: { control: "select", options: DRIVERS },

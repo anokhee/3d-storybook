@@ -29,7 +29,10 @@ const HOUSE = {
   windows: { width: 1.3, height: 1.3, depth: 0.12, y: 2.5, apart: 1.9, frame: { thickness: 0.18, depth: 0.2 } },
   door: { width: 1.4, height: 2.4, depth: 0.16, knob: { radius: 0.11, side: 0.6 } },
 };
+// How tall the black cat stands: the tower is scaled so the house's door at its foot is this tall, as the houses are (src/nouns/house/objects.js, CAT_HEIGHT)
+const CAT_HEIGHT = 1.31;
 export const SKYSCRAPER = {
+  scale: CAT_HEIGHT / HOUSE.door.height,
   width: 7,
   depth: 7,
   storey: 3, // one floor's height
@@ -120,5 +123,6 @@ export function buildSkyscraper({ toon, hue }, floors = 8, S = SKYSCRAPER, K = H
     mesh.receiveShadow = true;
     group.add(mesh);
   }
+  group.scale.setScalar(S.scale ?? 1);
   return group;
 }

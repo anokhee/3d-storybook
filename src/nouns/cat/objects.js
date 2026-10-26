@@ -1,8 +1,8 @@
 import { solid } from "../../world/palette.js";
 
-// What every cat shares: pink in the ears and on the nose, a dark bead
-// behind each eye, a red collar if it wears one.
-const EYE_DARK = "#2A2230", EYE_YELLOW = "#F4D46A";
+// What every cat shares: pink in the ears and on the nose, the dark slit
+// of a pupil in each eye's iris, a red collar if it wears one.
+const EYE_DARK = "#2A2230", EYE_YELLOW = "#F4D46A", EYE_GREEN = "#9BD36A";
 const paint = {
   pupil: solid(EYE_DARK),
   nose: solid("#E08A8A"),
@@ -12,15 +12,15 @@ const paint = {
 
 // The coats a cat comes in, each its own colours and markings: `fur` the
 // coat, `belly` the lighter front, muzzle and whiskers, `eyes` the iris
-// (the dark of the bead on the tabby and the grey: plain black eyes;
-// yellow on the black cat and the tuxedo),
+// round the slit, whichever sits best with the coat: green on the orange
+// tabby (its complement) and the tuxedo, yellow on the black and the grey,
 // `markings` the colour of any stripes; `stripes` bands the back and
 // the tail (a tabby), `paws` paints a white sock on every foot (a tuxedo).
 // The default is the orange tabby; the story's coat knob picks another,
 // and a config may still name its own colours over the coat's.
 export const CAT_COATS = {
   "orange tabby": {
-    colors: { fur: solid("#E0975A"), belly: solid("#F2E9DC"), eyes: solid(EYE_DARK), markings: solid("#B86A3A") },
+    colors: { fur: solid("#E0975A"), belly: solid("#F2E9DC"), eyes: solid(EYE_GREEN), markings: solid("#B86A3A") },
     stripes: true,
     paws: false,
   },
@@ -30,12 +30,12 @@ export const CAT_COATS = {
     paws: false,
   },
   tuxedo: {
-    colors: { fur: solid("#2E2535"), belly: solid("#FFFFFF"), eyes: solid(EYE_YELLOW), markings: solid("#2E2535") },
+    colors: { fur: solid("#2E2535"), belly: solid("#FFFFFF"), eyes: solid(EYE_GREEN), markings: solid("#2E2535") },
     stripes: false,
     paws: true,
   },
   grey: {
-    colors: { fur: solid("#8E8A96"), belly: solid("#D9D5DC"), eyes: solid(EYE_DARK), markings: solid("#6B6672") },
+    colors: { fur: solid("#8E8A96"), belly: solid("#D9D5DC"), eyes: solid(EYE_YELLOW), markings: solid("#6B6672") },
     stripes: false,
     paws: false,
   },
@@ -86,7 +86,7 @@ export const CAT_POSES = ["standing", "sitting", "loaf"];
 //   stripes bands of `markings` painted across the back and round the tail
 //   paws    a white sock painted on every foot
 //   colors  `fur` the coat; `belly` the lighter patch under the body and
-//           the muzzle; `eyes` the iris, `pupil` the dark bead behind it;
+//           the muzzle; `eyes` the iris, `pupil` the slit;
 //           `markings` the stripes; `nose` and the inner `ear`; the
 //           `collar`
 export const CAT = {

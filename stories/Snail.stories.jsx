@@ -1,7 +1,7 @@
 // Snail: the snail car (Vehicles/Car/Snail) without the car, crawling
 // along the ground facing +z: a big coiled shell with a raised spiral on
 // each flank, over a soft foot rising into a smiling head with rosy
-// cheeks and two long swaying eyestalks, a streak of slime under it. Its
+// cheeks and two short swaying eyestalks, a streak of slime under it. Its
 // code lives in src/nouns/snail/ (Snail.jsx, defaults and knobs in
 // objects.js), built from the car's own snail (src/car/snailcar.js).
 import Snail from "../src/nouns/snail/Snail.jsx";

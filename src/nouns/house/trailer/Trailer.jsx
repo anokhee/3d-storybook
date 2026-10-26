@@ -8,6 +8,7 @@ import Primitive from "../../primitive/Primitive.jsx";
 import { useBody } from "../../planet/OnPlanet.jsx";
 import { registerSolid, unregisterSolid } from "../../../player/solids.js";
 import { Window, Door } from "../House.jsx";
+import { indoorWindowOf } from "../objects.js";
 import { TRAILER } from "./objects.js";
 
 // The shell is a cube pressed to `width` by `height` by `depth`, built at
@@ -64,10 +65,10 @@ export default function Trailer({ config }) {
     const solid = registerSolid({
       body: ball,
       dir: at.clone().normalize(),
-      top: at.length() - ball.radius + roofTopOf(T),
+      top: at.length() - ball.radius + roofTopOf(T) * T.scale,
       frame: turn,
-      halfWidth: B.width / 2,
-      halfLength: B.depth / 2,
+      halfWidth: (B.width / 2) * T.scale,
+      halfLength: (B.depth / 2) * T.scale,
     });
     return () => unregisterSolid(solid);
   }, [T, B, ball]);
@@ -84,7 +85,7 @@ export default function Trailer({ config }) {
       ways: {
         arch: T.interior.arch,
         door: T.interior.door,
-        window: T.interior.window,
+        window: indoorWindowOf(T.interior.window, T.window),
       },
       door: T.door,
       window: T.window,
@@ -92,7 +93,7 @@ export default function Trailer({ config }) {
     [B, R, T.interior, T.door, T.window],
   );
   return (
-    <group ref={root}>
+    <group ref={root} scale={T.scale}>
       <group position-y={floor + B.height / 2}>
         <Primitive
           shape="cube"

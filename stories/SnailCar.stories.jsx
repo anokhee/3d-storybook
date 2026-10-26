@@ -1,7 +1,7 @@
 // Snail car: the roadster (see Car.stories.jsx) remade as a snail — a
 // big coiled shell with a raised spiral winding in on each flank, the
 // cockpit cut down into its crown, over a soft foot that rises at the
-// front into a smiling head with two long eyestalks, the eyeballs lit
+// front into a smiling head with two short eyestalks, the eyeballs lit
 // as the headlights, the wheels standing out either side of the foot
 // (src/car/snailcar.js). See stories/helpers/snailcar.jsx.
 import { useMemo } from "react";

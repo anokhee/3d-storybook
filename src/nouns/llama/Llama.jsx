@@ -5,6 +5,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye, AHEAD, OUT } from "../../world/eye.jsx";
 import { LLAMA, ALPACA } from "./objects.js";
 
 // Where everything sits, at size 1: the cat's frame (see cat/Cat.jsx)
@@ -19,7 +20,7 @@ import { LLAMA, ALPACA } from "./objects.js";
 // shorter block out of the head's front, and the tail a sphere or two
 // out of the top of the rump. `head` is the head block's middle and
 // `headTop` its top, for what stands on it: `ears` where the two ears
-// stand, from the middle; `eyes` where the beads sit on the head's
+// stand, from the middle; `eyes` where the eyeballs sit on the head's
 // sides. `muzzle` is the box the dark tip is painted within, round the
 // muzzle's end — a box round the end paints it all round, like a sock.
 // `patches` are the round patches painted on, each a disc `d` across at
@@ -37,7 +38,7 @@ const LEG_EMBED = 0.12; // how far the legs run up into the body
 const NECK_EMBED = 0.2; // how far the neck's foot runs down into the body
 const MUZZLE = { size: [0.15, 0.13, 0.18], round: 0.05, out: 0.12, down: 0.035 }; // out of the head's front, its front `out` ahead of the face, `down` below the head's middle
 const EAR = { r: 0.03, length: 0.13, apart: 0.075, back: 0.07, splay: 0.4 };
-const EYE_R = 0.03;
+const EYE_R = 0.036; // the eyeballs, on the sides of the head
 const WOOL_R = 0.13, WOOL_OUT = 0.05, WOOL_BLEND = 0.08;
 function layoutOf(C) {
   const B = C.alpaca ? { ...C.body, ...ALPACA.body } : C.body;
@@ -185,11 +186,11 @@ export default function Llama({ config }) {
           <capsuleGeometry args={[EAR.r, EAR.length, 4, 12]} />
         </mesh>
       ))}
-      {/* Eyes: dark beads on either side of the head, well forward. */}
+      {/* Eyes: white eyeballs on either side of the head, well forward,
+          looking mostly ahead and a little out, a round pupil in the eye colour
+          (world/eye.jsx). */}
       {[-1, 1].map((s) => (
-        <mesh key={s} position={[s * lay.eyes[0], lay.eyes[1], lay.eyes[2]]} castShadow material={unlitMat(paint.eyes)}>
-          <sphereGeometry args={[EYE_R, 12, 8]} />
-        </mesh>
+        <Eye key={s} position={[s * lay.eyes[0], lay.eyes[1], lay.eyes[2]]} r={EYE_R} look={[s, 0, AHEAD]} face={[s, 0, OUT]} pupil={paint.eyes} />
       ))}
     </group>
   );

@@ -8,13 +8,14 @@ import { knobStory } from "./helpers/knobs.js";
 const K = knobStory(PUMPKIN, ANTHRO_SKIN_KNOBS, PUMPKIN, {});
 
 export default {
-  title: "Characters/Pumpkin Head",
+  title: "Characters/Anthropomorphic/Pumpkin Head",
   component: Anthro,
   argTypes: K.argTypes,
   args: K.args,
   render: (a) => <Anthro config={K.configOf(a)} />,
 };
 
-// The pose knob switches the T-pose to walking, running or jumping, and
-// the animate knob plays those as a loop.
+// The pose knob switches the T-pose to walking, running or jumping, or to
+// wielding a water gun (1-handed) or a whack-a-mole mallet (2-handed), and
+// the animate knob plays those as a loop (the mallet swings).
 export const Default = {};

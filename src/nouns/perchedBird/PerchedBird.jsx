@@ -4,10 +4,13 @@ import { useFrame } from "@react-three/fiber";
 
 import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
+import { Eye, AHEAD } from "../../world/eye.jsx";
 import { PERCHED_BIRD } from "./objects.js";
 
 // Where the bar the bird grips is, before the bird's size: its top, at
 // `height`, and its radius, which the toes wrap round.
+// How far forward of straight out the eyes look.
+
 const barOf = (C) => (C.perch === "branch" ? C.branch.radius * 0.8 : C.stand.bar);
 
 // How tall the bird is from its feet to the top of its head, before its size.
@@ -110,7 +113,7 @@ function Bird({ B, P, bar, tilt, look }) {
         {/* the fan tail, out and down from the back */}
         <mesh geometry={tail} position={[0, B.body * 0.1, -B.body * 1.0]} rotation-x={-(Math.PI / 2 + B.tail.droop - B.pitch)} castShadow receiveShadow material={unlitMat(P.body)} />
       </group>
-      {/* the head: a ball, a cone beak, bead eyes; it cocks and turns */}
+      {/* the head: a ball, a cone beak, white eyes on its sides looking out and forward; it cocks and turns */}
       <group ref={head} position={[0, headY, headZ]}>
         <mesh castShadow receiveShadow material={unlitMat(P.body)}>
           <sphereGeometry args={[B.head, 24, 16]} />
@@ -119,9 +122,7 @@ function Bird({ B, P, bar, tilt, look }) {
           <coneGeometry args={[B.beak.radius, B.beak.length, 10]} />
         </mesh>
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * B.head * 0.55, B.head * 0.2, B.head * 0.75]} castShadow material={unlitMat(P.eye)}>
-            <sphereGeometry args={[B.eye, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[s * B.head * 0.55, B.head * 0.2, B.head * 0.75]} r={B.eye} look={[s, 0, AHEAD]} face={[s * 0.55, 0.2, 0.75]} pupil={P.eye} />
         ))}
       </group>
     </group>

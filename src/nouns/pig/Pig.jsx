@@ -6,6 +6,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye } from "../../world/eye.jsx";
 import { PIG } from "./objects.js";
 
 // Where everything sits, at size 1: the dog's frame (see dog/Dog.jsx)
@@ -39,7 +40,7 @@ const NOSTRIL = { x: 0.035, y: 0.005, r: 0.017 };
 // EAR.h tall, its base EAR.sunk under the head's top, tipped forward by
 // EAR.tip and rolled out by EAR.roll.
 const EAR = { r: 0.13, h: 0.25, sunk: 0.03, tip: 0.85, roll: 0.2 };
-const EYE_X = 0.105, EYE_Y = 0.075, EYE_R = 0.034;
+const EYE_X = 0.105, EYE_Y = 0.075, EYE_R = 0.04;
 // How far round the tail's spiral goes, and how much of it is the
 // straight run out of the rump before the curl.
 const TAIL_TURNS = 1.15, TAIL_POINTS = 8;
@@ -171,11 +172,10 @@ export default function Pig({ config }) {
             <sphereGeometry args={[NOSTRIL.r, 10, 8]} />
           </mesh>
         ))}
-        {/* Eyes: dark beads either side above the snout. */}
+        {/* Eyes: white eyeballs either side above the snout, a round
+            pupil in the eye colour (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * EYE_X, EYE_Y, 0.004]} castShadow material={unlitMat(paint.eyes)}>
-            <sphereGeometry args={[EYE_R, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, 0.004]} r={EYE_R} pupil={paint.eyes} />
         ))}
       </group>
     </group>

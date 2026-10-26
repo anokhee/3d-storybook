@@ -27,7 +27,7 @@ export const BEAR_COATS = {
 // a short rounded block of a muzzle out of it ending in a big dark bead
 // nose, and a stubby tail out of its rear — with the muzzle painted
 // lighter over the front, two small round ears sat on top of the head
-// and bead eyes. It stands on all fours on the ground facing +z, about
+// and white eyeballs with a dark pupil. It stands on all fours on the ground facing +z, about
 // 1 tall and 1.4 long.
 //
 //   size    the whole bear scaled; 1 is a bear beside the furniture

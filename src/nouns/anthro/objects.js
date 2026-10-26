@@ -6,7 +6,10 @@ import { solid } from "../../world/palette.js";
 // they differ; `hat`, `band`, `hair`, `stem`, `chin`, `straw`, `rope`,
 // `patch`, `stitch`, `pin`s, `ribbon`, `collar` and `freckle` the
 // witch's, the pumpkin's, the fish's, the scarecrow's, the voodoo
-// doll's and the doll's own parts; `whisker` the cat's whiskers, if
+// doll's and the doll's own parts; `cup`, `cake`, `frosting`, `cherry`,
+// `blush` and the `sprinkle`s the cupcake head's, `dough` and `glaze`
+// the donut head's, `roast`, `bone`, `string` and `herb` the rotisserie
+// chicken's; `whisker` the cat's whiskers, if
 // not the pupils' colour;
 // `accent` the beak, bill, bare legs or floppy ears; `detail` the comb,
 // wattle, nose or mouth; `eyes` the beads (or the irises, for the frog
@@ -28,6 +31,9 @@ const paint = {
   scarecrow: { coat: solid("#B5473A"), accent: solid("#B5473A"), skin: solid("#CDB384"), trousers: solid("#4E6A8E"), shoes: solid("#5A3E2B"), straw: solid("#E2C25E"), detail: solid("#3A2A22"), eyes: solid("#1E1A14"), pupil: solid("#1E1A14"), stitch: solid("#3A2A22"), nose: solid("#E07A2E"), rope: solid("#8A6A3A"), hat: solid("#D9B85C"), band: solid("#8B3A2E"), patch: solid("#5A7FA8") },
   doll: { coat: solid("#3E6FB8"), accent: solid("#3E6FB8"), skin: solid("#F2C7A5"), trousers: solid("#F4F1EA"), shoes: solid("#2A2224"), hair: solid("#D9502E"), ribbon: solid("#3E6FB8"), collar: solid("#F7F4EE"), freckle: solid("#C7744E"), detail: solid("#B8483E"), eyes: solid("#1E2A48"), pupil: solid("#1E2A48") },
   alien: { coat: solid("#8FCB6A"), accent: solid("#E8E36A"), detail: solid("#2E4A26"), eyes: solid("#141414"), pupil: solid("#141414") },
+  cupcake: { coat: solid("#79C7B4"), accent: solid("#79C7B4"), cup: solid("#E8647C"), cake: solid("#EFC27B"), frosting: solid("#FBE9EE"), cherry: solid("#C8283A"), stem: solid("#6B8E3D"), blush: solid("#F4A3B5"), sprinkleA: solid("#F9D34C"), sprinkleB: solid("#5AB8E8"), sprinkleC: solid("#F26D8D"), detail: solid("#4A2A22"), eyes: solid("#1E1A14"), pupil: solid("#1E1A14") },
+  donut: { coat: solid("#6B4130"), accent: solid("#6B4130"), dough: solid("#E6B46A"), glaze: solid("#F58AB0"), sprinkleA: solid("#FFF6DC"), sprinkleB: solid("#F9D34C"), sprinkleC: solid("#5AB8E8"), detail: solid("#3A2A22"), eyes: solid("#1E1A14"), pupil: solid("#1E1A14") },
+  roast: { coat: solid("#2E6B6A"), accent: solid("#2E6B6A"), roast: solid("#C47A2E"), bone: solid("#F4E7CF"), string: solid("#E6D9BC"), herb: solid("#5E8A3A"), detail: solid("#3A2A22"), eyes: solid("#1E1A14"), pupil: solid("#1E1A14") },
 };
 
 // A toy anthropomorphic creature, ONE continuous lump of clay
@@ -48,16 +54,23 @@ const paint = {
 // dome, black almond eyes and antennae; the voodoo doll's button eye,
 // stitched X and mouth, heart patch and pins; the scarecrow's sack head,
 // straw hat, stitched grin and straw for hands; the doll's red hair and
-// pigtails, freckles, collar and skirt. The black cat is the cat in
+// pigtails, freckles, collar and skirt; the cupcake head's fluted paper
+// cup, domed cake, swirl of frosting, sprinkles and cherry; the donut
+// head's ring of dough stood on edge, glazed and sprinkled, the face
+// round the hole; the rotisserie chicken's roasted bird on its back,
+// drumsticks trussed out of its front, wings tucked, a sprig of herb on
+// top. The black cat is the cat in
 // black. The beak, bill, bare legs and floppy ears are
 // lumps of their own in the accent colour. It stands on the ground facing
 // +z, about 1.3 tall and 1.3 across the arms.
 //
 //   size    the whole creature scaled
 //   kind    frog, chicken, cat, dog, duck, human, witch, pumpkin, statue, fish, alien,
-//           voodoo, scarecrow or doll
+//           voodoo, scarecrow, doll, cupcake, donut or roast
 //   skin    `head` and `hands`: whether they are in the skin colour, not the coat
-//   pose    t-pose, walk, run or jump: the arms and legs (see Anthro.jsx)
+//   pose    t-pose, walk, run, jump, or wield (1-handed) a water gun or
+//           wield (2-handed) a whack-a-mole mallet, or hang from a white
+//           parachute (opened only on a drop of a cliff's height or more): the arms and legs (see Anthro.jsx)
 //   animate whether a walk, run or jump plays as a loop of frames, stop-motion
 //           style (a pause while the frames are made); the T-pose stands still
 //   body    `radius` of the trunk, `belly` of the round belly in front
@@ -185,12 +198,38 @@ export const DOLL = {
   skin: { head: true, hands: true },
   colors: paint.doll,
 };
+// The food heads: each head is its own lumps in its own colours (see
+// Anthro.jsx), so `skin` is not used. The head's block is the room the
+// head takes: the cupcake from the cup's bottom to the top of the
+// frosting, the donut the ring's outer size (its `depth` the tube), the
+// roast the bird's body, its trussed legs standing up over that.
+export const CUPCAKE = {
+  ...ANTHRO,
+  kind: "cupcake",
+  body: { radius: 0.17, belly: 0.19 },
+  head: { width: 0.46, height: 0.66, depth: 0.46, round: 0.1, y: 1.28 },
+  colors: paint.cupcake,
+};
+export const DONUT = {
+  ...ANTHRO,
+  kind: "donut",
+  body: { radius: 0.17, belly: 0.19 },
+  head: { width: 0.6, height: 0.6, depth: 0.26, round: 0.1, y: 1.21 },
+  colors: paint.donut,
+};
+export const ROAST = {
+  ...ANTHRO,
+  kind: "roast",
+  body: { radius: 0.17, belly: 0.19 },
+  head: { width: 0.4, height: 0.34, depth: 0.42, round: 0.16, y: 1.17 },
+  colors: paint.roast,
+};
 
 // What can be changed on a creature, from the panel.
 // The catalog shows these, and the game's edit panel can (stories/helpers/knobs.js).
 export const ANTHRO_KNOBS = [
   { label: "size", path: "size", step: 0.1, min: 0.3, max: 3 },
-  { label: "pose", path: "pose", options: ["t-pose", "walk", "run", "jump"] },
+  { label: "pose", path: "pose", options: ["t-pose", "walk", "run", "jump", "wield (1-handed)", "wield (2-handed)", "parachute"] },
   { label: "animate", path: "animate", bool: true, on: true, off: false },
   { label: "arm length", path: "arm.length", step: 0.05, min: 0.2, max: 0.9 },
   { label: "body colour", path: "colors.coat.hex", color: true },
@@ -198,3 +237,7 @@ export const ANTHRO_KNOBS = [
 ];
 // ...and on a dressed one (a witch, a pumpkin head, a fish head, a scarecrow, a doll), its skin too
 export const ANTHRO_SKIN_KNOBS = [...ANTHRO_KNOBS, { label: "skin colour", path: "colors.skin.hex", color: true }];
+// ...and on the food heads, their own colours
+export const CUPCAKE_KNOBS = [...ANTHRO_KNOBS, { label: "frosting colour", path: "colors.frosting.hex", color: true }, { label: "cup colour", path: "colors.cup.hex", color: true }, { label: "cake colour", path: "colors.cake.hex", color: true }];
+export const DONUT_KNOBS = [...ANTHRO_KNOBS, { label: "glaze colour", path: "colors.glaze.hex", color: true }, { label: "dough colour", path: "colors.dough.hex", color: true }];
+export const ROAST_KNOBS = [...ANTHRO_KNOBS, { label: "roast colour", path: "colors.roast.hex", color: true }];

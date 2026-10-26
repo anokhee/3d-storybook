@@ -6,6 +6,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye, AHEAD, OUT } from "../../world/eye.jsx";
 import { BUFFALO } from "./objects.js";
 
 // Where everything sits, at size 1: the dog's standing frame (see
@@ -44,7 +45,7 @@ import { BUFFALO } from "./objects.js";
 const HEAD_EMBED = 0.11;
 const MUZZLE = { size: [0.38, 0.24, 0.24], round: 0.07, out: 0.14, down: 0.08 };
 const EAR_R = 0.065; // a small ear: a ball, flattened and stretched out sideways
-const EYE_X = 0.15, EYE_Y = 0.08, EYE_R = 0.045;
+const EYE_X = 0.15, EYE_Y = 0.08, EYE_R = 0.054;
 const NOSTRIL_X = 0.08, NOSTRIL_R = 0.028;
 const TUFT_R = 0.07;
 // A rhino's nose horns: each a curve like a buffalo's horn, the big one
@@ -299,11 +300,11 @@ export default function Buffalo({ config }) {
         )))}
         {/* Nostrils: two dark beads on the muzzle's front. */}
         {!C.snout && !C.trunk && [-1, 1].map(nostril)}
-        {/* Eyes: dark beads either side above the muzzle. */}
+        {/* Eyes: white eyeballs either side above the muzzle, a round
+            pupil in the eye colour (world/eye.jsx); on the sides of the
+            head they look mostly ahead, a little out. */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * lay.eyes[0], lay.eyes[1], lay.eyes[2]]} castShadow material={unlitMat(paint.eyes)}>
-            <sphereGeometry args={[EYE_R, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[s * lay.eyes[0], lay.eyes[1], lay.eyes[2]]} r={EYE_R} look={C.snout || C.trunk ? [s, 0, AHEAD] : undefined} face={C.snout || C.trunk ? [s, 0, OUT] : undefined} pupil={paint.eyes} />
         ))}
       </group>
     </group>

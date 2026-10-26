@@ -5,8 +5,8 @@
 // with ball-tipped antennae (BASE in stories/helpers/dolly.jsx); flip
 // "randomize" and the whole doll is rolled again; flip "grid" and it is a
 // wall of them, every head twice, the way the project's grid does, on a
-// wide ground seen from above. Tagged `polymorphic`, so the sidebar can
-// filter to objects like it.
+// wide ground seen from above. Tagged "polymorphic" (in
+// public/library-meta.json), so the sidebar can filter to objects like it.
 import { DollyFigure, DollyGrid } from "./helpers/dolly.jsx";
 
 // Counts the flips of the switch, so every change is a new roll.
@@ -19,7 +19,6 @@ function rollOf(id, value) {
 
 export default {
   title: "Characters/Dolly",
-  tags: ["polymorphic"],
   argTypes: { randomize: { control: "boolean" }, grid: { control: "boolean", name: "a grid of them" } },
   args: { randomize: false, grid: false },
   // The grid wants the wide ground and the top view (see preview.jsx).

@@ -9,7 +9,7 @@
    peel eased level round it so its rim is four straight, level lines,
    its floor, walls and lip in a darker colour; in it the roadster's two
    bucket seats, dashboard and steering wheel, and an arched windshield
-   standing upright on its front edge. Headlights on the stem end's slope, tail lights on the
+   raked back from its front edge. Headlights on the stem end's slope, tail lights on the
    tip's, four wheels with hubcaps on two axles under the belly, and
    brown speckles on the peel for a ripe one. Faces +X; its origin on
    the ground under the axles. Up is +Y.
@@ -26,8 +26,8 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 
 // `peel` the banana, `ridge` the lines along it, `stem` and `tip` its two
 // ends, `speckles` how ripe it is (that many brown speckles, 0 for none),
-// `bend` how steeply the ends curve up, `trim` the seats, hubcaps and
-// windshield frame, `well` the cockpit's floor, walls and lip.
+// `bend` how steeply the ends curve up, `trim` the seats and hubcaps,
+// `well` the cockpit's floor, walls and lip.
 export const BANANACAR = {
   scale: 1.6, // built about 2.9 long; the game scales it up to fit a driver
   peel: 0xf6d035,

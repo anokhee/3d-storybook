@@ -6,6 +6,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye } from "../../world/eye.jsx";
 import { COW } from "./objects.js";
 
 // Where everything sits, at size 1: the dog's standing frame (see
@@ -43,7 +44,7 @@ const HEAD = { size: [0.42, 0.4, 0.44], round: 0.1, out: 0.12, down: 0.28, blend
 // ahead of the face, its middle `down` below the face's; painted pink
 // from `from` ahead of the face outwards.
 const MUZZLE = { size: [0.36, 0.22, 0.2], round: 0.06, out: 0.12, down: 0.08, from: 0.03 };
-const EYE_X = 0.13, EYE_Y = 0.1, EYE_R = 0.04;
+const EYE_X = 0.13, EYE_Y = 0.1, EYE_R = 0.048;
 const NOSTRIL_X = 0.075, NOSTRIL_R = 0.022;
 // A horn: a tapered capsule from `x` in from the head's middle on its
 // top, up `rise` and out `spread` to the tip, `rootR` thick at the base
@@ -221,11 +222,10 @@ export default function Cow({ config }) {
       ))}
       {/* The face, drawn on the head's front. */}
       <group position={lay.face}>
-        {/* Eyes: dark beads either side above the muzzle. */}
+        {/* Eyes: white eyeballs either side above the muzzle, a round
+            pupil in the eye colour (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * EYE_X, EYE_Y, -0.01]} castShadow material={unlitMat(paint.eyes)}>
-            <sphereGeometry args={[EYE_R, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, -0.01]} r={EYE_R} pupil={paint.eyes} />
         ))}
         {/* Nostrils: two small dark beads on the muzzle's front. */}
         {[-1, 1].map((s) => (

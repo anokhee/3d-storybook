@@ -6,7 +6,8 @@
   "scripts": {
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "thumbs": "node scripts/thumbnails.mjs"
+    "thumbs": "node scripts/thumbnails.mjs",
+    "mapmaker": "vite --config mapmaker/vite.config.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

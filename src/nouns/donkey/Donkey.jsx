@@ -6,6 +6,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye, AHEAD, OUT } from "../../world/eye.jsx";
 import { DONKEY } from "./objects.js";
 
 // Where everything sits, at size 1: the cat's frame (see cat/Cat.jsx)
@@ -22,8 +23,8 @@ import { DONKEY } from "./objects.js";
 // and `dip` how far it points down: the ears, eyes and nostrils are
 // placed in its own frame, turned with it. `ears` is where the two
 // ears stand, from the head's middle, `splay` how far out each leans;
-// `eyes` where the beads sit on the head's sides and `nostrils` where
-// two smaller ones sit on the muzzle's front. `muzzle` is the box the
+// `eyes` where the eyeballs sit on the head's sides and `nostrils`
+// where two beads sit on the muzzle's front. `muzzle` is the box the
 // pale muzzle is painted within, round the head's front end — a box
 // round the end paints it all round, like a sock — `belly` the box the
 // pale belly is painted within from underneath, and `hooves` the same
@@ -38,7 +39,7 @@ const LEG_EMBED = 0.15; // how far the legs run up into the body
 const NECK_EMBED = 0.2; // how far the neck's foot runs down into the body
 const HEAD_EMBED = 0.12; // how far the head's back runs down into the neck
 const EAR_R = 0.06, EAR_SINK = 0.04; // an ear: a capsule, flattened; its root sunk into the head
-const EYE_R = 0.035, NOSTRIL_R = 0.018;
+const EYE_R = 0.042, NOSTRIL_R = 0.018;
 function layoutOf(C) {
   const B = C.body;
   const L = C.legs;
@@ -209,11 +210,11 @@ export default function Donkey({ config }) {
             <capsuleGeometry args={[EAR_R, C.ears.length, 4, 12]} />
           </mesh>
         ))}
-        {/* Eyes: dark beads on either side of the head. */}
+        {/* Eyes: white eyeballs on either side of the head, looking mostly
+            ahead and a little out, the pupils in the eye colour
+            (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * lay.eyes[0], lay.eyes[1], lay.eyes[2]]} castShadow material={unlitMat(paint.eyes)}>
-            <sphereGeometry args={[EYE_R, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[s * lay.eyes[0], lay.eyes[1], lay.eyes[2]]} r={EYE_R} look={[s, 0, AHEAD]} face={[s, 0, OUT]} pupil={paint.eyes} />
         ))}
         {/* Nostrils: two smaller beads on the front of the muzzle. */}
         {[-1, 1].map((s) => (

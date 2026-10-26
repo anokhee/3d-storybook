@@ -2,8 +2,8 @@ import { solid } from "../../world/palette.js";
 
 // The wolf's own colours: a grey coat with a paler cream on the chest,
 // the belly, the muzzle and the insides of the ears, a darker grey for
-// the saddle down its back and the tip of its tail, a dark nose, and pale
-// amber eyes with a dark pupil. The story's knobs write over these.
+// the saddle down its back and the tip of its tail, a dark nose, and white
+// eyes with a dark pupil. The story's knobs write over these.
 const EYE_DARK = "#2A2230";
 const paint = {
   coat: solid("#878A91"),
@@ -22,7 +22,7 @@ const paint = {
 // block's corners to the ground, and a thick bushy tail out of its rump
 // held low and straight back with a slight droop, its tip painted dark
 // — with two pointed ears standing up on the front corners of the top
-// (a cream triangle painted on each), pale amber bead eyes,
+// (a cream triangle painted on each), white eyes with dark pupils,
 // a lighter bib painted on the chest, the muzzle and the belly painted
 // the same, and a darker saddle painted down the spine. It stands on
 // the ground facing +z, about 0.95 tall to the top of its head and 1.4
@@ -37,8 +37,8 @@ const paint = {
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   colors  `coat`; `belly` the lighter bib, muzzle, belly and inner
 //           ears; `markings` the saddle and the tail's tip; `eyes` the
-//           amber bead of each, `pupil` the small dark bead on its
-//           front; `nose`
+//           old amber of each (not drawn while the eyes are white,
+//           world/eye.jsx), `pupil` the dark pupil; `nose`
 export const WOLF = {
   size: 1,
   wag: 0.5,
@@ -62,5 +62,5 @@ export const WOLF_KNOBS = [
   { label: "wag", path: "wag", step: 0.1, min: 0, max: 1 },
   { label: "coat colour", path: "colors.coat.hex", color: true },
   { label: "belly colour", path: "colors.belly.hex", color: true },
-  { label: "eye colour", path: "colors.eyes.hex", color: true },
+  { label: "eye colour", path: "colors.pupil.hex", color: true },
 ];

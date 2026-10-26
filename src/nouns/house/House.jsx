@@ -9,7 +9,8 @@ import { useBody } from "../planet/OnPlanet.jsx";
 import { registerSolid, unregisterSolid } from "../../player/solids.js";
 import { registerDoor, unregisterDoor } from "../../player/doors.js";
 import { useThing } from "../station/thing.js";
-import { HOUSE } from "./objects.js";
+import { HOUSE, indoorWindowOf } from "./objects.js";
+import { Muntins, WindowPane } from "./Panes.jsx";
 
 // The gable's slopes: how long each runs from eave to ridge, and how
 // steeply — the angle it climbs off the level.
@@ -145,7 +146,8 @@ export function Plaque({
 }
 
 // A window: its frame's four bars standing off the wall, and the pane
-// between them, lit as the config says.
+// between them, lit as the config says — or, of `type` "arched" or
+// "round", the pane the mushroom house's are (see Panes.jsx).
 export function Window({ W, x, face }) {
   const F = W.frame;
   const light = useMemo(() => merge(LIGHT, W.light), [W.light]);
@@ -158,6 +160,12 @@ export function Window({ W, x, face }) {
     { x: W.width / 2 + t / 2, y: 0, w: t, h: W.height },
     { x: -(W.width / 2 + t / 2), y: 0, w: t, h: W.height },
   ];
+  if (W.type === "arched" || W.type === "round")
+    return (
+      <group position={[x, W.y, face]}>
+        <WindowPane config={W} />
+      </group>
+    );
   return (
     <group position-x={x}>
       <Plaque
@@ -172,6 +180,11 @@ export function Window({ W, x, face }) {
         color={W.color}
         light={light}
       />
+      {W.columns > 1 || W.rows > 1 ? (
+        <group position={[0, W.y, face]}>
+          <Muntins R={W} z={W.depth} />
+        </group>
+      ) : null}
       {bars.map((b, i) => (
         <Plaque
           key={i}
@@ -211,11 +224,13 @@ export function useDoorAt(ref, height, room) {
     const at = new THREE.Vector3();
     ref.current.updateWorldMatrix(true, false);
     ref.current.getWorldPosition(at);
+    // the door is as tall as the house's scale makes it
+    const k = ref.current.getWorldScale(new THREE.Vector3()).y;
     at.sub(ball.center);
     const door = registerDoor({
       body: ball,
       dir: at.clone().normalize(),
-      top: height,
+      top: height * k,
       room: {
         id: thing ? `${thing.station}:${thing.index}` : null,
         ...room,
@@ -282,13 +297,13 @@ export default function House({ config }) {
     const solid = registerSolid({
       body: ball,
       dir: at.clone().normalize(),
-      top: at.length() - ball.radius + ridgeOf(B),
+      top: at.length() - ball.radius + ridgeOf(B) * H.scale,
       frame: turn,
-      halfWidth: B.width / 2,
-      halfLength: B.depth / 2,
+      halfWidth: (B.width / 2) * H.scale,
+      halfLength: (B.depth / 2) * H.scale,
     });
     return () => unregisterSolid(solid);
-  }, [B, ball]);
+  }, [B, ball, H.scale]);
 
   const body = useMemo(() => bodyGeometry(B), [B]);
   const slabs = useMemo(() => slabsOf(H), [H]);
@@ -304,7 +319,7 @@ export default function House({ config }) {
         arch: H.interior.arch,
         door: H.interior.door,
         front: H.interior.front,
-        window: H.interior.window,
+        window: indoorWindowOf(H.interior.window, W),
         frame: H.interior.frame,
       },
       door: H.door,
@@ -313,7 +328,7 @@ export default function House({ config }) {
     [B, R, H.interior, H.door, H.windows],
   );
   return (
-    <group ref={root}>
+    <group ref={root} scale={H.scale}>
       <group position-y={-B.sink}>
         <mesh geometry={body} material={unlitMat(B.color)} />
       </group>

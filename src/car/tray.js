@@ -7,7 +7,7 @@
    one LEVEL, so the cut's edge runs in four straight, level lines. In
    the well: a floor, four walls up to the rim, a solid lip round it,
    the roadster's dashboard, steering wheel and two bucket seats, and
-   an arched windshield standing upright on the front edge. Every car's
+   an arched windshield raked back from the front edge. Every car's
    cockpit is the same size, so a driver fits each the same way. Up is
    +Y, the car faces +X.
    ============================================================ */
@@ -39,30 +39,43 @@ function clipSide(poly, k, v, keep) {
 // `margin` of the well the surface is drawn to `level`, all the way at
 // its edge; and, if `cap`, anywhere it rises over the level it is
 // flattened to it, rounding off over `soft` below, so nothing beyond
-// the well stands higher than its rim. `height(h, x, z)` is the
+// the well stands higher than its rim. `level` is a height, or a
+// function of x giving one (a level that falls away ahead of the well,
+// say, so the body's top runs down in one curve). `height(h, x, z)` is the
 // surface's new height over (x, z) where it was `h`, `reshaped` whether
 // that differs from `h`, and `normal(n, h, x, z)` its new normal from
 // its old one `n`.
 export function leveller(well, level, { soft = 0.08, margin = 0.22, cap = true } = {}) {
   const { x0, x1, z1 } = well;
+  const L = typeof level === "function" ? level : () => level;
   const eased = (x, z) => {
     const t = Math.min(1, Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(Math.abs(z) - z1, 0)) / margin);
     return 1 - t * t * (3 - 2 * t);
   };
-  const capped = (h) => (!cap || h < level - soft ? h : h > level + soft ? level : level - (level + soft - h) ** 2 / (4 * soft));
-  const capSlope = (h) => (!cap || h < level - soft ? 1 : h > level + soft ? 0 : (level + soft - h) / (2 * soft));
-  const height = (h, x, z) => {
-    const c = capped(h);
-    return c + (level - c) * eased(x, z);
+  const capped = (h, x) => {
+    const l = L(x);
+    return !cap || h < l - soft ? h : h > l + soft ? l : l - (l + soft - h) ** 2 / (4 * soft);
   };
-  const reshaped = (h, x, z) => eased(x, z) > 0 || (cap && h > level - soft);
+  // how much of the old surface's slope the capped one keeps (the rest
+  // being the level's own)
+  const capSlope = (h, x) => {
+    const l = L(x);
+    return !cap || h < l - soft ? 1 : h > l + soft ? 0 : (l + soft - h) / (2 * soft);
+  };
+  const height = (h, x, z) => {
+    const c = capped(h, x);
+    return c + (L(x) - c) * eased(x, z);
+  };
+  const reshaped = (h, x, z) => eased(x, z) > 0 || (cap && h > L(x) - soft);
   // the old surface's slope from its normal, then the new one's: the
-  // capped height's, eased toward the level by how near the well it is
+  // capped height's, eased toward the level by how near the well it is,
+  // and the level's own slope along the car where it takes over
   const normal = (n, h, x, z) => {
     const e = 1e-3, w = eased(x, z), gx = -n.x / n.y, gz = -n.z / n.y;
     const ex = (eased(x + e, z) - eased(x - e, z)) / (2 * e), ez = (eased(x, z + e) - eased(x, z - e)) / (2 * e);
-    const k = capSlope(h) * (1 - w), c = level - capped(h);
-    return new THREE.Vector3(-(k * gx + c * ex), 1, -(k * gz + c * ez)).normalize();
+    const lx = (L(x + e) - L(x - e)) / (2 * e);
+    const s = capSlope(h, x), k = s * (1 - w), c = L(x) - capped(h, x);
+    return new THREE.Vector3(-(k * gx + lx * (1 - k) + c * ex), 1, -(k * gz + c * ez)).normalize();
   };
   return { eased, height, reshaped, normal };
 }
@@ -105,10 +118,14 @@ export function cutThrough(geo, well, floor, L) {
 // The cockpit's insides in the `well`, its floor at `floor` and its rim
 // at `top`: `group` the car, `add` and `box` its own makers, `C` its
 // colours (the
-// walls, floor and lip in `wall`, the dashboard and steering wheel in
-// `C.dash`, the seats and windshield frame in `C.trim`). Returns the
-// top of the driver's cushion, for a driver to sit on.
-export function fitCockpit({ group, add, box }, C, well, floor, top, wall = C.dash) {
+// walls, floor, lip and windshield frame in `wall`, the dashboard and
+// steering wheel in `C.dash`, the seats in `C.trim`), `rake` how far
+// the windshield leans back, in radians (0 stands it upright), `seats`
+// 2 for the roadster's pair side by side, or 1 for a single seat in the
+// middle with the steering wheel before it (a narrower well will do).
+// Returns the top of the driver's cushion, for a driver to sit on.
+export const RAKE = 0.35; // the windshield's and steering wheel's lean, the roadster's
+export function fitCockpit({ group, add, box }, C, well, floor, top, wall = C.dash, rake = RAKE, seats = 2) {
   const { x0, x1, z1 } = well, both = { side: THREE.DoubleSide };
 
   // a floor, four walls up to the rim, and a solid lip round it: `RIM`
@@ -130,7 +147,7 @@ export function fitCockpit({ group, add, box }, C, well, floor, top, wall = C.da
   // the dashboard against the front wall, just under the rim, and the
   // steering wheel before the left seat: its face toward the seats,
   // raked, on a short column into the dashboard's face
-  const DASH = 0.22, RAKE = 0.35, DRIVER = -0.3, STEM = 0.18;
+  const DASH = 0.22, DRIVER = seats === 1 ? 0 : -0.3, STEM = 0.18;
   box(DASH, 0.2, 2 * z1, C.dash, x1 - DASH / 2, top - 0.12, 0);
   const wheelAt = new THREE.Vector3(x1 - DASH - 0.14, top - 0.12, DRIVER);
   const rim = new THREE.TorusGeometry(0.16, 0.025, 10, 28).rotateY(Math.PI / 2).rotateZ(RAKE);
@@ -142,22 +159,28 @@ export function fitCockpit({ group, add, box }, C, well, floor, top, wall = C.da
   const columnAt = wheelAt.clone().addScaledVector(axis, STEM / 2);
   add(column, C.dash, columnAt.x, columnAt.y, columnAt.z);
 
-  // two bucket seats on the floor, their backs leaning against the back
-  // wall
+  // two bucket seats on the floor (or the one, in the middle), their
+  // backs leaning against the back wall
   const seatX = x0 + 0.45;
-  for (const z of [-DRIVER, DRIVER]) {
+  for (const z of seats === 1 ? [0] : [-DRIVER, DRIVER]) {
     box(0.46, 0.26, 0.5, C.trim, seatX, floor + 0.13, z);
     const back = box(0.12, 0.5, 0.5, C.trim, seatX - 0.24, floor + 0.48, z);
     back.rotation.z = 0.22;
     seatHeadrest(add, box, C.trim, [seatX - 0.24, floor + 0.48], z, 0.26); // the headrest, straight over the backrest, on two metal posts
   }
 
-  // the windshield: a pane in a frame, its top arched, standing upright
-  // on the front edge
+  // the windshield: a pane in a frame, its top arched, standing on the
+  // lip's front run and raked back from it like the roadster's. The
+  // group's origin is on the lip's top, in the middle of its width, so
+  // the frame's foot sits on the lip and only its back corner sinks a
+  // hair into it as it leans; nothing reaches down into the body.
+  const LIP_TOP = top + LIP - 0.02;
   const shield = new THREE.Group();
-  shield.position.set(x1 + 0.03, top, 0);
+  shield.position.set(x1, LIP_TOP, 0);
+  shield.rotation.z = rake;
   group.add(shield);
-  const SW = 2 * z1 - 0.1, SIDE = 0.36, ARCH = 0.14, BASE = -0.2; // the arch's peak 0.5 over the rim, as tall as the roadster's pane
+  const F = 0.045; // the frame's width
+  const SW = 2 * z1 - 0.1, SIDE = 0.33, ARCH = 0.14, BASE = F; // the frame's foot on the lip, the arch's peak 0.5 over the rim as before
   // a shape across (x) and up (y): straight sides to `side`, the top an arch rising `arch` more
   const arched = (hw, bottom, side, arch) => {
     const sh = new THREE.Shape();
@@ -172,10 +195,9 @@ export function fitCockpit({ group, add, box }, C, well, floor, top, wall = C.da
   const across = (geo, depth) => geo.translate(0, 0, -depth / 2).rotateY(-Math.PI / 2);
   const pane = add(across(new THREE.ExtrudeGeometry(arched(SW / 2, BASE, SIDE, ARCH), { depth: 0.03, bevelEnabled: false }), 0.03), C.glass, 0, 0, 0, { transparent: true, opacity: 0.55, side: THREE.DoubleSide }, shield);
   pane.castShadow = false;
-  const F = 0.045; // the frame's width
   const ring = arched(SW / 2 + F, BASE - F, SIDE, ARCH + F * 0.5);
   ring.holes.push(arched(SW / 2, BASE, SIDE, ARCH));
-  add(across(new THREE.ExtrudeGeometry(ring, { depth: 0.05, bevelEnabled: false }), 0.05), C.trim, 0, 0, 0, undefined, shield);
+  add(across(new THREE.ExtrudeGeometry(ring, { depth: 0.05, bevelEnabled: false }), 0.05), wall, 0, 0, 0, undefined, shield); // the frame in the tray's colour, one piece with the lip
 
   return [seatX, floor + 0.26, DRIVER];
 }

@@ -33,7 +33,7 @@ export const FLOWER_TYPES = {
     petals: 5,
     petalWidth: 0.28,
     petalTaper: 2.4,
-    petalPitch: 0,
+    petalPitch: 12,
     pistilRadius: 0.25,
     hangsBy: "top",
   },

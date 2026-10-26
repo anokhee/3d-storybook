@@ -13,8 +13,8 @@
    lies over the instep, its back end curling up before the windshield,
    and the LACES cross over it between two rows of eyelets, tied in a
    bow at the top. In the cockpit the roadster's two bucket seats,
-   dashboard and steering wheel, and an arched windshield standing
-   upright on its front edge. Headlights in the toe, tail lights in the
+   dashboard and steering wheel, and an arched windshield
+   raked back from its front edge. Headlights in the toe, tail lights in the
    heel, and four wheels with hubcaps standing out either side of the
    sole, on axles under it. Faces +X (the toe); its origin on the
    ground under the axles. Up is +Y.
@@ -31,7 +31,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // counter, `collar` the padded rim and pull tab, `stripe` the wavy band
 // along each side, `laces` the laces, `sole` the midsole, toe bumper and
 // tread lugs, `outsole` the band under it, `trim` the seats, eyelets,
-// hubcaps and windshield frame, `dash` the cockpit's floor, walls and
+// hubcaps, `dash` the cockpit's floor, walls and
 // lip, the dashboard, the steering wheel and the axles.
 export const SNEAKERCAR = {
   scale: 1.6, // built about 3.3 long; the game scales it up to fit a driver

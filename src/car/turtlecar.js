@@ -12,7 +12,7 @@
    cut-out cars' (tray.js), cut out of the shell's top, the shell
    levelled round it so its rim is four straight, level lines; in it the
    roadster's two bucket seats, dashboard and steering wheel, and an
-   arched windshield standing upright on its front edge. Faces +X; its
+   arched windshield raked back from its front edge. Faces +X; its
    origin on the ground under the axles. Up is +Y.
 
    `finish(color, extra)` makes every material, so a page can hand in its
@@ -27,7 +27,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // `scute` the ridges between them, `margin` the band round the shell's
 // foot (scored in `shell`), `skin` the head, neck, legs and tail,
 // `belly` the plate under the shell, `eye` and `pupil` the eyes, `trim`
-// the seats, hubcaps, toenails and windshield frame, `dash` the
+// the seats, hubcaps and toenails, `dash` the
 // cockpit's floor, walls and lip, the dashboard, the steering wheel and
 // the axles.
 export const TURTLECAR = {

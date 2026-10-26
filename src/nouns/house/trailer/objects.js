@@ -1,6 +1,6 @@
 import { PALETTE } from "../../../world/palette.js";
 import { merge } from "../../../world/merge.js";
-import { DWELLING } from "../objects.js";
+import { DWELLING, CAT_HEIGHT, windowShapeKnobs } from "../objects.js";
 
 // A trailer: a little camper — a rounded clay shell standing off the
 // ground on one wheel each side, a stripe round its middle and a slab of
@@ -38,6 +38,7 @@ import { DWELLING } from "../objects.js";
 //            bathroom off that one's north wall through a door, a
 //            bathtub in it
 export const TRAILER = merge(DWELLING, {
+  scale: CAT_HEIGHT / 5,
   body: {
     width: 14,
     height: 6.8,
@@ -60,6 +61,9 @@ export const TRAILER = merge(DWELLING, {
     vent: { radius: 0.48, height: 0.8, x: -3.6, color: PALETTE.trailer.vent },
   },
   window: {
+    type: "square",
+    columns: 3,
+    rows: 1,
     x: 3,
     width: 3.8,
     height: 2,
@@ -127,5 +131,5 @@ export const TRAILER_KNOBS = [
   { label: "depth", path: "body.depth", step: 0.2, min: 1 },
   { label: "lift", path: "body.lift", step: 0.1, min: 0 },
   { label: "door width", path: "door.width", step: 0.1, min: 0.5 },
-  { label: "door height", path: "door.height", step: 0.1, min: 1 },
+  ...windowShapeKnobs("window"),
 ];

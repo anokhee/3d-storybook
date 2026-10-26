@@ -1,8 +1,8 @@
 import { solid } from "../../world/palette.js";
 
 // The dog's own colours: a tan coat with brown ears and spots, a red
-// collar with a brass tag, and a dark nose and eyes. The story's knobs
-// write over these.
+// collar with a brass tag, a dark nose and the dark pupils of its eyes.
+// The story's knobs write over these.
 const paint = {
   coat: solid("#E8C39E"),
   patch: solid("#8B5A3C"),
@@ -21,7 +21,7 @@ export const DOG_POSES = ["standing", "sitting", "loaf"];
 // (see world/lump.js) — ONE rounded block for the head and body
 // together, the face drawn on its front with a smaller block of a snout
 // out of it ending in a dark bead nose, two floppy ears hanging down
-// the sides of the head, bead eyes, the legs slimmer blocks pulled
+// the sides of the head, white eyes with dark pupils, the legs slimmer blocks pulled
 // straight down out of the block to the ground, and the tail out of its
 // rear the same way, curling up at the tip — with round spots painted
 // over the back and flanks and, if it wears one, a collar painted across the front
@@ -46,7 +46,7 @@ export const DOG_POSES = ["standing", "sitting", "loaf"];
 //           front of the base each hind foot's front sits
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   colors  `coat`; `patch` the ears and spots; `collar` and its `tag`;
-//           `nose` and `eyes`
+//           `nose`; `eyes` the pupils (the eyeballs are white)
 export const DOG = {
   size: 1,
   pose: "standing",

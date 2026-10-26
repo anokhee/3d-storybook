@@ -6,13 +6,13 @@
    middle. Under it and out ahead of it runs the soft FOOT, a slug's
    body low along the ground, tapering to a point behind the shell and
    rising at the front into the HEAD: a round face with a smile and two
-   rosy cheeks, two long EYESTALKS out of its top, the eyeballs on their
-   tips lit as the headlights, each with a dark pupil looking ahead, and
-   two short tentacles lower down. The COCKPIT is the cut-out cars'
+   rosy cheeks, two short EYESTALKS out of its top, the eyeballs on their
+   tips lit as the headlights, each with a dark pupil looking ahead. The
+   COCKPIT is the cut-out cars'
    (tray.js), cut down into the shell's crown like a cookie cutter, the
    crown levelled round it so its rim is four straight, level lines; in
    it the roadster's two bucket seats, dashboard and steering wheel, and
-   an arched windshield standing upright on its front edge. Tail lights
+   an arched windshield raked back from its front edge. Tail lights
    on the foot's tail, a glossy streak of slime on the ground under it,
    and four wheels with hubcaps either side of the foot, on axles
    through it. Faces +X; its origin on the ground under the axles. Up
@@ -28,10 +28,10 @@ import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
 import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 
 // `shell` the shell, `stripe` its spiral and the knob at the spiral's
-// middle, `body` the foot, head, eyestalks and tentacles, `cheek` the
+// middle, `body` the foot, head and eyestalks, `cheek` the
 // blush either side of the smile, `slime` the streak under the foot (on
 // a switch, `hasSlime`), `lamp` the eyeballs (lit, they are the
-// headlights), `trim` the seats, hubcaps and windshield frame, `dash`
+// headlights), `trim` the seats and hubcaps, `dash`
 // the cockpit's floor, walls and lip, the dashboard, the steering
 // wheel, the axles, the pupils and the smile.
 export const SNAILCAR = {
@@ -129,6 +129,7 @@ function footGeo() {
 // it: out from HEAD's middle in direction `d`, a point on its skin and
 // the skin's normal there.
 const HEAD = { x: 1.25, y: 1.07, r: 0.36, wide: 1.15 };
+const STALK = 0.55; // how far out the eyestalks reach, as a share of what they did
 function onHead(d) {
   const v = new THREE.Vector3(...d).normalize();
   return {
@@ -154,7 +155,7 @@ function tapered(pts, r0, r1, segs = 24) {
 
 // The snail itself, everything but the shell's own surface (which the
 // car cuts its cockpit into): the spiral on each flank, the foot and the
-// head, the eyestalks and tentacles, the face, and the slime, into
+// head, the eyestalks, the face, and the slime, into
 // `group`, `add` as buildSnailCar's; the eyeballs are `C.lamp`, `lit`
 // as headlights or not, the pupils and smile `C.dash`. Returns the two
 // eyestalks, each a Group pivoting at its root.
@@ -189,17 +190,17 @@ export function buildSnailBody(group, add, C, { lit = false } = {}) {
     return mesh;
   };
 
-  // the eyestalks, long, out of the head's top and leaning forward and
-  // apart, each an eyeball on its tip lit as a headlight, a dark pupil
-  // on its front looking ahead; and the two short tentacles lower down,
-  // reaching forward, each with a little knob
+  // the eyestalks, short, out of the head's top and leaning forward and
+  // apart (STALK of the way out the old long ones reached), each an
+  // eyeball on its tip lit as a headlight, a dark pupil on its front
+  // looking ahead
   for (const s of [-1, 1]) {
     const root = onHead([0.1, 1, s * 0.45]).at;
     const stalk = new THREE.Group(); // pivots at the root, so a page can sway it
     stalk.position.copy(root);
     group.add(stalk);
     stalks.push(stalk);
-    const { tube, curve } = tapered([root.clone().addScaledVector(Y, -0.1), root, new THREE.Vector3(1.32, 1.65, s * 0.3), new THREE.Vector3(1.42, 1.88, s * 0.4)].map((v) => v.sub(root)), 0.06, 0.035);
+    const { tube, curve } = tapered([root.clone().addScaledVector(Y, -0.1), root, new THREE.Vector3(1.32, 1.65, s * 0.3), new THREE.Vector3(1.42, 1.88, s * 0.4)].map((v, i) => (i > 1 ? v.sub(root).multiplyScalar(STALK) : v.sub(root))), 0.06, 0.035);
     add(tube, C.body, 0, 0, 0, undefined, stalk);
     const tip = curve.getPointAt(1);
     add(new THREE.SphereGeometry(0.13, 20, 14), C.lamp, tip.x, tip.y + 0.06, tip.z, lit ? { emissive: C.lamp, emissiveIntensity: 0.6 } : undefined, stalk);
@@ -207,12 +208,6 @@ export function buildSnailBody(group, add, C, { lit = false } = {}) {
     const pupil = add(new THREE.SphereGeometry(0.06, 14, 10).scale(1, 1, 0.45).rotateY(Math.PI / 2), C.dash, 0, 0, 0, undefined, stalk);
     pupil.position.set(tip.x, tip.y + 0.06, tip.z).addScaledVector(look, 0.11);
     pupil.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), look);
-
-    const low = onHead([0.75, 0.15, s * 0.55]).at;
-    const feeler = tapered([low.clone().add(new THREE.Vector3(-0.08, 0, 0)), low, new THREE.Vector3(1.66, 1.08, s * 0.3), new THREE.Vector3(1.76, 1.02, s * 0.36)], 0.04, 0.025, 12);
-    add(feeler.tube, C.body, 0, 0, 0);
-    const end = feeler.curve.getPointAt(1);
-    add(new THREE.SphereGeometry(0.04, 10, 8), C.body, end.x, end.y, end.z);
   }
 
   // the face: a smile across the front of the head, and a rosy cheek

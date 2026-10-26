@@ -15,7 +15,7 @@ function Story({ speed, driver, body, belly, fin, spike, spot, lips, trim, wheel
 }
 
 export default {
-  title: "Vehicles/Car/Pufferfish",
+  title: "Vehicles/Fish Cars/Pufferfish",
   argTypes: {
     speed: { control: { type: "range", min: 0, max: 20, step: 0.5 }, name: "speed (the wheels)" },
     driver: { control: "select", options: DRIVERS },

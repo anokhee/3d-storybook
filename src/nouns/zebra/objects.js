@@ -17,9 +17,10 @@ const paint = {
 // in place of its own, painted black, a longer head nosing down, its
 // ears standing up a little pointed, a stiff black mane along the neck's
 // back, a white tail hanging down with a black tuft on its end, and
-// BLACK STRIPES painted on: bands across the body wrapping down the
-// flanks and across the rump, rings round the neck, the head and each
-// leg. It stands on the ground facing +z.
+// BLACK STRIPES painted on all round, as a zebra's run: upright and
+// wavy up the barrel, sweeping round in arcs over the haunch, a line
+// down the spine, broad rings round the neck, thin ones across the face
+// and down the legs (goat/markings.js). It stands on the ground facing +z.
 //
 //   size     the whole zebra scaled; 1 is a toy beside the furniture
 //   wag      how much the tail swishes, 0 still to 1 a full swish

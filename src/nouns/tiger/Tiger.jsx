@@ -6,7 +6,9 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
-import { paintOn } from "../../world/paint.js";
+import { paintOn, paintWhere } from "../../world/paint.js";
+import { hash3, noise3 } from "../../world/random.js";
+import { Eye } from "../../world/eye.jsx";
 import { TIGER } from "./objects.js";
 
 // Where everything sits, at size 1: the cat's standing frame (see
@@ -16,10 +18,9 @@ import { TIGER } from "./objects.js";
 // block pulled straight down out of one of its corners to the ground,
 // and the tail a run of capsules out of its rear. The face is drawn on
 // the block's front: `face` is the middle of it, on the front surface;
-// `ears` where the two ears sit, from `face`. `spine` is where the back
-// stripes go, along the top: each a band `at` a point over the back,
-// `r` half how wide across, `w` how thick nose to rump, projected
-// straight down `depth` deep so it runs on down the flanks; `brow` the
+// `ears` where the two ears sit, from `face`. `frame` is the block's
+// plan, for the stripes down the flanks and round the legs (see
+// tigerMark); `brow` the
 // short stripes on the forehead and the cheeks, each a box `at`, turned
 // `turn`, `size` across, tall and deep, projected onto the head from
 // ahead or in from a side; `chest` the white bib painted on the front, projected
@@ -44,16 +45,11 @@ function layoutOf(C) {
   const bottom = 0.26, top = bottom + B.height;
   const front = B.length / 2, rear = -B.length / 2;
   const face = [0, top - 0.2, front];
-  // The back stripes: bands from behind the shoulders to the rump, the
-  // ones over the middle thickest, every other one a hair narrower across
-  // so the set reads as drawn rather than ruled
-  const bands = [-0.46, -0.3, -0.14, 0.03, 0.2, 0.36];
-  const spine = bands.map((z, i) => ({ at: [0, top, z], r: B.width / 2 + (i % 2 ? 0.1 : 0.16), w: i === 0 || i === bands.length - 1 ? 0.055 : 0.07, depth: i % 2 ? 0.7 : 0.8 }));
   return {
     parts: [block([0, bottom + B.height / 2, 0], [B.width, B.height, B.length]), ...feet.map(([x, , z]) => leg(x, z, 0.5))],
     face,
     ears: [0.2, 0.17, -0.16],
-    spine,
+    frame: { L, feet, bottom, top, front, rear },
     // The forehead: three short strokes up from above the eyes over the
     // brow, the outer two leaning out, projected onto the front from
     // ahead; the cheeks: two short dashes a side on the side of the head
@@ -106,9 +102,53 @@ const MUZZLE_R = 0.12;
 // half down in the block; the pink a smaller disc of the same, sat
 // forward so its front stands EAR_PROUD out through the ear's.
 const EAR_R = 0.11, EAR_FLAT = 0.5, EAR_PINK = 0.6, EAR_PROUD = 0.012;
-const EYE_X = 0.17, EYE_Y = 0.05, EYE_R = 0.042, IRIS_SPREAD = 0.8;
+const EYE_X = 0.17, EYE_Y = 0.05, EYE_R = 0.05;
 
 const Y = new THREE.Vector3(0, 1, 0);
+
+// THE STRIPES down the flanks: narrow dark strokes from over the spine
+// (where they meet across the back) down the sides, each leaning back a
+// little, bowed a little its own way, tapering to a point at a height
+// of its own above the white belly, and every few forking into two
+// lower down, as a tiger's do; none on the face (its strokes are
+// `brow`'s) or the rump's end, where the tail leaves. On the legs, short
+// bars across the outside of each, fading out round to the inside.
+// `gap` between strokes along the body, from `from` in front of the
+// rump to `to` behind the face; `width` the widest a stroke gets; the
+// height it tapers out at somewhere in `ends` (0 the belly, 1 the back).
+const STRIPES = { from: 0.1, to: 0.3, gap: 0.085, width: 0.03, slant: 0.06, ends: [0.15, 0.5], fork: 0.3, legs: [0.21, 0.15, 0.09], leg: 0.016, wobble: 0.008 };
+function tigerMark({ L, feet, bottom, top, front, rear }, seed = 3) {
+  const S = STRIPES, strokes = [];
+  for (let z = rear + S.from, k = 0; z < front - S.to; z += S.gap, k++) {
+    strokes.push({
+      z: z + (hash3(k, 0, 0, seed) - 0.5) * 0.025,
+      end: S.ends[0] + hash3(k, 1, 0, seed) * (S.ends[1] - S.ends[0]),
+      w: S.width * (0.7 + 0.5 * hash3(k, 2, 0, seed)),
+      bow: (hash3(k, 3, 0, seed) - 0.5) * 0.06,
+      fork: hash3(k, 4, 0, seed) < S.fork,
+    });
+  }
+  return (p) => {
+    const wob = S.wobble * noise3(p.x * 10, p.y * 10, p.z * 10, seed);
+    if (p.y < bottom) {
+      const [fx, , fz] = feet.reduce((a, b) => (Math.hypot(p.x - b[0], p.z - b[2]) < Math.hypot(p.x - a[0], p.z - a[2]) ? b : a));
+      const out = Math.min(1, Math.max(0, ((Math.abs(p.x) - Math.abs(fx)) / L.thickness + 0.5 - 0.25) / 0.5)); // 0 on the inside, 1 on the outside
+      const y = p.y + 0.15 * (p.z - fz) + wob;
+      return (S.leg / 2) * out - Math.min(...S.legs.map((b) => Math.abs(y - b)));
+    }
+    if (p.z < rear + 0.05 || p.z > front - S.to + 0.02) return -1;
+    const h = (p.y - bottom) / (top - bottom);
+    let best = -1;
+    for (const k of strokes) {
+      if (h < k.end) continue;
+      const taper = Math.pow((h - k.end) / (1 - k.end), 0.6);
+      let d = Math.abs(p.z - (k.z + S.slant * (1 - h) + k.bow * Math.sin(h * Math.PI) + wob));
+      if (k.fork && h < (k.end + 1) / 2) d = Math.abs(d - k.w * 0.6); // forked: two strokes either side of the line
+      best = Math.max(best, (k.w / 2) * taper - d);
+    }
+    return best;
+  };
+}
 
 // One tiger, standing on the ground at y = 0 facing +z. `config`
 // overrides any of TIGER's fields for this one instance.
@@ -133,16 +173,15 @@ export default function Tiger({ config }) {
   const chest = useMemo(() => paintOn(lump.geo, new THREE.Vector3(...lay.chest.at), new THREE.Euler(0, 0, 0), [lay.chest.size[0], lay.chest.size[1], lay.chest.depth], { arch: true, radius: lay.chest.radius }), [lump, lay.chest]);
   useEffect(() => () => chest.dispose(), [chest]);
 
-  // The stripes, painted on: bands across the back, each projected
-  // straight down over one point of the spine, deep enough to run on
-  // down the flanks; short strokes on the forehead and the cheeks,
+  // The stripes, painted on: the strokes down the flanks and the bars
+  // round the legs, wherever tigerMark falls; short strokes on the forehead and the cheeks,
   // projected onto the front from ahead; and rings round the tail, each
   // projected in from the side, square across the tail where it is. The
   // tail's carry the same weights as the lump's tail, so the swish bends
   // them with it.
   const stripes = useMemo(() => {
     if (!C.stripes) return null;
-    const backs = lay.spine.map((b) => paintOn(lump.geo, new THREE.Vector3(b.at[0], b.at[1] + 0.4 - b.depth / 2, b.at[2]), new THREE.Euler(-Math.PI / 2, 0, 0), [b.r * 2, b.w, b.depth]));
+    const backs = [paintWhere(lump.geo, tigerMark(lay.frame))];
     const brows = lay.brow.map((b) => paintOn(lump.geo, new THREE.Vector3(...b.at), new THREE.Euler(...b.turn), b.size));
     const tails = [0.3, 0.55, 0.8].map((f) => Math.round(f * (tail.length - 1))).map((k) => { // how far down the tail each ring goes
       const at = new THREE.Vector3(...tail[k].at);
@@ -176,11 +215,6 @@ export default function Tiger({ config }) {
   const markings = unlitMat(paint.markings);
   const F = 0; // the face's middle is on the front surface
   const muzzle = head.clone().add(new THREE.Vector3(0, -0.07, F + 0.02));
-  // The iris: a cap of the bead's sphere, the front IRIS_SPREAD of it
-  // either way from straight ahead, a hair proud. Built round +y and
-  // turned to face +z.
-  const irisGeo = useMemo(() => new THREE.SphereGeometry(EYE_R + 0.002, 14, 6, 0, Math.PI * 2, 0, IRIS_SPREAD).rotateX(Math.PI / 2), []);
-  useEffect(() => () => irisGeo.dispose(), [irisGeo]);
   const noseGeo = useMemo(() => {
     const t = new THREE.Shape();
     t.moveTo(-0.045, 0.022);
@@ -196,7 +230,7 @@ export default function Tiger({ config }) {
       <mesh geometry={lump.geo} castShadow receiveShadow material={fur} />
       {/* The bib: a white patch painted on the chest. */}
       <mesh geometry={chest} receiveShadow material={belly} />
-      {/* Stripes painted over the back, on the face and round the tail. */}
+      {/* Stripes down the flanks and round the legs, on the face and round the tail. */}
       {stripes?.backs.map((g, i) => (
         <mesh key={i} geometry={g} receiveShadow material={markings} />
       ))}
@@ -231,15 +265,9 @@ export default function Tiger({ config }) {
         <mesh position={[0, -0.09, F + 0.02 + MUZZLE_R - 0.02]} rotation-x={0.5} material={unlitMat(paint.pupil)}>
           <boxGeometry args={[0.012, 0.08, 0.012]} />
         </mesh>
-        {/* Eyes: a dark bead with the amber iris painted on its front — a
-            cap of a sphere a hair bigger than the bead, lying on it. */}
+        {/* Eyes: white eyeballs with a round dark pupil (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * EYE_X, EYE_Y, F + 0.004]}>
-            <mesh castShadow material={unlitMat(paint.pupil)}>
-              <sphereGeometry args={[EYE_R, 12, 8]} />
-            </mesh>
-            <mesh geometry={irisGeo} material={unlitMat(paint.eyes)} />
-          </group>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, F + 0.004]} r={EYE_R} pupil={paint.pupil} />
         ))}
       </group>
       {/* Whiskers: three hair-thin cylinders a side, fanned, from the

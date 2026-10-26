@@ -1,7 +1,7 @@
 import { solid } from "../../world/palette.js";
 
 // The tiger's own colours: an orange coat with a white chest and muzzle,
-// black stripes, amber eyes on a dark bead, pink in the ears and on the
+// black stripes, a dark pupil in each white eye, pink in the ears and on the
 // nose. The story's knobs write over the coat and the stripes.
 const paint = {
   fur: solid("#E8893A"),
@@ -21,10 +21,11 @@ const paint = {
 // the same way, curling up at the tip — with a white bib painted on the
 // chest, two ROUND ears on the front corners of the top (a pink disc on
 // each), a white muzzle bump with a pink triangle nose and a line of a
-// mouth drawn down from it, two bead eyes and three whiskers a side, and
-// black stripes painted on: bands across the back running down the
-// flanks, rings round the tail, and short marks on the forehead and the
-// cheeks. It stands on the ground facing +z, about 1.3 long and 0.85
+// mouth drawn down from it, two white eyes and three whiskers a side, and
+// black stripes painted on: narrow strokes over the back and down the
+// flanks, tapering to points (some forking) above the belly, bars on the
+// outsides of the legs, rings round the tail, and short marks on the
+// forehead and the cheeks. It stands on the ground facing +z, about 1.3 long and 0.85
 // tall.
 //
 //   size    the whole tiger scaled; 1 is a toy tiger beside the furniture,
@@ -37,8 +38,8 @@ const paint = {
 //           a fillet it makes with the belly
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   colors  `fur` the coat; `belly` the bib, the muzzle and the whiskers;
-//           `markings` the stripes; `eyes` the iris, `pupil` the dark
-//           bead behind it; `nose` and the inner `ear`
+//           `markings` the stripes; `eyes` the iris (not drawn while the
+//           eyes are white, world/eye.jsx), `pupil` the pupil; `nose` and the inner `ear`
 export const TIGER = {
   size: 1,
   swish: 0.6,

@@ -1,7 +1,7 @@
 import { solid } from "../../world/palette.js";
 
 // The sheep's own colours: a cream fleece over a near-black body, a
-// grey muzzle on the dark face, white bead eyes with dark pupils, and
+// grey muzzle on the dark face, white eyes with dark pupils, and
 // horns the colour of old bone. The story's knobs write over these.
 const paint = {
   fleece: solid("#F4EBDC"),
@@ -21,7 +21,7 @@ const paint = {
 // fleece's front, four slim legs pulled straight down out of it to the
 // ground, and a short tail out of the rump, hanging down. Two dark ears
 // stick out to the sides of the head, a lighter muzzle is painted on
-// its front, and the eyes are white beads with dark pupils. With
+// its front, and the eyes are white eyeballs with dark pupils. With
 // `horns` on it is a RAM: a third lump, a thick horn either side of the
 // head, each a run of tapering capsules wound in a spiral round the
 // ear. It stands on the ground facing +z, about 0.9 tall and 1.1 long.
@@ -37,7 +37,8 @@ const paint = {
 //           a fillet it makes with the belly
 //   resolution  the lumps' grid, cells a side: more is smoother, slower
 //   colors  `fleece`; `body` the head, legs, tail and ears; `horn`;
-//           `muzzle` the patch on the face; `eyes` the beads, `pupil`
+//           `muzzle` the patch on the face; `eyes` the eyeballs (not
+//           drawn: they are the shared white, world/eye.jsx), `pupil`
 //           the dark spot on each
 export const SHEEP = {
   size: 1,

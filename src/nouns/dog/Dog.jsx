@@ -6,6 +6,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye } from "../../world/eye.jsx";
 import { DOG } from "./objects.js";
 
 // Where everything sits for each pose, at size 1: the cat's frame (see
@@ -40,7 +41,7 @@ const CHEST_EMBED = 0.03, LEG_EMBED = 0.03;
 // face, its middle `down` below the face's.
 const SNOUT = { size: [0.26, 0.2, 0.3], round: 0.07, out: 0.17, down: 0.09 };
 const EAR_R = 0.12, EAR_LENGTH = 0.26; // a floppy ear: a capsule, flattened
-const EYE_X = 0.16, EYE_Y = 0.08, EYE_R = 0.045;
+const EYE_X = 0.16, EYE_Y = 0.08, EYE_R = 0.054;
 function layoutOf(C) {
   const B = C.body;
   const L = C.legs;
@@ -294,11 +295,10 @@ export default function Dog({ config }) {
         <mesh position={[0, -SNOUT.down + 0.03, SNOUT.out - 0.01]} castShadow material={unlitMat(paint.nose)}>
           <sphereGeometry args={[0.065, 12, 8]} />
         </mesh>
-        {/* Eyes: dark beads either side above the snout. */}
+        {/* Eyes: white eyeballs either side above the snout, each with a
+            big round pupil in the eye colour (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * EYE_X, EYE_Y, 0.004]} castShadow material={unlitMat(paint.eyes)}>
-            <sphereGeometry args={[EYE_R, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, 0.004]} r={EYE_R} pupil={paint.eyes} />
         ))}
       </group>
     </group>

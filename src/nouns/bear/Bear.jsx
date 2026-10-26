@@ -5,6 +5,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye } from "../../world/eye.jsx";
 import { BEAR } from "./objects.js";
 
 // Where everything sits, at size 1: the cat's standing frame (see
@@ -30,7 +31,7 @@ import { BEAR } from "./objects.js";
 const MUZZLE = { size: [0.3, 0.22, 0.28], round: 0.08, out: 0.15, down: 0.07 };
 const HEAD = { size: [0.5, 0.42, 0.44], round: 0.14, into: 0.14 }; // the head block, run `into` the body
 const EAR_R = 0.1; // a round ear: a sphere, flattened front to back and a little top to bottom
-const EYE_X = 0.12, EYE_Y = 0.1, EYE_R = 0.04;
+const EYE_X = 0.12, EYE_Y = 0.1, EYE_R = 0.048;
 const NOSE_R = 0.07;
 function layoutOf(C) {
   const B = C.body;
@@ -123,11 +124,10 @@ export default function Bear({ config }) {
         <mesh position={[0, -MUZZLE.down + 0.04, MUZZLE.out - 0.01]} castShadow material={unlitMat(paint.nose)}>
           <sphereGeometry args={[NOSE_R, 12, 8]} />
         </mesh>
-        {/* Eyes: small dark beads either side above the muzzle. */}
+        {/* Eyes: small white eyeballs either side above the muzzle, a
+            round pupil in the eye colour (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <mesh key={s} position={[s * EYE_X, EYE_Y, 0.004]} castShadow material={unlitMat(paint.eyes)}>
-            <sphereGeometry args={[EYE_R, 12, 8]} />
-          </mesh>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, 0.004]} r={EYE_R} pupil={paint.eyes} />
         ))}
       </group>
     </group>

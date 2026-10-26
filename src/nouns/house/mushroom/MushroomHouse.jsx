@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 
 import { merge } from "../../../world/merge.js";
-import { LIGHT } from "../../../adjectives/lit/objects.js";
 import Primitive from "../../primitive/Primitive.jsx";
 import Seated from "../../primitive/Seated.jsx";
 import {
@@ -12,6 +11,8 @@ import {
 import { useBody } from "../../planet/OnPlanet.jsx";
 import { registerSolid, unregisterSolid } from "../../../player/solids.js";
 import { useDoorAt } from "../House.jsx";
+import { Arch, WindowPane } from "../Panes.jsx";
+import { indoorWindowOf } from "../objects.js";
 import { MUSHROOM_HOUSE } from "./objects.js";
 
 const rad = (deg) => (deg * Math.PI) / 180;
@@ -86,145 +87,6 @@ export function mushroomHouseFootprintOf(M) {
   return { x: r, z: r, round: true };
 }
 
-// A round pane (the cupcake's too — see Cupcake.jsx — so it is
-// exported): a cylinder lying along z — a coin, `depth` thick — with
-// its frame, a wider coin, behind it against the wall. Built lying in x/y
-// and bulging out along +z, so Seated can stand it flush on the stem.
-export function Coin({ config: R }) {
-  const light = useMemo(() => merge(LIGHT, R.light), [R.light]);
-  const F = R.frame;
-  const form = useMemo(
-    () => ({ tall: R.depth / (2 * R.radius) }),
-    [R.depth, R.radius],
-  );
-  const frameForm = useMemo(
-    () => (F ? { tall: F.depth / (2 * (R.radius + F.thickness)) } : null),
-    [F, R.radius],
-  );
-  const K = R.knob;
-  return (
-    <group>
-      {F && (
-        <group position-z={F.depth / 2}>
-          <Primitive
-            shape="cylinder"
-            radius={R.radius + F.thickness}
-            detail={R.detail}
-            form={frameForm}
-            clay={R.clay}
-            rotation={{ x: 90 }}
-            swatch={F.color}
-          />
-        </group>
-      )}
-      <group position-z={(F?.depth ?? 0) + R.depth / 2}>
-        <Primitive
-          shape="cylinder"
-          radius={R.radius}
-          detail={R.detail}
-          form={form}
-          clay={R.clay}
-          rotation={{ x: 90 }}
-          swatch={R.color}
-          light={light}
-        />
-      </group>
-      {K && (
-        <group
-          position={[
-            K.side * R.radius,
-            0,
-            (F?.depth ?? 0) + R.depth + K.radius * 0.6,
-          ]}
-        >
-          <Primitive shape="sphere" radius={K.radius} swatch={K.color} />
-        </group>
-      )}
-    </group>
-  );
-}
-
-// How an arch's two solids are pressed to shape: a cube `radius` wide
-// stretched to `straight` tall and `depth` deep, and a coin of `radius`
-// `depth` thick.
-const archFormsOf = (radius, depth, straight) => ({
-  box: { tall: straight / (2 * radius), deepen: depth / (2 * radius) },
-  arch: { tall: depth / (2 * radius) },
-});
-
-// An arched slab (the cupcake's door too, so it is exported): a box
-// `width` across standing under a half-coin of the same width, `height`
-// tall from its foot to the crown of the arch, with its frame, a wider
-// arch, behind it against the wall, and a knob on it. Built like the Coin
-// — lying in x/y, bulging out along +z, its middle at mid-height — so
-// Seated can stand it flush on the stem.
-export function Arch({ config: R }) {
-  const light = useMemo(() => merge(LIGHT, R.light), [R.light]);
-  const F = R.frame;
-  const K = R.knob;
-  const r = R.width / 2;
-  // The straight part stands from the foot up to where the arch springs.
-  // The frame's springs from the same height: it is `thickness` wider each
-  // side and taller by that over the top, so its arch is that much bigger.
-  const straight = R.height - r;
-  const at = -R.height / 2 + straight / 2;
-  const forms = useMemo(
-    () => archFormsOf(r, R.depth, straight),
-    [r, R.depth, straight],
-  );
-  const frameForms = useMemo(
-    () => (F ? archFormsOf(r + F.thickness, F.depth, straight) : null),
-    [F, r, straight],
-  );
-  const part = (radius, depth, forms, swatch, light) => (
-    <group>
-      <group position-y={at}>
-        <Primitive
-          shape="cube"
-          radius={radius}
-          detail={R.detail}
-          form={forms.box}
-          clay={R.clay}
-          swatch={swatch}
-          light={light}
-        />
-      </group>
-      <group position-y={-R.height / 2 + straight}>
-        <Primitive
-          shape="cylinder"
-          radius={radius}
-          detail={R.detail}
-          form={forms.arch}
-          half="back"
-          clay={R.clay}
-          rotation={{ x: 90 }}
-          swatch={swatch}
-          light={light}
-        />
-      </group>
-    </group>
-  );
-  return (
-    <group>
-      {F && (
-        <group position-z={F.depth / 2}>
-          {part(r + F.thickness, F.depth, frameForms, F.color)}
-        </group>
-      )}
-      <group position-z={(F?.depth ?? 0) + R.depth / 2}>
-        {part(r, R.depth, forms, R.color, light)}
-      </group>
-      {K && (
-        <group
-          position={[K.side * r, 0, (F?.depth ?? 0) + R.depth + K.radius * 0.6]}
-        >
-          <Primitive shape="sphere" radius={K.radius} swatch={K.color} />
-        </group>
-      )}
-    </group>
-  );
-}
-
 // One mushroom house, standing on the ground at y = 0 with its front
 // facing +z. `config` overrides any of MUSHROOM_HOUSE's fields for this
 // one instance.
@@ -246,8 +108,8 @@ export default function MushroomHouse({ config }) {
     const solid = registerSolid({
       body: ball,
       dir: at.clone().normalize(),
-      top: at.length() - ball.radius + capTopOf(M),
-      radius: mushroomHouseFootprintOf(M).x,
+      top: at.length() - ball.radius + capTopOf(M) * M.scale,
+      radius: mushroomHouseFootprintOf(M).x * M.scale,
     });
     return () => unregisterSolid(solid);
   }, [M, ball]);
@@ -276,7 +138,7 @@ export default function MushroomHouse({ config }) {
       ways: {
         arch: M.interior.arch,
         door: M.interior.door,
-        window: M.interior.window,
+        window: indoorWindowOf(M.interior.window, W),
       },
       door: D,
       window: W,
@@ -299,7 +161,7 @@ export default function MushroomHouse({ config }) {
     [stem, S.radius, W, D],
   );
   return (
-    <group ref={root}>
+    <group ref={root} scale={M.scale}>
       <group ref={foot} position-z={S.radius} />
       <group position-y={stem.lift}>
         <Primitive
@@ -312,7 +174,7 @@ export default function MushroomHouse({ config }) {
         />
         <Seated body={stemBody} spec={seats.door} part={Arch} />
         {seats.windows.map((spec, i) => (
-          <Seated key={i} body={stemBody} spec={spec} part={Coin} />
+          <Seated key={i} body={stemBody} spec={spec} part={WindowPane} />
         ))}
       </group>
       <group position-y={capBase}>

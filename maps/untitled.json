@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "untitled",
+  "surface": {
+    "kind": "planet",
+    "radius": 36
+  },
+  "look": {
+    "daylight": 1,
+    "ground": "#6E9B5E"
+  },
+  "folder": "maps",
+  "terrain": "terrain",
+  "placements": [],
+  "dismissed": [],
+  "savedAt": "2026-10-24T18:47:15.806Z"
+}

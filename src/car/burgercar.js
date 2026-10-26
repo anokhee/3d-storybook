@@ -9,7 +9,7 @@
    (tray.js), cut down through the top bun to the cheese like a cookie
    cutter, the bun's top levelled round it so its rim is four straight,
    level lines; in it the roadster's two bucket seats, dashboard and
-   steering wheel, and an arched windshield standing upright on its
+   steering wheel, and an arched windshield raked back from its
    front edge. Headlights on the bottom bun's front, tail lights on its
    back, and four wheels with hubcaps standing out either side of it, on
    axles under it. Faces +X; its origin on the ground under the axles.

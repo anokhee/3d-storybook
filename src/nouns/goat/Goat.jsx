@@ -5,8 +5,10 @@ import { useFrame } from "@react-three/fiber";
 import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
-import { paintOn } from "../../world/paint.js";
+import { paintOn, paintWhere } from "../../world/paint.js";
+import { zebraMark, giraffeMark } from "./markings.js";
 import { GOAT } from "./objects.js";
+import { Eye, AHEAD, OUT } from "../../world/eye.jsx";
 
 // Where everything sits, at size 1: the cat's frame (see cat/Cat.jsx)
 // with a goat's parts on it, standing only. The goat is one lump (see
@@ -67,15 +69,7 @@ const COW_SNOUT = { depth: 0.45, out: 0.27, from: 0.02, nostrilX: 0.045, nostril
 // above the withers (`from` along the neck), each `r` thick and
 // `length` long between its round ends, sunk `sink` into the neck.
 const MANE = { count: 12, r: 0.024, length: 0.035, from: 0.2, sink: 0.03 };
-const STRIPE = { body: 0.042, neck: 0.036, head: 0.03, leg: 0.03 }; // how wide each kind of a zebra's stripe is
-// A ring's turn: a box frame with its y along `axis` and its x along
-// `across`, so the box lies square across the part, as an Euler.
-const ringTurn = (axis, across) => {
-  const x = across.clone().normalize(), y = axis.clone().normalize(), z = new THREE.Vector3().crossVectors(x, y);
-  return new THREE.Euler().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x, y, z)).toArray().slice(0, 3);
-};
-const EYE_R = 0.036, EYE_Y = 0.035, EYE_Z = 0.05; // the beads, on the sides of the head
-const BAR = [0.04, 0.012, 0.012]; // the pupil, a bar across the bead's outer face
+const EYE_R = 0.042, EYE_Y = 0.035, EYE_Z = 0.05; // the eyeballs, on the sides of the head
 const EAR_R = 0.042, EAR_BACK = 0.25, EAR_TIP = 0.35; // an ear: a capsule out to the side, flattened, swept back; its length and droop are the config's
 const TAIL_FROM = 0.03; // how far along the tail (its eased weight, see world/lump.js) the tail's colour starts
 const OSSICONE = { r: 0.024, knob: 0.032, foot: 0.045, height: 0.12 }; // a giraffe's: a short peg up off the top of the head, `foot` out from the middle, with a ball on its end
@@ -86,50 +80,6 @@ const BEARD = { top: 0.045, tip: 0.01, length: 0.14, back: 0.08 }; // the beard:
 // one and smaller ones lumped off its edge in a direction of their own.
 // `n` picks which blotch, the same every time.
 const rand = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
-// The giraffe's patches: octagons tiled close over the back — behind
-// the neck — and down either flank, each row shifted half a step from
-// the last, each patch nudged off the grid a little so the coat between
-// runs in uneven lines.
-const PATCH_R = 0.055, PATCH_STEP = 0.13;
-function octagons(B, top, bottom) {
-  const out = [];
-  const add = (at, turn, depth, n) => out.push({ at: [at[0] + (rand(n + 0.1) - 0.5) * 0.02, at[1] + (rand(n + 0.4) - 0.5) * 0.02, at[2] + (rand(n + 0.6) - 0.5) * 0.02], turn, d: PATCH_R * 2.6, depth, edges: octagon(n, PATCH_R) });
-  let n = 0;
-  [-0.065, 0.065].forEach((x, row) => {
-    for (let z = -B.length / 2 + 0.07 + (row % 2) * PATCH_STEP / 2; z <= 0.05; z += PATCH_STEP) add([x, top + 0.02, z], [-Math.PI / 2, 0, 0], 0.14, n++);
-  });
-  for (const s of [-1, 1]) {
-    [0.22, 0.52, 0.82].forEach((t, row) => {
-      for (let z = -B.length / 2 + 0.07 + (row % 2) * PATCH_STEP / 2; z <= B.length / 2 - 0.04; z += PATCH_STEP) add([s * (B.width / 2 + 0.1), bottom + B.height * t, z], [0, s * Math.PI / 2, 0], 0.3, n++);
-    });
-  }
-  return out;
-}
-// And up the neck: rows of them along it from `from` to `to` high,
-// round all four sides — a patch on each side, and on the front and the
-// back half a step further along, so they stagger round the neck — each
-// a shallow box against its face, turned with the neck's lean.
-function neckOctagons(foot, lean, from, to) {
-  const out = [];
-  const up = [0, Math.cos(lean), Math.sin(lean)], fwd = [0, -Math.sin(lean), Math.cos(lean)];
-  const at = (t, across, out_) => [across, foot[1] + up[1] * t + fwd[1] * out_, foot[2] + up[2] * t + fwd[2] * out_];
-  let n = 100;
-  for (let t = (from - foot[1]) / up[1]; foot[1] + up[1] * t <= to; t += PATCH_STEP * 0.9) {
-    for (const s of [-1, 1]) out.push({ at: at(t, s * NECK_W / 2, 0), turn: [lean, s * Math.PI / 2, 0], d: PATCH_R * 2.6, depth: 0.12, edges: octagon(n++, PATCH_R) });
-    const t2 = t + PATCH_STEP * 0.45;
-    if (foot[1] + up[1] * t2 > to) continue;
-    out.push({ at: at(t2, 0, NECK_DEPTH / 2), turn: [lean, 0, 0], d: PATCH_R * 2.6, depth: 0.12, edges: octagon(n++, PATCH_R) });
-    out.push({ at: at(t2, 0, -NECK_DEPTH / 2), turn: [lean + Math.PI, 0, 0], d: PATCH_R * 2.6, depth: 0.12, edges: octagon(n++, PATCH_R) });
-  }
-  return out;
-}
-// A giraffe's patch: an octagon `r` out to its edges, each edge turned
-// and pushed in or out a little by noise so no two are alike, the whole
-// turned too. `n` picks which, the same every time.
-function octagon(n, r) {
-  const turn = rand(n + 0.9) * Math.PI;
-  return Array.from({ length: 8 }, (_, k) => ({ a: turn + (k * Math.PI) / 4 + (rand(n * 11 + k) - 0.5) * 0.35, r: r * (0.8 + rand(n * 13 + k + 0.2) * 0.35) }));
-}
 function blotch(n) {
   const discs = [[0, 0, 0.034 + rand(n) * 0.022]];
   const more = 1 + Math.floor(rand(n + 0.5) * 3);
@@ -260,29 +210,12 @@ function layoutOf(C) {
     // The mane: capsules along the neck's back, each standing straight
     // off it (back and up, the way the neck leans) and sunk a little in
     mane: maneOf(neckFoot, neckUp, neckFwd, neckLen, H, half, onHead),
-    // The stripes (a zebra's), each a box the paint is laid within:
-    // `bands` across the body projected down from above, as wide as the
-    // body and more and deep enough to wrap down both flanks, kept back
-    // of where the neck rises, and two across the rump from behind; and
-    // `rings` round the neck, the head behind the snout and each leg,
-    // each a box square across its part and a little wider than it every
-    // way, so it paints all round
-    bands: [
-      ...[0.06, -0.04, -0.13, -0.22, -0.3].map((z, i) => ({ at: [0, (top + 0.05 + bottom + 0.07) / 2, z], turn: [-Math.PI / 2, 0, 0], size: [B.width + 0.3, STRIPE.body * (i === 2 ? 1.25 : 1), top - bottom - 0.02] })),
-      ...[top - 0.14, top - 0.26].map((y) => ({ at: [0, y, -B.length / 2 + 0.05], turn: [0, Math.PI, 0], size: [B.width - 0.06, STRIPE.body * 0.9, 0.18] })),
-    ],
-    rings: [
-      ...[[0.3, 1.1], [0.45, 1], [0.6, 1], [0.75, 0.9], [0.9, 0.85]].map(([f, w]) => ({ at: [0, neckFoot[1] + neckUp[1] * f * neckLen, neckFoot[2] + neckUp[2] * f * neckLen], turn: ringTurn(new THREE.Vector3(...neckUp), new THREE.Vector3(...neckFwd)), size: [NECK_DEPTH + 0.06, STRIPE.neck * w, NECK_W + 0.06] })),
-      ...[[-0.1, 1], [-0.03, 0.9], [0.04, 0.85]].map(([dz, w]) => ({ at: onHead(0, dz), turn: ringTurn(new THREE.Vector3(0, -Math.sin(H.tilt), Math.cos(H.tilt)), new THREE.Vector3(0, Math.cos(H.tilt), Math.sin(H.tilt))), size: [H.height + 0.08, STRIPE.head * w, H.width + 0.08] })),
-      // each leg's at a few heights, spaced for legs 0.5 high and stretched to these
-      ...feet.flatMap(([x, , z], i) => [[0.12, 0.2, 0.28, 0.36], [0.11, 0.19, 0.27, 0.35], [0.13, 0.21, 0.29, 0.37], [0.11, 0.2, 0.28, 0.36]][i].map((y, k) => ({ at: [x, y * legTop / 0.5, z], turn: [0, 0, 0], size: [L.thickness + 0.14, STRIPE.leg * (k === 1 ? 1.15 : 1), L.thickness + 0.14] }))),
-    ],
     hooves: feet.map(([x, , z]) => ({ at: [x, 0.03, z], size: [L.thickness + 0.04, 0.06, L.thickness + 0.04] })),
     // The spots (a deer's): small blotches scattered down onto the back —
     // behind the neck, and shallow, so none catches the neck where it
     // rises — and in from either flank, each a few overlapping discs of
     // different sizes (see blotch) so no two are the same round shape
-    spots: C.spotShape === "octagon" ? [...octagons(B, top, bottom), ...neckOctagons(neckFoot, H.neck, top + 0.05, head[1] - 0.15)] : [
+    spots: [
       ...[[0.06, -0.3], [-0.07, -0.22], [0.1, -0.12], [-0.04, -0.04], [0.07, 0.04], [-0.1, -0.33], [0.02, -0.19], [-0.08, 0.03]].flatMap(([x, z], i) => blotch(i).map(([u, v, d]) => ({ at: [x + u, top + 0.02, z + v], turn: [-Math.PI / 2, 0, 0], d, depth: 0.14 }))),
       ...[[0.7, -0.22], [0.55, -0.06], [0.75, 0.1], [0.5, 0.22], [0.4, -0.3]].flatMap(([t, z], i) => blotch(i + 8).map(([u, v, d]) => ({ at: [B.width / 2 + 0.1, bottom + B.height * t + u, z + v], turn: [0, Math.PI / 2, 0], d, depth: 0.3 }))),
       ...[[0.65, -0.3], [0.5, -0.14], [0.72, 0.02], [0.55, 0.18], [0.4, 0.28]].flatMap(([t, z], i) => blotch(i + 13).map(([u, v, d]) => ({ at: [-(B.width / 2 + 0.1), bottom + B.height * t + u, z + v], turn: [0, -Math.PI / 2, 0], d, depth: 0.3 }))),
@@ -298,6 +231,9 @@ function layoutOf(C) {
     // then down, through `bend` to `tip`, with a brush of a tuft on the
     // end, swung side to side about the root
     hang: { root: [0, top - 0.07, -B.length / 2 + 0.01], bend: [0, -0.07, -0.05], tip: [0, -0.4, -0.065] },
+    // The body plan, for markings painted wherever a pattern says
+    // (goat/markings.js: a zebra's stripes, a giraffe's patches)
+    frame: { B, legTop, bottom, top, neckFoot, neckUp, head, tilt: H.tilt, half },
     top: top + H.rise + half[1],
     hornTop,
     ossiconeTop: top + H.rise + half[1] + OSSICONE.height + OSSICONE.knob,
@@ -378,15 +314,18 @@ export default function Goat({ config }) {
   // the head.
   const snout = useMemo(() => (C.snout ? paintOn(lump.geo, new THREE.Vector3(...lay.snout.at), new THREE.Euler(lay.snout.tilt, 0, 0), lay.snout.size) : null), [C.snout, lump, lay.snout]);
   useEffect(() => () => snout?.dispose(), [snout]);
-  // The stripes, if it has them (a zebra's): the bands across the body
-  // and rump and the rings round the neck, head and legs, each the
-  // lump's surface within its box.
-  const stripes = useMemo(() => (C.stripes ? [...lay.bands, ...lay.rings].map((b) => paintOn(lump.geo, new THREE.Vector3(...b.at), new THREE.Euler(...b.turn), b.size)) : []), [C.stripes, lump, lay.bands, lay.rings]);
+  // The stripes, if it has them (a zebra's): painted wherever its
+  // pattern falls, all round the body, neck, head and legs.
+  const stripes = useMemo(() => (C.stripes ? [paintWhere(lump.geo, zebraMark(lay.frame))] : []), [C.stripes, lump, lay.frame]);
   useEffect(() => () => stripes.forEach((g) => g.dispose()), [stripes]);
-  // The spots, if it has them: each a disc of paint, a patch arched at
-  // the top and rounded off at the bottom by half its width, so a circle
-  // (or a giraffe's, an octagon trimmed by its edges)
-  const spots = useMemo(() => (C.spots ? lay.spots.map((s) => paintOn(lump.geo, new THREE.Vector3(...s.at), new THREE.Euler(...s.turn), [s.d, s.d, s.depth], s.edges ? { edges: s.edges } : { arch: true, radius: s.d / 2 })) : []), [C.spots, lump, lay.spots]);
+  // The spots, if it has them: a deer's each a disc of paint, a patch
+  // arched at the top and rounded off at the bottom by half its width,
+  // so a circle; a giraffe's patches painted wherever their net falls.
+  const spots = useMemo(() => {
+    if (!C.spots) return [];
+    if (C.spotShape === "patches") return [paintWhere(lump.geo, giraffeMark(lay.frame))];
+    return lay.spots.map((s) => paintOn(lump.geo, new THREE.Vector3(...s.at), new THREE.Euler(...s.turn), [s.d, s.d, s.depth], { arch: true, radius: s.d / 2 }));
+  }, [C.spots, C.spotShape, lump, lay.spots, lay.frame]);
   useEffect(() => () => spots.forEach((g) => g.dispose()), [spots]);
   // The antlers, if it has them: a second small lump poured round both,
   // in the head's frame
@@ -444,7 +383,6 @@ export default function Goat({ config }) {
   });
 
   const coat = unlitMat(paint.coat);
-  const dark = unlitMat(paint.pupil);
   const horn = unlitMat(paint.horn);
   return (
     <group scale={C.size}>
@@ -556,20 +494,19 @@ export default function Goat({ config }) {
             <sphereGeometry args={[0.034, 12, 8]} />
           </mesh>
         )}
-        {/* Eyes: beads on the sides of the head, a dark bar lying across
-            the outer face of each for a pupil when it has them (a goat's);
-            without, plain round beads (a deer's). */}
+        {/* Eyes: white eyeballs on the sides of the head, looking mostly
+            ahead and a little out (world/eye.jsx): a goat's (`pupils`) with
+            its wide bar of a pupil, the others' round in their eye colour. */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * (hw - 0.012), EYE_Y, EYE_Z]}>
-            <mesh castShadow material={unlitMat(paint.eyes)}>
-              <sphereGeometry args={[EYE_R, 12, 8]} />
-            </mesh>
-            {C.pupils && (
-              <mesh position={[s * (EYE_R - 0.003), 0, 0]} material={dark}>
-                <boxGeometry args={[BAR[1], BAR[2], BAR[0]]} />
-              </mesh>
-            )}
-          </group>
+          <Eye
+            key={s}
+            position={[s * (hw - 0.012), EYE_Y, EYE_Z]}
+            r={EYE_R}
+            look={[s, 0, AHEAD]}
+            face={[s, 0, OUT]}
+            shape={C.pupils ? "bar" : "round"}
+            pupil={C.pupils ? paint.pupil : paint.eyes}
+          />
         ))}
       </group>
     </group>

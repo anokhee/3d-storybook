@@ -2,8 +2,8 @@ import { solid } from "../../world/palette.js";
 
 // The lion's own colours: a golden coat, a paler cream on the muzzle,
 // the chest and the insides of the ears, a dark brown mane (and the
-// tuft on the tail, the same), a dark nose, and an amber iris on a dark
-// bead. The story's knobs write over these.
+// tuft on the tail, the same), a dark nose, and white eyes with a dark
+// pupil. The story's knobs write over these.
 const EYE_DARK = "#2A2230";
 const paint = {
   fur: solid("#D9A45B"),
@@ -21,7 +21,7 @@ const paint = {
 // the ground, and a long tail out of its rear hanging down and back
 // with a thicker TUFT at its tip, painted dark — with a lighter bib
 // painted on the chest, a big muzzle bump with a triangle nose and a
-// line of a mouth drawn down from it, two bead eyes, three whiskers a
+// line of a mouth drawn down from it, two white eyes, three whiskers a
 // side, and two small round ears on the front corners of the top. Round
 // the head sits the MANE: a second lump of its own, a thick ring of
 // balls framing the face, wider than the body, over the front of the
@@ -39,8 +39,9 @@ const paint = {
 //   resolution  the lumps' grid, cells a side: more is smoother, slower
 //   colors  `fur` the coat; `belly` the lighter bib on the chest, the
 //           muzzle, the whiskers and the inner ears; `mane` the mane and
-//           the tail's tuft; `eyes` the iris, `pupil` the dark bead
-//           behind it; `nose`
+//           the tail's tuft; `eyes` the iris (not drawn while the eyes
+//           are white with a pupil, world/eye.jsx), `pupil` the pupil;
+//           `nose`
 export const LION = {
   size: 1,
   swish: 0.6,

@@ -57,15 +57,17 @@ const paint = {
 //           horse's or a zebra's)
 //   stripes whether stripes are painted round the body, neck, head and
 //           legs (a zebra's)
-//   spotShape  "blotch" for the deer's irregular spots, or "octagon"
-//           for a giraffe's patches, noise-bent octagons close over the
-//           back and flanks and up the neck
+//   spotShape  "blotch" for the deer's irregular spots, or "patches"
+//           for a giraffe's: irregular polygons fitted close with a thin
+//           pale web between, over the body, up the neck and down the
+//           legs to the knees (goat/markings.js)
 //   tail    `hang` whether the tail hangs down off the rump, thin, with
 //           a brush of a tuft on its end (a giraffe's), instead of the
 //           short tail pointing up; `r` how thick it hangs and `tuft`
 //           how big its tuft, if not the giraffe's
-//   pupils  whether a dark bar lies across each eye for a pupil; off,
-//           the eyes are plain round beads
+//   pupils  whether each eye's pupil is a goat's wide bar, in `pupil`;
+//           off, a round one in `eyes` (the eyeballs are white either
+//           way, world/eye.jsx)
 //   ears    `length` of each, `droop` how far below straight-out each
 //           hangs, in radians: 0 is level, negative stands them up;
 //           `point` how far the tips are drawn out to a point, 0 round
@@ -85,7 +87,7 @@ const paint = {
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   colors  `coat`; `tail` the tail, the coat's colour on a goat;
 //           `patch` the patch over the back; `horn`; `antler`;
-//           `ossicone` the pegs and `knob` the balls on them; `spot` the fawn spots; `eyes` the beads and `pupil` the bar across
+//           `ossicone` the pegs and `knob` the balls on them; `spot` the fawn spots; `eyes` the round pupils and `pupil` the goat's bar (the eyeballs are white)
 //           each; `nose` the nose or the nostrils; `snout` the snout's paint;
 //           `tuft` the hanging tail's tuft; `mane`; `stripe` the stripes;
 //           `hoof`

@@ -1,6 +1,6 @@
 import { PALETTE } from "../../../world/palette.js";
 import { merge } from "../../../world/merge.js";
-import { DWELLING } from "../objects.js";
+import { DWELLING, CAT_HEIGHT, windowShapeKnobs } from "../objects.js";
 
 // A mushroom house: a fat clay stem standing on the ground, a domed cap
 // squashed down on top of it with gills under the rim and spots dotted
@@ -26,8 +26,9 @@ import { DWELLING } from "../objects.js";
 //                      theirs; `at` where each lies, `{ lat, lon }` in
 //                      degrees on the dome — lat 90 is the crown, 0 the
 //                      rim; lon 0 is the front, 90 the right
-//   windows  the two round panes, one each side of the door: `radius`
-//            the pane, `depth` how far it stands off the stem, `y` how
+//   windows  the two panes, one each side of the door: `type` "round",
+//            "arched" or "square", `width` and `height` the pane (a round
+//            one an oval that size), `depth` how far it stands off the stem, `y` how
 //            high its middle is off the ground, `apart` how far round the
 //            stem each stands from the front, in degrees; `frame` the ring
 //            round it — `thickness` how far past the pane it reaches,
@@ -44,6 +45,7 @@ import { DWELLING } from "../objects.js";
 //            `color` its own — `detail`, `clay` and `color` as a window's
 //   interior as DWELLING's (see ../objects.js)
 export const MUSHROOM_HOUSE = merge(DWELLING, {
+  scale: CAT_HEIGHT / 3.2,
   stem: {
     radius: 4.4,
     height: 8.4,
@@ -77,7 +79,11 @@ export const MUSHROOM_HOUSE = merge(DWELLING, {
     },
   },
   windows: {
-    radius: 0.85,
+    type: "round",
+    columns: 2,
+    rows: 2,
+    width: 1.7,
+    height: 1.7,
     depth: 0.12,
     y: 4,
     apart: 30,
@@ -104,7 +110,7 @@ export const MUSHROOM_HOUSE = merge(DWELLING, {
     rooms: 4,
     door: { curve: 1 },
     front: { curve: 1 },
-    window: { width: 1.7, height: 1.7, y: 4, topCurve: 1, bottomCurve: 1 },
+    window: { width: 1.7, height: 1.7, y: 4 },
   },
 });
 
@@ -116,5 +122,5 @@ export const MUSHROOM_HOUSE_KNOBS = [
   { label: "cap radius", path: "cap.radius", step: 0.2, min: 1 },
   { label: "cap squash", path: "cap.squash", step: 0.05, min: 0.1, max: 1.5 },
   { label: "door width", path: "door.width", step: 0.1, min: 0.5 },
-  { label: "door height", path: "door.height", step: 0.1, min: 1 },
+  ...windowShapeKnobs(),
 ];

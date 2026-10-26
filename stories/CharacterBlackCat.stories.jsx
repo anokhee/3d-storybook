@@ -8,13 +8,14 @@ import { knobStory } from "./helpers/knobs.js";
 const K = knobStory(BLACK_CAT, ANTHRO_KNOBS, BLACK_CAT, {});
 
 export default {
-  title: "Characters/Black Cat",
+  title: "Characters/Anthropomorphic/Black Cat",
   component: Anthro,
   argTypes: K.argTypes,
   args: K.args,
   render: (a) => <Anthro config={K.configOf(a)} />,
 };
 
-// The pose knob switches the T-pose to walking, running or jumping, and
-// the animate knob plays those as a loop.
+// The pose knob switches the T-pose to walking, running or jumping, or to
+// wielding a water gun (1-handed) or a whack-a-mole mallet (2-handed), and
+// the animate knob plays those as a loop (the mallet swings).
 export const Default = {};

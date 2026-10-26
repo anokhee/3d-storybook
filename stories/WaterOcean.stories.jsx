@@ -18,7 +18,7 @@ const OCEAN = {
 };
 
 export default {
-  title: "Nature/Water/Ocean",
+  title: "Terrain/Water/Ocean",
   parameters: { stage: { ground: "planet" } },
   argTypes: {
     width: { control: { type: "range", min: 4, max: 30, step: 0.5 } },

@@ -6,6 +6,7 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye } from "../../world/eye.jsx";
 import { SHEEP } from "./objects.js";
 
 // Where everything sits, at size 1, standing. The sheep is TWO lumps
@@ -32,7 +33,7 @@ import { SHEEP } from "./objects.js";
 // fleece's front and `up` from the ground.
 const HEAD = { size: [0.28, 0.3, 0.36], round: 0.08, out: 0.16, up: 0.66 };
 const EAR_R = 0.055, EAR_LENGTH = 0.16; // an ear: a capsule, flattened, out to the side
-const EYE_X = 0.1, EYE_Y = 0.06, EYE_R = 0.04, PUPIL_R = 0.022;
+const EYE_X = 0.1, EYE_Y = 0.06, EYE_R = 0.048;
 // A horn: a curve wound round the ear's side of the head, the way a
 // ram's spirals — from its root up inside the top of the head, out and
 // back over the ear, down behind it, forward under it and up again in
@@ -194,17 +195,10 @@ export default function Sheep({ config }) {
             <capsuleGeometry args={[EAR_R, EAR_LENGTH, 4, 12]} />
           </mesh>
         ))}
-        {/* Eyes: white beads either side of the face with a dark pupil
-            on the front of each. */}
+        {/* Eyes: white eyeballs either side of the face with a dark
+            pupil on the front of each (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * EYE_X, EYE_Y, 0.004]}>
-            <mesh castShadow material={unlitMat(paint.eyes)}>
-              <sphereGeometry args={[EYE_R, 12, 8]} />
-            </mesh>
-            <mesh position={[0, 0, EYE_R - PUPIL_R * 0.6]} material={unlitMat(paint.pupil)}>
-              <sphereGeometry args={[PUPIL_R, 10, 6]} />
-            </mesh>
-          </group>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, 0.004]} r={EYE_R} pupil={paint.pupil} />
         ))}
       </group>
     </group>

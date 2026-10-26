@@ -16,7 +16,7 @@ function Story({ speed, driver, speckles, bend, peel, trim, wheel }) {
 }
 
 export default {
-  title: "Vehicles/Car/Banana",
+  title: "Vehicles/Food Cars/Banana",
   argTypes: {
     speed: { control: { type: "range", min: 0, max: 20, step: 0.5 }, name: "speed (the wheels)" },
     driver: { control: "select", options: DRIVERS },

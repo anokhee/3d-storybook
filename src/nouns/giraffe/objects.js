@@ -19,7 +19,8 @@ const paint = {
 // ears held out to the sides rather than standing up, a little pointed,
 // a long cream snout tapering and turned nose-down in place of its
 // muzzle, and a neck three times as long — brown patches on a tan coat,
-// octagons bent by noise and set close, over the body and up the neck, and a thin brown tail hanging down with a dark
+// irregular polygons fitted close with a thin web of the coat between, over the body, up the neck and down the legs
+// to the knees, and a thin brown tail hanging down with a dark
 // brush of a tuft on its end. It stands on the ground facing +z, about
 // 1.65 tall.
 //
@@ -33,7 +34,7 @@ export const GIRAFFE = {
   antlers: false,
   ossicones: true,
   snout: true,
-  spotShape: "octagon",
+  spotShape: "patches",
   tail: { hang: true },
   head: { ...DEER.head, rise: 0.6 }, // three times the deer's rise, so the neck out of the body is three times as long, at the same lean
   ears: { length: 0.13, droop: 0.15, point: 0.6 }, // out to the sides, barely drooping

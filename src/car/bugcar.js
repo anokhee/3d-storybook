@@ -8,11 +8,14 @@
    lines, and in it the roadster's two bucket seats, a dashboard, a
    steering wheel on its column, and a framed windshield standing on the
    shell at the well's front. A LADYBUG has a red shell with black
-   spots, a black head and two antennae; a BEETLE a dark
-   shell, no spots, and a great curving horn out of its head; a
-   BUTTERFLY a dark banded body with a tapering tail, long clubbed
-   antennae, and two great patterned wings each side that flap as it
-   drives. Faces +X;
+   spots, a black head and two antennae; a STAGBEETLE a dark shell, no
+   spots, and a great forked horn curving out of its head; a HORNEDBEETLE
+   a jewel beetle, a violet shell with two lilac bands over its rear and
+   a pair of horns out of its head; a LONGHORN a powder-blue spotted
+   shell with a pair of antennae longer than itself, beaded along their
+   length, sweeping back over its flanks; a BUTTERFLY a dark banded body
+   with a tapering tail, long clubbed antennae, and two great patterned
+   wings each side that flap as it drives. Faces +X;
    its origin on the ground under the axles. Up is +Y.
 
    `finish(color, extra)` makes every material, so a page can hand in its
@@ -25,9 +28,14 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // What every bug car shares, and what each kind changes: `shell` and
 // `head` their colours, `spots` how many spots the shell wears (in
 // `spot` colour, mirrored each side, 0 for none), `antennae` whether
-// the head grows two (`antennaLen` long, `knob` the ball on each tip),
-// `horn` how long the horn out of the head is (0 for none), `trim` the
-// seats, bumper, hubcaps and windshield frame, `dash` the cockpit's
+// the head grows two (`antennaLen` long, `knob` the ball on each tip;
+// `antennaSweep` whether they arc up, out and back over the flanks as a
+// longhorn's do, instead of standing straight, and `antennaBeads` how
+// many beads mark the joints along each of those),
+// `horn` how long the horns out of the head are (0 for none) and `horns`
+// how many: one standing in the middle, forked at the tip like a stag
+// beetle's, or a pair either side of it, curving outward to a point like
+// a rhinoceros beetle's. `trim` the seats, bumper and hubcaps, `dash` the cockpit's
 // walls, the steering wheel and the belly. A butterfly's: `wings`
 // whether it has them (`wing` their colour, `wingEdge` the border and
 // eyespots, `wingDot` the dots in the border and the eyespots' middles),
@@ -42,7 +50,10 @@ export const BUGCAR = {
   antennae: true,
   antennaLen: 0.4,
   knob: 0.045,
+  antennaSweep: false,
+  antennaBeads: 0,
   horn: 0,
+  horns: 1,
   wings: false,
   wing: 0xf08a24,
   wingEdge: 0x1e1a1c,
@@ -59,15 +70,17 @@ export const BUGCAR = {
   wheelR: 0.3,
 };
 export const LADYBUG = { ...BUGCAR };
-export const BEETLE = { ...BUGCAR, shell: 0x4f3a2d, head: 0x2a1d17, spots: 0, antennae: false, horn: 1, trim: 0xd8c08a };
+export const STAGBEETLE = { ...BUGCAR, shell: 0x4f3a2d, head: 0x2a1d17, spots: 0, antennae: false, horn: 1, trim: 0xd8c08a };
 export const BUTTERFLY = { ...BUGCAR, shell: 0x2e2836, head: 0x2e2836, spot: 0x1e1a1c, spots: 0, antennaLen: 0.65, knob: 0.065, wings: true, bands: 3, abdomen: 0.8 };
+export const HORNEDBEETLE = { ...BUGCAR, shell: 0x6b3fa6, head: 0x2a1f33, spot: 0x3d2566, spots: 0, antennae: false, horn: 0.9, horns: 2, bands: 2, band: 0xb48ae6, trim: 0xefe4f6 };
+export const LONGHORN = { ...BUGCAR, shell: 0x8fb0cc, head: 0x26262c, spots: 6, antennaLen: 2.3, knob: 0.04, antennaSweep: true, antennaBeads: 5, bands: 1, band: 0x1e1a1c, trim: 0xeef2f5 };
 
 // The body, in the car's own units (before `scale`). Each dome is half
 // an ellipsoid stood on the FLOOR: `x` where its middle is along the
 // car, `rx`, `ry`, `rz` how far it reaches along, up and across. The
 // head's rear runs into the shell's front. The WELL is the cockpit
 // (tray.js) cut out of the shell's top, its floor the FLOOR, the shell
-// flattened round it to its rim, TOP.
+// flattened round it to its rim, TOP, and run down ahead of it.
 const FLOOR = 0.45, BELLY = 0.16;
 const SHELL = { x: -0.32, rx: 1.2, ry: 0.92, rz: 0.88 };
 const HEAD = { x: 0.95, rx: 0.4, ry: 0.4, rz: 0.5 };
@@ -85,7 +98,13 @@ function onDome(D, d) {
 // How high a dome's surface is over the point (x, z): the floor where
 // the point is outside its footprint.
 const heightAt = (D, x, z) => FLOOR + D.ry * Math.sqrt(Math.max(0, 1 - ((x - D.x) / D.rx) ** 2 - (z / D.rz) ** 2));
-const LEVEL = leveller(WELL, TOP);
+// The level the shell's top is eased and capped to: the rim's height,
+// TOP, behind and beside the well, and ahead of it a quarter-ellipse
+// falling from the rim to the shell's front edge, so the top runs down
+// into the head in one curve instead of a shelf with a shoulder
+const FRONT = SHELL.x + SHELL.rx;
+const levelAt = (x) => (x <= WELL.x1 ? TOP : FLOOR + (TOP - FLOOR) * Math.sqrt(Math.max(0, 1 - ((x - WELL.x1) / (FRONT - WELL.x1)) ** 2)));
+const LEVEL = leveller(WELL, levelAt);
 // The shell's height over (x, z), levelled round the well; whether that
 // differs from the dome's there; and its normal.
 const shellAt = (x, z) => LEVEL.height(heightAt(SHELL, x, z), x, z);
@@ -169,7 +188,33 @@ export function buildBugCar(finish, C = BUGCAR) {
   // of its top
   const lampGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.08, 14).translate(0, 0.04, 0);
   for (const s of [-1, 1]) stickOn(HEAD, [0.8, 0.4, s * 0.55], lampGeo, C.lamp, { emissive: C.lamp, emissiveIntensity: 0.6 }, 0.03);
-  if (C.antennae) {
+  if (C.antennae && C.antennaSweep) {
+    // a longhorn's antennae: each a tube along a curve out of the head's
+    // top, up and forward a little, then arcing out past the shell's
+    // flank and back along it, thinning to the tip, a bead at each joint
+    // along it and a knob on the end
+    const L = C.antennaLen;
+    for (const s of [-1, 1]) {
+      const root = onDome(HEAD, [0.5, 0.8, s * 0.45]).at;
+      const at = (dx, dy, z) => new THREE.Vector3(root.x + dx, root.y + dy, s * z);
+      const curve = new THREE.CatmullRomCurve3([root.clone().add(new THREE.Vector3(-0.05, -0.1, 0)), root, at(0.35, 0.45, 0.4), at(-0.3 * L, 0.6, SHELL.rz + 0.1), at(-0.7 * L, 0.45, SHELL.rz + 0.3), at(-L, 0.25, SHELL.rz + 0.35)]);
+      const tube = new THREE.TubeGeometry(curve, 40, 0.03, 8, false);
+      const pos = tube.attributes.position, uv = tube.attributes.uv, v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        const u = uv.getX(i), on = curve.getPointAt(u);
+        v.fromBufferAttribute(pos, i).sub(on).multiplyScalar(1 - 0.5 * u).add(on);
+        pos.setXYZ(i, v.x, v.y, v.z);
+      }
+      tube.computeVertexNormals();
+      add(tube, C.head, 0, 0, 0);
+      for (let i = 1; i <= C.antennaBeads; i++) {
+        const p = curve.getPointAt(0.15 + (0.8 * i) / (C.antennaBeads + 1));
+        add(new THREE.SphereGeometry(0.03 * (1 - 0.4 * (i / C.antennaBeads)) + 0.018, 10, 8), C.shell, p.x, p.y, p.z);
+      }
+      const tip = curve.getPointAt(1);
+      add(new THREE.SphereGeometry(C.knob, 10, 8), C.head, tip.x, tip.y, tip.z);
+    }
+  } else if (C.antennae) {
     const stalk = new THREE.CylinderGeometry(0.015, 0.015, C.antennaLen, 8).translate(0, C.antennaLen / 2, 0);
     const knob = new THREE.SphereGeometry(C.knob, 10, 8).scale(1, C.knob > 0.05 ? 1.6 : 1, 1).translate(0, C.antennaLen, 0); // a long knob is a butterfly's club
     for (const s of [-1, 1]) {
@@ -177,28 +222,40 @@ export function buildBugCar(finish, C = BUGCAR) {
       stickOn(HEAD, [0.5, 0.8, s * 0.45], knob, C.head, undefined, 0.03);
     }
   }
-  if (C.horn > 0) {
-    // the horn: a tube along a curve out of the head's top, sweeping
-    // forward and up, thick at the root and tapering — each ring of the
-    // tube drawn in toward the curve by how far along it is — and forked
-    // at the tip like a beetle's, two prongs splayed apart
-    const root = onDome(HEAD, [0.3, 1, 0]).at;
-    const bend = (dx, dy) => root.clone().add(new THREE.Vector3(dx * C.horn, dy * C.horn, 0));
-    const curve = new THREE.CatmullRomCurve3([root.clone().add(new THREE.Vector3(0, -0.15, 0)), root, bend(0.3, 0.25), bend(0.6, 0.6), bend(0.72, 0.95)]);
-    const tube = new THREE.TubeGeometry(curve, 20, 0.13, 12, false);
-    const pos = tube.attributes.position, uv = tube.attributes.uv, v = new THREE.Vector3();
-    for (let i = 0; i < pos.count; i++) {
-      const u = uv.getX(i), on = curve.getPointAt(u);
-      v.fromBufferAttribute(pos, i).sub(on).multiplyScalar(1 - 0.65 * u).add(on);
-      pos.setXYZ(i, v.x, v.y, v.z);
-    }
-    tube.computeVertexNormals();
-    add(tube, C.head, 0, 0, 0);
-    const tip = curve.getPointAt(1), dir = curve.getTangentAt(1);
-    for (const s of [-1, 1]) {
-      const prong = add(new THREE.ConeGeometry(0.05, 0.3, 10).translate(0, 0.15, 0), C.head, 0, 0, 0);
-      prong.position.copy(tip).addScaledVector(dir, -0.03);
-      prong.quaternion.setFromUnitVectors(Y, dir.clone().add(new THREE.Vector3(0, 0, s * 0.4)).normalize());
+  if (C.horn > 0 && C.horns > 0) {
+    // the horns: each a tube along a curve out of the head's top,
+    // sweeping forward and up, thick at the root and tapering — each
+    // ring of the tube drawn in toward the curve by how far along it is.
+    // One horn stands in the middle, forked at the tip like a stag
+    // beetle's, two prongs splayed apart; a pair stand either side of
+    // the middle, each curving a little outward, and ending in a point
+    // like a rhinoceros beetle's
+    const pair = C.horns >= 2, R = pair ? 0.09 : 0.13;
+    for (const s of pair ? [-1, 1] : [0]) {
+      const root = onDome(HEAD, [0.3, 1, s * 0.4]).at;
+      const bend = (dx, dy, dz) => root.clone().add(new THREE.Vector3(dx * C.horn, dy * C.horn, s * dz * C.horn));
+      const curve = new THREE.CatmullRomCurve3([root.clone().add(new THREE.Vector3(0, -0.15, 0)), root, bend(0.3, 0.25, 0.05), bend(0.6, 0.6, 0.15), bend(0.72, 0.95, 0.28)]);
+      const tube = new THREE.TubeGeometry(curve, 20, R, 12, false);
+      const pos = tube.attributes.position, uv = tube.attributes.uv, v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        const u = uv.getX(i), on = curve.getPointAt(u);
+        v.fromBufferAttribute(pos, i).sub(on).multiplyScalar(1 - 0.65 * u).add(on);
+        pos.setXYZ(i, v.x, v.y, v.z);
+      }
+      tube.computeVertexNormals();
+      add(tube, C.head, 0, 0, 0);
+      const tip = curve.getPointAt(1), dir = curve.getTangentAt(1);
+      if (pair) {
+        const point = add(new THREE.ConeGeometry(R * 0.35, 0.22, 10).translate(0, 0.11, 0), C.head, 0, 0, 0);
+        point.position.copy(tip).addScaledVector(dir, -0.02);
+        point.quaternion.setFromUnitVectors(Y, dir);
+        continue;
+      }
+      for (const p of [-1, 1]) {
+        const prong = add(new THREE.ConeGeometry(0.05, 0.3, 10).translate(0, 0.15, 0), C.head, 0, 0, 0);
+        prong.position.copy(tip).addScaledVector(dir, -0.03);
+        prong.quaternion.setFromUnitVectors(Y, dir.clone().add(new THREE.Vector3(0, 0, p * 0.4)).normalize());
+      }
     }
   }
 

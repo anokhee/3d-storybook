@@ -127,6 +127,100 @@ a `<mesh>` or a `<primitive>`. Leave out anything that patches three.js
 globally (albatross's flatlight.js): the library applies that look per
 material instead.
 
+## The mapmaker
+
+`npm run mapmaker` opens a second page (http://localhost:6007) that lays the
+catalogue out on a planet: pick a thing on the left, click the ground to
+place it, drag it about, and turn its knobs on the right — the same knobs
+its story has, within the same bounds — plus its turn, size and lift.
+Nothing here needs Storybook; it reads the story files directly.
+
+**Save** writes two files into the folder named in the top bar (this repo's
+`maps/` by default; `../Car/maps` to save straight into a game — anywhere
+under the Desktop): `<name>.json`, the map as the editor keeps it, and
+`<name>.glb`, the placed objects baked, one node per placement carrying
+its bearing, turn, size, lift, entry and knob values as extras.
+
+A game loads the `.glb` with `runtime/mapLoader.js` (plain three.js, no
+React — copy it beside the game's code):
+
+```js
+const { group, placements } = await loadMap("maps/world.glb", {
+  finish: (m) => myToonMaterial(m.color),   // the game's own materials, optional
+  radiusAt: (dir) => groundRadiusAt(dir),  // stand each on the game's ground, optional
+});
+scene.add(group);
+```
+
+A placement is kept as a **bearing** (a unit direction from the planet's
+middle), not a position, so a game with hills stands each thing on its own
+ground there. A flat ground, when a game wants one, is the same interface
+with up always +y — see `mapmaker/surface.js`.
+
+**Roles.** Each placement is scenery (baked as it stands — a placed car or
+animal too) or the one `player start`: where you begin, and as which
+character. The first character placed gets it; the inspector moves it. The
+start wears a coloured ring and a bar the way it faces. The loader returns
+it as `starts.player` with a `heading`, and keeps its mesh out of `group`.
+
+**Groundcover.** The `groundcover` tab holds patches of grass, flowers,
+pebbles, bare ground, water and road. Pick one and **drag on the ground to
+draw it out** (a click places one of the stock size), then shape it in the
+inspector: width, length and corner in world units, how thickly it is
+planted, and `blend`, how near another patch of the same kind must come
+for the two to run together, the way the dollies' pools do. Patches lie in
+the order they are placed, later on top, and a patch laid over one of
+another kind clears it where they overlap: bare ground over grass is a
+clearing, pebbles over grass are pebbles with no grass under them. "On
+top" and "underneath" in the inspector reorder them. The editor plants a
+preview; a game plants its own things from the patches' shapes with
+`runtime/cover.js` (`coverLobes`, `coverField`, `sampleCover`), which
+deals a bearing for every tuft, so both agree on where the grass is. The
+car game grows its grass, pebbles and daisies only inside these patches.
+A **water** patch is a pond: a game sinks a basin under it, and a **road**
+laid across it is a bridge — the editor shows those pieces in timber, and
+the game is to build a deck on piers there, as it does for its own sea.
+(The car game's copy of `cover.js` has yet to learn `water`.)
+
+**Terrain seed.** Instead of drawing every cliff, pond and road, the map
+panel (nothing picked) has a `terrain seed`: a word the whole ground is
+grown from — cliffs with a ramp up each, some with a second storey; ponds;
+roads winding between the cliffs and running straight across the ponds as
+bridges; grass, flowers and pebbles. `roll` picks a new word and grows it;
+the sliders say how much of each (scaled by the ball's size); `replace` or
+`keep` says what happens to the shapes drawn by hand (things placed stay
+either way). What grows is ordinary placements — pick any of it in the
+terrain tab and move, reshape or delete it, or draw more — and ⌘Z takes it
+all back. The same word on the same ball grows the same ground; the word
+and amounts are saved with the map. See `mapmaker/seed.js`.
+
+**Terrain.** To lay things out against a game's real ground, the game
+exports a snapshot: the car game does it at `index.html?terrain` while the
+mapmaker is running (it posts `terrain.glb` into `../Car/maps`; with no
+server it downloads instead). The map's `terrain` setting names that file
+in the map's folder; the editor shows it, raycasts against its `ground:`
+meshes, and stands things at the real height. Re-export after changing the
+game's terrain. Without one, the editor's ball is a plain sphere at the
+map's radius (the car game's is 36).
+
+**Adopting a game's houses and trees.** The car game's houses and trees
+are left out of the snapshot and offered instead, as placements, in
+`adopt.json` beside it. A map that has none of them yet takes them all as
+the terrain loads (ids `adopt-…`), so the world looks as the game has it
+and the first save changes nothing; after that an `adopt` button offers
+any new ones, and deleted ones stay deleted. Once a map holds any houses
+the game builds ALL its houses from the map (likewise trees), with its
+own code: a house flattens its lot and keeps the fields clear as before,
+a tree is instanced and kept out of. Their knobs in the editor are not
+read by the game — only where they stand, their turn, a tree's size and
+the two-storey house's garage side. Other buildings (the cupcake house,
+the trailer) are plain scenery from the glb.
+
+Keys: drag moves · arrows nudge · q / e turn · [ ] size · ⌘D duplicate ·
+⌫ delete · f look at · ⌘Z undo · shift-click keeps placing · esc stops ·
+drag on the ground draws a groundcover patch.
+Planets and the sky are left out of the catalogue; everything else is in.
+
 ## Deploy
 
 Pushing to `main` builds the site and publishes it to GitHub Pages. Turn on

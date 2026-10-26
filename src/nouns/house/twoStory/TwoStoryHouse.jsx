@@ -90,9 +90,8 @@ export function twoStoryHouseFootprintOf(H) {
 // seams of its panels laid across it, standing a hair prouder.
 function GarageDoor({ D, face }) {
   const S = D.seams;
-  const seams =
-    S ?
-      Array.from(
+  const seams = S
+    ? Array.from(
         { length: S.count - 1 },
         (_, k) => ((k + 1) * D.height) / S.count,
       )
@@ -149,13 +148,13 @@ export default function TwoStoryHouse({ config }) {
     const solid = registerSolid({
       body: ball,
       dir: at.clone().normalize(),
-      top: at.length() - ball.radius + G.height - G.sink,
+      top: at.length() - ball.radius + (G.height - G.sink) * H.scale,
       frame: turn,
-      halfWidth: G.width / 2,
-      halfLength: G.depth / 2,
+      halfWidth: (G.width / 2) * H.scale,
+      halfLength: (G.depth / 2) * H.scale,
     });
     return () => unregisterSolid(solid);
-  }, [G, ball]);
+  }, [G, ball, H.scale]);
 
   const shell = useMemo(() => shellGeometry(G), [G]);
   const slab = useMemo(() => leanToOf(G), [G]);
@@ -163,9 +162,9 @@ export default function TwoStoryHouse({ config }) {
   const U = useMemo(() => merge(H.windows, H.upstairs), [H]);
   const face = B.depth / 2;
   return (
-    <group>
+    <group scale={H.scale}>
       <group position-x={houseXOf(H)}>
-        <House config={H} />
+        <House config={{ ...H, scale: 1 }} />
         {U.at.map((x, i) => (
           <Window key={i} W={U} x={x} face={face} />
         ))}

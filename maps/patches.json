@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "name": "patches",
+  "surface": {
+    "kind": "planet",
+    "radius": 36
+  },
+  "look": {
+    "daylight": 1,
+    "ground": "#6E9B5E"
+  },
+  "folder": "maps",
+  "terrain": "",
+  "placements": [
+    {
+      "id": "y1l0tv8aa",
+      "entry": "cover-grass",
+      "args": {
+        "width": 14,
+        "length": 10
+      },
+      "dir": [
+        0,
+        0.6,
+        0.8
+      ],
+      "yaw": 0,
+      "scale": 1,
+      "lift": 0,
+      "role": "prop"
+    },
+    {
+      "id": "5zkjq7c0e",
+      "entry": "cover-grass",
+      "args": {
+        "width": 5.5,
+        "length": 8
+      },
+      "dir": [
+        0.19607028307476548,
+        0.6550155910082045,
+        0.7297335264541118
+      ],
+      "yaw": 0.11014182389408737,
+      "scale": 1,
+      "lift": 0,
+      "role": "prop"
+    },
+    {
+      "id": "lnv6kjfue",
+      "entry": "cover-bare",
+      "args": {
+        "width": 5,
+        "length": 5,
+        "corner": 2.5
+      },
+      "dir": [
+        0,
+        0.6,
+        0.8
+      ],
+      "yaw": 0,
+      "scale": 1,
+      "lift": 0,
+      "role": "prop"
+    },
+    {
+      "id": "ipys47fue",
+      "entry": "cover-pebbles",
+      "args": {
+        "width": 6,
+        "length": 8
+      },
+      "dir": [
+        -0.24253562503633294,
+        0.5820855000871991,
+        0.7761140001162654
+      ],
+      "yaw": 0,
+      "scale": 1,
+      "lift": 0,
+      "role": "prop"
+    },
+    {
+      "id": "vsfoeefue",
+      "entry": "cover-flowers",
+      "args": {
+        "width": 8,
+        "length": 5
+      },
+      "dir": [
+        0,
+        0.4121678698554466,
+        0.911107922838356
+      ],
+      "yaw": 0,
+      "scale": 1,
+      "lift": 0,
+      "role": "prop"
+    }
+  ],
+  "dismissed": [],
+  "savedAt": "2026-10-24T19:41:40.950Z"
+}

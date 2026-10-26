@@ -17,7 +17,7 @@ const paint = {
 // cockpit, seats, wheels and lights left off, so the shell is whole. A
 // big round coiled shell with a raised spiral winding in on each flank,
 // over a soft foot that rises at the front into a smiling head with
-// rosy cheeks, two long eyestalks and two short tentacles. Crawling
+// rosy cheeks and two short eyestalks. Crawling
 // along the ground facing +z, about a unit long. Everything is scaled
 // by `size`.
 //

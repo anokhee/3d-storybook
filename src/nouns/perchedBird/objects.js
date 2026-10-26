@@ -1,8 +1,8 @@
 import { solid } from "../../world/palette.js";
 
 // The bird's and perch's own colours: a candy-red songbird with a cream
-// belly and a yellow beak, on a warm wooden perch, with bead eyes and
-// thin legs in dark plum.
+// belly and a yellow beak, on a warm wooden perch, with dark pupils in white
+// eyes and thin legs in dark plum.
 const paint = {
   body: solid("#E5534B"),
   belly: solid("#F2E9DC"),
@@ -33,11 +33,11 @@ export const PERCHES = ["stand", "branch"];
 //           off upright it leans (radians), `twig` a side shoot's length
 //   bird    `size` scales the bird alone; `body` the plump ball's radius,
 //           `pitch` how far it leans forward; `head` its radius; `beak`
-//           the cone's radius and `length`; `eye` the beads' radius;
+//           the cone's radius and `length`; `eye` the eyeballs' radius;
 //           `wing` the flattened ellipsoids' radius; `tail` its `length`
 //           and `width` at the tip, angled `droop` down; `leg` the thin
 //           legs' radius and `length`
-//   colors  `body`, `belly`, `beak`, `perch`, `eye`, `leg`
+//   colors  `body`, `belly`, `beak`, `perch`, `eye` (the pupils), `leg`
 export const PERCHED_BIRD = {
   height: 2.5,
   perch: "stand",
@@ -51,7 +51,7 @@ export const PERCHED_BIRD = {
     pitch: 0.35,
     head: 0.16,
     beak: { radius: 0.045, length: 0.13 },
-    eye: 0.03,
+    eye: 0.036,
     wing: 0.15,
     tail: { length: 0.3, width: 0.18, droop: 0.6 },
     leg: { radius: 0.016, length: 0.13 },

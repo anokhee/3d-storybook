@@ -6,6 +6,8 @@ import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
 import { lumpOf, tailBalls, tailParts } from "../../world/lump.js";
 import { ANTHRO } from "./objects.js";
+import { CLIFF_ARGS } from "../../../runtime/terrain.js";
+import { Eye, CAT_PUPIL } from "../../world/eye.jsx";
 
 // Where everything sits, at size 1, standing in a T-pose facing +z. The
 // creature is ONE lump (see world/lump.js): `main` are the parts it is
@@ -16,9 +18,13 @@ import { ANTHRO } from "./objects.js";
 // bumps and fingers, the cat's ears and tail, the dog's snout and
 // tail, the duck's wings and the chicken's tail feathers). `accents` are lumps of
 // their own in the accent colour (a beak, a bill, bare legs, floppy
-// ears) and `crest` in the detail colour (a comb, a wattle). `eyes` are
-// the beads or eyeballs, from the world, each `r` big with a pupil if it
-// has one; `mouth` is a curve of points drawn as a dark tube, `nose` a
+// ears) and `crest` in the detail colour (a comb, a wattle); `lumps`
+// are lumps each in a colour of its own (a witch's hair, the food
+// heads' cup, cake, frosting, dough, glaze and roast). `eyes` are
+// the eyeballs, each `r` big: a `ball` is the white one with a big pupil
+// every creature has ("round", or a cat's "slit"), drawn EYE_GROW times
+// as big so the white shows round it; the others are the kind's own,
+// with a pupil if they have one; `mouth` is a curve of points drawn as a dark tube, `nose` a
 // bead, `whiskers` thin sticks.
 // The poses. `legs` are [left, right] (x negative, then positive) each
 // { a, b } the thigh's and the shin's angle forward of straight down
@@ -28,8 +34,116 @@ import { ANTHRO } from "./objects.js";
 // walk steps the right foot forward and the left arm with it; the run
 // is a longer stride with the elbows bent; the jump tucks the knees and
 // throws the arms up, `lift` off the ground.
+// Things held, in the wield poses: each a few plain shapes in colours of
+// their own, laid out from the grip — the middle of the hand that holds
+// it, or between both hands — at size 1. In its own frame `y` is up the
+// thing and `z` the way it points (the gun's barrel) or strikes (the
+// mallet's head); `aims` is which of those its `aim` sets. `tip` is its
+// business end: the nozzle, the middle of the mallet's head.
+const HELD = {
+  // a toy water gun: an orange body over the grip, a round blue tank on
+  // top, a yellow barrel with a pump under it, a red nozzle
+  "water gun": {
+    aims: "z",
+    parts: [
+      { shape: "box", args: [0.05, 0.12, 0.06], at: [0, -0.02, -0.01], rot: [-0.25, 0, 0], hex: "#E8742A" },
+      { shape: "box", args: [0.07, 0.08, 0.3], at: [0, 0.07, 0.06], rot: [0, 0, 0], hex: "#E8742A" },
+      { shape: "sphere", args: [0.065, 16, 12], at: [0, 0.14, -0.02], rot: [0, 0, 0], hex: "#4FA3D9" },
+      { shape: "cylinder", args: [0.022, 0.022, 0.16, 12], at: [0, 0.08, 0.27], rot: [Math.PI / 2, 0, 0], hex: "#F2C94C" },
+      { shape: "box", args: [0.05, 0.04, 0.1], at: [0, 0.025, 0.24], rot: [0, 0, 0], hex: "#F2C94C" },
+      { shape: "cylinder", args: [0.03, 0.03, 0.04, 12], at: [0, 0.08, 0.37], rot: [Math.PI / 2, 0, 0], hex: "#D9483B" },
+    ],
+    tip: [0, 0.08, 0.4],
+  },
+  // a giant whack-a-mole mallet: a long wooden handle with a knob on its
+  // end, a fat red drum of a head across the top of it, capped yellow
+  mallet: {
+    aims: "y",
+    parts: [
+      { shape: "cylinder", args: [0.028, 0.028, 0.9, 12], at: [0, 0.2, 0], rot: [0, 0, 0], hex: "#B07A45" },
+      { shape: "sphere", args: [0.04, 12, 10], at: [0, -0.25, 0], rot: [0, 0, 0], hex: "#B07A45" },
+      { shape: "cylinder", args: [0.13, 0.13, 0.32, 24], at: [0, 0.65, 0], rot: [Math.PI / 2, 0, 0], hex: "#D9483B" },
+      { shape: "cylinder", args: [0.135, 0.135, 0.04, 24], at: [0, 0.65, 0.17], rot: [Math.PI / 2, 0, 0], hex: "#F2C94C" },
+      { shape: "cylinder", args: [0.135, 0.135, 0.04, 24], at: [0, 0.65, -0.17], rot: [Math.PI / 2, 0, 0], hex: "#F2C94C" },
+    ],
+    tip: [0, 0.65, 0],
+  },
+  // a white parachute: a dome of a canopy high over the grip, lines
+  // running down from its rim to a bar held in both hands
+  parachute: {
+    aims: "y",
+    parts: [
+      { shape: "sphere", args: [0.62, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2], at: [0, 0.95, 0], rot: [0, 0, 0], scale: [1, 0.62, 1], hex: "#FFFFFF" },
+      { shape: "cylinder", args: [0.014, 0.014, 0.2, 8], at: [0, 0, 0], rot: [0, 0, Math.PI / 2], hex: "#E6E6E6" },
+      ...Array.from({ length: 8 }, (_, i) => {
+        const th = (i / 8) * Math.PI * 2, rim = [Math.cos(th) * 0.6, 0.95, Math.sin(th) * 0.6], end = [Math.sign(Math.cos(th)) * 0.1 || 0.1, 0, 0];
+        const d = new THREE.Vector3(rim[0] - end[0], rim[1] - end[1], rim[2] - end[2]), len = d.length();
+        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize());
+        return { shape: "cylinder", args: [0.006, 0.006, len, 4], at: [(rim[0] + end[0]) / 2, (rim[1] + end[1]) / 2, (rim[2] + end[2]) / 2], rot: new THREE.Euler().setFromQuaternion(q).toArray().slice(0, 3), hex: "#E6E6E6" };
+      }),
+    ],
+    tip: [0, 0.95, 0],
+  },
+};
+// The held thing's parts and tip, put in the figure at `grip`, turned so
+// its `aims` axis runs along `aim`, kept upright (a gun) or square across
+// the body (a mallet, so its head swings straight ahead).
+function holding({ thing, aim }, grip) {
+  const T = HELD[thing];
+  const a = new THREE.Vector3(...aim).normalize(), x = new THREE.Vector3(), y = new THREE.Vector3(), z = new THREE.Vector3();
+  if (T.aims === "z") {
+    z.copy(a);
+    x.crossVectors(new THREE.Vector3(0, 1, 0), z).normalize();
+    y.crossVectors(z, x);
+  } else {
+    y.copy(a);
+    z.crossVectors(new THREE.Vector3(1, 0, 0), y).normalize();
+    x.crossVectors(y, z);
+  }
+  const basis = new THREE.Matrix4().makeBasis(x, y, z), turn = new THREE.Quaternion().setFromRotationMatrix(basis);
+  const at = (p) => new THREE.Vector3(...p).applyMatrix4(basis).add(new THREE.Vector3(...grip)).toArray();
+  const parts = T.parts.map((p) => ({
+    ...p,
+    at: at(p.at),
+    scale: p.scale,
+    rot: new THREE.Euler().setFromQuaternion(turn.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(...p.rot)))).toArray().slice(0, 3),
+  }));
+  return { parts, tip: at(T.tip) };
+}
+// The wield poses' arms, [left, right] as POSES's (worked back from where
+// the hands should be), and what is held: the water gun out ahead in the
+// right hand, the left hanging; the mallet upright in front in both, the
+// left hand below the right on its handle. `both` grips it between the
+// hands, else in the right; `aim` the way it points. The mallet's `swing`
+// is its whack: up and back over the head, then down in front.
+export const WIELDS = {
+  "water gun": {
+    arms: [[-1.1, 0, -0.9, 0.2], [-0.48, 1.19, 0.25, 1.66]],
+    held: { thing: "water gun", aim: [0, 0.1, 1] },
+  },
+  mallet: {
+    arms: [[-0.98, 1.04, 0.26, 2.15], [-0.64, 1.31, 0.55, 2.13]],
+    held: { thing: "mallet", both: true, aim: [0, 0.85, 0.5] },
+    swing: [
+      { arms: [[1.03, 0.74, 0.7, 2.53], [1.34, 2.04, 1.31, 2.15]], held: { thing: "mallet", both: true, aim: [0, 0.6, -0.8] } },
+      { arms: [[-0.97, 1.24, 0.11, 2.02], [-0.78, 1.52, -0.23, 1.87]], held: { thing: "mallet", both: true, aim: [0, -0.7, 0.71] } },
+    ],
+  },
+};
+// The parachute (see HELD): the jump's tucked legs, the arms up in both
+// fists on the bar, the canopy over the head. It only opens on a drop of
+// a cliff's height or more (CLIFF_ARGS.height, runtime/terrain.js); a
+// shorter jump stays a plain "jump".
+export const PARACHUTE_MIN_DROP = CLIFF_ARGS.height;
+export const opensParachute = (drop) => drop >= PARACHUTE_MIN_DROP;
+const PARACHUTE = { arms: [[1.2, 0.25, 1.3, 0.1], [1.2, 0.25, 1.3, 0.1]], held: { thing: "parachute", both: true, aim: [0, 1, 0] } };
+const STILL = [{ a: 0, b: 0 }, { a: 0, b: 0 }];
 const POSES = {
   "t-pose": { legs: [{ a: 0, b: 0 }, { a: 0, b: 0 }], arms: [[0, 0, 0, 0], [0, 0, 0, 0]] },
+  // stood holding something (see WIELDS): the water gun in one hand, the
+  // whack-a-mole mallet in both
+  "wield (1-handed)": { legs: STILL, ...WIELDS["water gun"] },
+  "wield (2-handed)": { legs: STILL, ...WIELDS.mallet },
   // sat in a car's seat (see stories/helpers/driver.jsx): thighs
   // sloping down forward, shins straight down to feet flat on the car's
   // floor (its ground), both arms reaching ahead and down to the wheel
@@ -50,6 +164,8 @@ const POSES = {
     arms: [[0.9, 0.2, 1.1, 0.1], [0.9, 0.2, 1.1, 0.1]],
     lift: 0.3,
   },
+  // dropping from a cliff's height or more, a white parachute held overhead
+  parachute: { legs: [{ a: 0.35, b: 0.1 }, { a: 0.25, b: 0 }], ...PARACHUTE, lift: 0.3 },
 };
 // The ride (see stories/helpers/rider.jsx): sat astride a back, the
 // thighs out forward along it, knees to the front, `straddle` [thigh,
@@ -90,8 +206,24 @@ const CYCLES = {
     { hold: 0.14, pose: { legs: [{ a: 0.5, b: 0.1 }, { a: 0.5, b: 0.1 }], arms: [[0.5, 0.1, 0.5, 0], [0.5, 0.1, 0.5, 0]], lift: 0.25 } },
     { hold: 0.2, pose: { legs: [{ a: 0.9, b: -0.5 }, { a: 0.9, b: -0.5 }], arms: [[-0.3, 0.3, -0.2, 0.4], [-0.3, 0.3, -0.2, 0.4]] } },
   ],
+  // the mallet's whack: held ready, swung up over the head, brought down
+  "wield (2-handed)": [
+    { hold: 0.5, pose: { legs: STILL, ...WIELDS.mallet } },
+    { hold: 0.25, pose: { legs: STILL, ...WIELDS.mallet.swing[0] } },
+    { hold: 0.4, pose: { legs: [{ a: 0.15, b: 0.05 }, { a: -0.1, b: -0.1 }], ...WIELDS.mallet.swing[1] } },
+  ],
 };
 const SHOULDER_Y = 0.86, HIP_Y = 0.6, HIP_X = 0.1;
+// The kinds whose head is not the rounded block but lumps of their own
+const OWN_HEAD = new Set(["pumpkin", "cupcake", "donut", "roast"]);
+// A smile, `w` wide at `y`, curving up at the ends and back round the face's front at `z`
+const smileOf = (y, w, z, lift = 0.015, back = 0.02) => Array.from({ length: 9 }, (_, i) => { const x = (-1 + i / 4) * w; return [x, y + lift * (x / w) ** 2, z - back * (x / w) ** 2]; });
+// Where the food heads' sprinkles lie, each [ring, angle round, twist],
+// in thirds of the three sprinkle colours
+const SPRINKLE_COLORS = ["sprinkleA", "sprinkleB", "sprinkleC"];
+const CUPCAKE_SPRINKLES = [[0, 0.3, 0.8], [0, 1.4, -0.4], [0, 2.3, 0.9], [0, 3.5, 0.2], [0, 4.4, -0.7], [0, 5.6, 0.5], [1, 0.9, -0.6], [1, 2.6, 0.7], [1, 4.0, 0.1], [1, 5.2, -0.9], [2, 1.8, 0.4], [2, 4.7, -0.3]];
+const DONUT_SPRINKLES = [[0.03, 15, 0.3], [-0.04, 35, -0.5], [0.05, 55, 0.9], [0.05, 125, -0.4], [-0.03, 150, 0.6], [0.04, 170, -0.2], [0.0, 200, 0.8], [-0.05, 225, -0.6], [0.04, 250, 0.2], [-0.02, 290, -0.8], [0.05, 315, 0.5], [-0.04, 340, -0.1]];
+const EYE_GROW = 1.25; // a white eyeball over the bead it replaced
 // The bottom of the trunk, at size 1: where a seated figure sits
 export const seatOf = (C) => Math.min(0.58 - C.body.radius, 0.68 - C.body.belly);
 // A ridden leg, at size 1 (see rider.jsx): the hips' half-width, the
@@ -132,10 +264,10 @@ function layoutOf(C, P) {
   main.push(cap([0, 0.58, 0], [0, 0.9, 0], B.radius, B.radius * 0.88, 0.1));
   main.push(ball([0, 0.68, 0.03], B.belly, 0.12));
 
-  // The head, grown out of the top of the trunk (the pumpkin's is its
-  // own, see below)
+  // The head, grown out of the top of the trunk (the pumpkin's and the
+  // food heads' are their own, see below)
   const headZ = 0.03, front = headZ + H.depth / 2, top = H.y + H.height / 2;
-  if (C.kind !== "pumpkin") face(block([0, H.y, headZ], [H.width, H.height, H.depth], H.round, 0.1));
+  if (!OWN_HEAD.has(C.kind)) face(block([0, H.y, headZ], [H.width, H.height, H.depth], H.round, 0.1));
 
   // The pose: each leg a thigh at angle `a` (forward of straight down)
   // and a shin at angle `b` (the same, absolute), each arm an upper arm
@@ -189,6 +321,7 @@ function layoutOf(C, P) {
   const t = A.thickness, half = A.length / 2;
   const dir = (s, e, f) => [s * Math.cos(e) * Math.cos(f), Math.sin(e), Math.cos(e) * Math.sin(f)];
   const along = (from, d, len) => [from[0] + d[0] * len, from[1] + d[1] * len, from[2] + d[2] * len];
+  const hands = [];
   for (const s of [-1, 1]) {
     const arm = P.arms[s < 0 ? 0 : 1];
     const root = [s * 0.1, SHOULDER_Y, 0];
@@ -197,6 +330,7 @@ function layoutOf(C, P) {
     main.push(cap(root, elbow, t * 1.3, t * 1.1, 0.08));
     main.push(cap(elbow, wrist, t * 1.1, t * 0.9, 0.03));
     const hand = along(wrist, d2, t);
+    hands.push(hand);
     if (C.kind === "scarecrow") {
       // no hands: a bunch of straw out of each cuff, fanned round the forearm's line
       for (const [u, v] of [[0, 0], [0.35, 0], [-0.35, 0], [0, 0.35], [0, -0.35], [0.25, 0.25], [-0.25, -0.25]]) {
@@ -219,6 +353,8 @@ function layoutOf(C, P) {
       main.push(block([s * (0.12 + A.length * 0.55), SHOULDER_Y - 0.02, -0.04], [A.length * 0.9, 0.04, 0.2], 0.02, 0.06));
     }
   }
+  // What a wield pose holds (see HELD), gripped between the hands or in the right
+  const held = P.held ? holding(P.held, P.held.both ? hands[0].map((v, i) => (v + hands[1][i]) / 2) : hands[1]) : null;
 
   // The kind's own parts
   const eyeX = H.width * 0.24, eyeY = H.y + H.height * 0.1;
@@ -245,7 +381,7 @@ function layoutOf(C, P) {
       crest.push(cap([0, H.y - 0.07, front - 0.02], [0, H.y - 0.15, front - 0.01], 0.03, 0.02));
       main.push(ball([0, 0.66, -0.12], 0.13, 0.14)); // a rump the feathers grow out of
       for (const s of [-1, 0, 1]) main.push(...curve([[s * 0.01, 0.64, -0.12], [s * 0.05, 0.76, -0.24], [s * 0.1, 0.92, -0.3]], 0.065, 0.02));
-      for (const s of [-1, 1]) eyes.push({ at: [s * eyeX, eyeY, front - 0.02], r: 0.035 });
+      for (const s of [-1, 1]) eyes.push({ at: [s * eyeX, eyeY, front - 0.02], r: 0.035, ball: "round" });
       break;
     }
     case "human":
@@ -255,7 +391,7 @@ function layoutOf(C, P) {
       // hat on a wide brim, and hair hanging from under it
       for (const s of [-1, 1]) {
         face(ball([s * (H.width / 2 - 0.01), H.y - 0.01, headZ], 0.05, 0.03));
-        eyes.push({ at: [s * H.width * 0.22, H.y + 0.03, front - 0.012], r: 0.026 });
+        eyes.push({ at: [s * H.width * 0.22, H.y + 0.03, front - 0.012], r: 0.026, ball: "round" });
       }
       const smile = (y, w) => Array.from({ length: 9 }, (_, i) => { const x = (-1 + i / 4) * w; return [x, y + 0.015 * (x / w) ** 2, front - 0.008 - 0.02 * (x / w) ** 2]; });
       mouthR = 0.008;
@@ -397,7 +533,7 @@ function layoutOf(C, P) {
         put("hair", cap([s * 0.17, H.y + 0.02, headZ - 0.05], [s * 0.3, H.y - 0.13, headZ - 0.06], 0.06, 0.04, 0.03));
         props.push({ shape: "sphere", args: [0.03, 12, 10], at: [s * 0.21, H.y + 0.0, headZ - 0.01], rot: [0, 0, 0], color: "ribbon" });
         props.push({ shape: "sphere", args: [0.03, 12, 10], at: [s * 0.22, H.y - 0.02, headZ - 0.09], rot: [0, 0, 0], color: "ribbon" });
-        eyes.push({ at: [s * H.width * 0.2, H.y + 0.01, front - 0.012], r: 0.034 });
+        eyes.push({ at: [s * H.width * 0.2, H.y + 0.01, front - 0.012], r: 0.034, ball: "round" });
         for (const [dx, dy] of [[0, 0], [0.025, 0.01], [0.012, -0.02]]) noses.push({ at: [s * (0.1 + dx), H.y - 0.05 + dy, front - 0.012], r: 0.008, color: "freckle" });
         props.push({ shape: "cylinder", args: [0.075, 0.075, 0.016, 24], at: [s * 0.06, 0.98, 0.1], rot: pointing([s * 0.3, 1, 0.8]), color: "collar" });
       }
@@ -407,11 +543,107 @@ function layoutOf(C, P) {
       props.push({ shape: "cylinder", args: [0.2, 0.31, 0.22, 32], at: [0, 0.52, 0.03], rot: [0, 0, 0], color: "coat" });
       break;
     }
+    case "cupcake": {
+      // a cupcake for a head: a fluted paper cup round the bottom, a
+      // golden cake domed over its rim with the face on it (bead eyes, a
+      // smile, blushed cheeks), a piped swirl of frosting on top in three
+      // rings and a peak, sprinkles over the frosting and a cherry on its
+      // stem on the point
+      const b = H.y - H.height / 2, R = H.width / 2;
+      const cupTop = b + 0.18, flutes = 14;
+      put("cup", cap([0, b + 0.08, headZ], [0, cupTop, headZ], R * 0.52, R * 0.86, 0.02));
+      for (let i = 0; i < flutes; i++) {
+        const th = (i / flutes) * Math.PI * 2;
+        put("cup", cap([Math.cos(th) * R * 0.62, b + 0.03, headZ + Math.sin(th) * R * 0.62], [Math.cos(th) * R * 0.88, cupTop, headZ + Math.sin(th) * R * 0.88], 0.03, 0.04, 0.02));
+      }
+      const cakeY = cupTop + 0.06;
+      put("cake", block([0, cakeY, headZ], [R * 2, 0.26, R * 2], 0.1, 0.03));
+      for (const s of [-1, 1]) {
+        eyes.push({ at: [s * 0.085, cakeY + 0.08, front - 0.012], r: 0.034, ball: "round" });
+        noses.push({ at: [s * 0.15, cakeY + 0.03, front - 0.012], r: 0.018, color: "blush" });
+      }
+      mouth = smileOf(cakeY + 0.0, 0.055, front - 0.008);
+      mouthR = 0.008;
+      // the frosting: discs piped one on the next, each smaller, a peak
+      // curling off the top; each disc is a block as thick as its edge
+      // is round, so it is a flat ring with a rounded rim
+      const f0 = cakeY + 0.12;
+      const discs = [{ y: f0, w: 0.21, h: 0.09 }, { y: f0 + 0.065, w: 0.16, h: 0.08 }, { y: f0 + 0.125, w: 0.11, h: 0.07 }];
+      for (const d of discs) put("frosting", block([0, d.y, headZ], [d.w * 2, d.h, d.w * 2], d.h / 2, 0.03));
+      put("frosting", cap([0, f0 + 0.15, headZ], [0.02, f0 + 0.22, headZ - 0.01], 0.045, 0.02, 0.03));
+      CUPCAKE_SPRINKLES.forEach(([ring, th, twist], i) => {
+        const d = discs[ring], rho = d.w - 0.035;
+        props.push({ shape: "cylinder", args: [0.009, 0.009, 0.045, 6], at: [Math.cos(th) * rho, d.y + d.h / 2 - 0.006, headZ + Math.sin(th) * rho], rot: pointing([Math.cos(th + twist), 0.12, Math.sin(th + twist)]), color: SPRINKLE_COLORS[i % 3] });
+      });
+      const cherry = [0.02, f0 + 0.25, headZ - 0.01];
+      props.push({ shape: "sphere", args: [0.04, 16, 12], at: cherry, rot: [0, 0, 0], color: "cherry" });
+      props.push({ shape: "cylinder", args: [0.007, 0.007, 0.08, 6], at: [cherry[0] + 0.012, cherry[1] + 0.065, cherry[2] - 0.008], rot: [0.2, 0, -0.3], color: "stem" });
+      break;
+    }
+    case "donut": {
+      // a ring donut stood on edge for a head, the hole through it front
+      // to back: a torus of dough (capsules end to end round the ring),
+      // a cap of glaze over its front face that drips over the outer
+      // rim, sprinkles on the glaze, the eyes on the ring over the hole
+      // and a smile on it under the hole, on a short neck
+      const tube = H.depth / 2 - 0.02, R = H.width / 2 - tube, N = 28;
+      const ring = (key, cz, r) => {
+        for (let i = 0; i < N; i++) {
+          const a = (i / N) * Math.PI * 2, b = ((i + 1) / N) * Math.PI * 2;
+          put(key, cap([Math.cos(a) * R, H.y + Math.sin(a) * R, cz], [Math.cos(b) * R, H.y + Math.sin(b) * R, cz], r, r));
+        }
+      };
+      ring("dough", headZ, tube);
+      const glazeZ = headZ + 0.035, glazeR = tube * 0.97;
+      ring("glaze", glazeZ, glazeR);
+      for (const [deg, r] of [[20, 0.035], [75, 0.03], [130, 0.04], [195, 0.03], [250, 0.038], [305, 0.032]]) {
+        const th = (deg / 180) * Math.PI;
+        put("glaze", ball([Math.cos(th) * (R + tube - 0.02), H.y + Math.sin(th) * (R + tube - 0.02), headZ + 0.01], r, 0.025));
+      }
+      main.push(cap([0, 0.88, 0], [0, H.y - R - tube + 0.05, 0.01], 0.07, 0.06, 0.05));
+      const fz = glazeZ + glazeR;
+      for (const s of [-1, 1]) eyes.push({ at: [s * 0.08, H.y + R - 0.01, fz - 0.012], r: 0.036, ball: "round" });
+      mouth = smileOf(H.y - R, 0.05, fz - 0.008, 0.015, 0.012);
+      mouthR = 0.008;
+      DONUT_SPRINKLES.forEach(([d, deg, twist], i) => {
+        const th = (deg / 180) * Math.PI, rho = R + d, a = th + Math.PI / 2 + twist;
+        const z = glazeZ + Math.sqrt(Math.max(0.0005, glazeR * glazeR - d * d)) - 0.004;
+        props.push({ shape: "cylinder", args: [0.009, 0.009, 0.045, 6], at: [Math.cos(th) * rho, H.y + Math.sin(th) * rho, z], rot: pointing([Math.cos(a), Math.sin(a), 0]), color: SPRINKLE_COLORS[i % 3] });
+      });
+      break;
+    }
+    case "roast": {
+      // a rotisserie chicken for a head: a plump roasted bird on its
+      // back, breast forward, the drumsticks trussed together up out of
+      // the top of it in a V with bare bone ends and a string round the
+      // ankles, wings tucked at its sides, a sprig of herb by a leg; the
+      // eyes on the breast and a smile under them; on a short neck
+      const rz = headZ + 0.02;
+      put("roast", block([0, H.y, rz], [H.width, H.height, H.depth], H.round, 0.04));
+      put("roast", ball([0, H.y + 0.02, rz + 0.08], 0.15, 0.08)); // the breast
+      main.push(cap([0, 0.88, 0], [0, H.y - H.height / 2 + 0.04, 0.01], 0.07, 0.06, 0.05));
+      for (const s of [-1, 1]) {
+        const root = [s * 0.11, H.y + 0.08, rz - 0.02], knee = [s * 0.15, H.y + 0.24, rz + 0.04], ankle = [s * 0.05, H.y + 0.34, rz + 0.03], tip = [s * 0.025, H.y + 0.42, rz + 0.02];
+        put("roast", cap(root, knee, 0.085, 0.065, 0.05));
+        put("roast", cap(knee, ankle, 0.062, 0.034, 0.02));
+        const d = [tip[0] - ankle[0], tip[1] - ankle[1], tip[2] - ankle[2]], len = Math.hypot(...d);
+        props.push({ shape: "cylinder", args: [0.016, 0.016, len, 8], at: [(tip[0] + ankle[0]) / 2, (tip[1] + ankle[1]) / 2, (tip[2] + ankle[2]) / 2], rot: pointing(d), color: "bone" });
+        props.push({ shape: "sphere", args: [0.026, 12, 10], at: tip, rot: [0, 0, 0], color: "bone" });
+        put("roast", cap([s * 0.18, H.y + 0.02, rz - 0.05], [s * 0.17, H.y - 0.1, rz + 0.1], 0.06, 0.04, 0.05)); // a wing, tucked
+        eyes.push({ at: [s * 0.085, H.y + 0.04, rz + 0.19], r: 0.034, ball: "round" });
+      }
+      props.push({ shape: "torus", args: [0.07, 0.011, 8, 24], at: [0, H.y + 0.34, rz + 0.03], rot: [Math.PI / 2, 0, 0], color: "string" });
+      mouth = Array.from({ length: 9 }, (_, i) => { const x = (-1 + i / 4) * 0.045; return [x, H.y - 0.06 + 0.012 * (x / 0.045) ** 2, rz + 0.08 + Math.sqrt(0.0161 - x * x) - 0.007]; });
+      mouthR = 0.008;
+      props.push({ shape: "sphere", args: [0.035, 12, 10], at: [0.1, top - 0.02, rz - 0.1], rot: [0, 0.5, 0.3], scale: [1, 0.4, 1.6], color: "herb" });
+      props.push({ shape: "sphere", args: [0.03, 12, 10], at: [-0.06, top - 0.01, rz - 0.14], rot: [0, -0.4, -0.2], scale: [1, 0.4, 1.4], color: "herb" });
+      break;
+    }
     case "cat": {
       // pointed ears, a small pink nose, whiskers, a long tail
       for (const s of [-1, 1]) {
         main.push(cap([s * 0.12, top - 0.04, 0], [s * 0.17, top + 0.14, 0], 0.07, 0.015, 0.05));
-        eyes.push({ at: [s * eyeX, eyeY, front - 0.01], r: 0.05, pupil: { scale: [0.3, 1, 0.3] } });
+        eyes.push({ at: [s * eyeX, eyeY, front - 0.01], r: 0.05, ball: "slit" });
         for (const k of [-1, 1]) whiskers.push({ at: [s * 0.2, H.y - 0.04 + k * 0.025, front - 0.02], turn: -s * k * 0.15, side: s });
       }
       noses.push({ at: [0, H.y - 0.03, front], r: 0.025, color: "detail" });
@@ -424,7 +656,7 @@ function layoutOf(C, P) {
       noses.push({ at: [0, H.y - 0.02, front + 0.13], r: 0.035, color: "detail" });
       for (const s of [-1, 1]) {
         accents.push(cap([s * (H.width / 2 - 0.02), top - 0.04, -0.02], [s * (H.width / 2 + 0.06), H.y - 0.14, -0.02], 0.06, 0.05, 0));
-        eyes.push({ at: [s * eyeX, eyeY + 0.02, front - 0.015], r: 0.035 });
+        eyes.push({ at: [s * eyeX, eyeY + 0.02, front - 0.015], r: 0.035, ball: "round" });
       }
       main.push(...curve([[0, 0.64, -0.16], [0, 0.7, -0.28], [0, 0.86, -0.32]], 0.05, 0.035));
       break;
@@ -432,13 +664,13 @@ function layoutOf(C, P) {
     case "duck": {
       // a flat bill, bead eyes, a small upturned tail
       accents.push(block([0, H.y - 0.04, front + 0.02], [0.2, 0.05, 0.2], 0.022, 0.03));
-      for (const s of [-1, 1]) eyes.push({ at: [s * eyeX, eyeY + 0.02, front - 0.04], r: 0.035 });
+      for (const s of [-1, 1]) eyes.push({ at: [s * eyeX, eyeY + 0.02, front - 0.04], r: 0.035, ball: "round" });
       main.push(...curve([[0, 0.66, -0.16], [0, 0.72, -0.28], [0, 0.84, -0.32]], 0.07, 0.025));
       break;
     }
     default:
   }
-  return { main, accents, crest, eyes, whiskers, noses, mouth, mouthR, props, lumps, ground };
+  return { main, accents, crest, eyes, whiskers, noses, mouth, mouthR, props, lumps, ground, held };
 }
 
 // One creature, standing on the ground at y = 0 in a T-pose facing +z.
@@ -492,14 +724,29 @@ export default function Anthro({ config }) {
           {f.accent && <mesh geometry={f.accent} castShadow receiveShadow material={unlitMat(paint.accent)} />}
           {/* The skin, hair, stem or chin, each in its own colour. */}
           {f.extras.map((e) => <mesh key={e.key} geometry={e.geo} castShadow receiveShadow material={unlitMat(paint[e.key])} />)}
+          {/* What a wield pose holds: the water gun, the mallet. */}
+          {f.lay.held?.parts.map((p, j) => {
+            const Geo = { cone: "coneGeometry", cylinder: "cylinderGeometry", sphere: "sphereGeometry", box: "boxGeometry" }[p.shape];
+            return (
+              <mesh key={`held${j}`} position={p.at} rotation={p.rot} scale={p.scale ?? [1, 1, 1]} castShadow material={unlitMat({ hex: p.hex })}>
+                <Geo args={p.args} />
+              </mesh>
+            );
+          })}
         </group>
       ))}
       {/* The comb and wattle. */}
       {crest && <mesh geometry={crest} castShadow receiveShadow material={unlitMat(paint.detail)} />}
       {/* The frog's wide mouth. */}
       {mouth && <mesh geometry={mouth} material={unlitMat(paint.detail)} />}
-      {/* The eyes: a bead or an eyeball, with a pupil if it has one. */}
-      {lay.eyes.map((e, i) => (
+      {/* The eyes: a white eyeball with a big pupil (world/eye.jsx) when
+          it has a `ball`, the pupil in the eyes' colour (a cat's slit in
+          the pupil's, in an iris of the eyes', as the cat's); else the kind's own (the frog's gold, the
+          fish's googly ones, the statue's shut slits, the alien's
+          almonds, buttons), a bead or a ball with a pupil if it has one. */}
+      {lay.eyes.map((e, i) => e.ball ? (
+        <Eye key={i} position={e.at} r={e.r * EYE_GROW} shape={e.ball} {...(e.ball === "slit" ? { iris: paint.eyes, size: CAT_PUPIL, pupil: paint.pupil } : { pupil: paint.eyes })} />
+      ) : (
         <group key={i} position={e.at} rotation={e.rot ?? [0, 0, 0]} scale={e.scale ?? [1, 1, 1]}>
           <mesh castShadow material={unlitMat(paint.eyes)}>
             <sphereGeometry args={[e.r, 16, 12]} />

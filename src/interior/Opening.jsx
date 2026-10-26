@@ -10,7 +10,7 @@ import Primitive from "../nouns/primitive/Primitive.jsx";
 // tall, its top and bottom edges each bowed out on a curve — `topCurve`
 // and `bottomCurve`, 1 a half-round as wide as the slab, 0 flat; both 1
 // on a slab as tall as it is wide is a coin — built the way the mushroom
-// house's Arch is (see mushroom/MushroomHouse.jsx): a box for the
+// house's Arch is (see house/Panes.jsx): a box for the
 // straight part with a half-coin pressed flatter or rounder on each
 // curved end. Its foot is at y = 0, its back against z = 0, bulging out
 // along +z: the `frame`, when there is one, a wider and taller slab of

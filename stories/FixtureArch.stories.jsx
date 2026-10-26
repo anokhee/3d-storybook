@@ -3,7 +3,7 @@
 // src/nouns/house/mushroom/objects.js). It is built about its middle, so
 // it is lifted by half its height to stand its foot on the ground. Set in
 // a floor-to-ceiling stretch of wall (stories/helpers/mounts.jsx).
-import { Arch } from "../src/nouns/house/mushroom/MushroomHouse.jsx";
+import { Arch } from "../src/nouns/house/Panes.jsx";
 import { MUSHROOM_HOUSE } from "../src/nouns/house/mushroom/objects.js";
 import { WallPanel } from "./helpers/mounts.jsx";
 import { PALETTE } from "../src/world/palette.js";

@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 
 import { merge } from "../../world/merge.js";
 import { unlitMat } from "../../adjectives/unlit/material.js";
+import { Eye, AHEAD } from "../../world/eye.jsx";
 import { FISH } from "./objects.js";
 
 // Where the belly's top edge runs round the body, as a sphere's theta.
@@ -112,16 +113,9 @@ export default function Fish({ config }) {
             ))}
           </group>
         ))}
-        {/* the eyes, white beads with a black bead of a pupil looking out to the side */}
+        {/* the eyes, white eyeballs with a big dark pupil looking mostly ahead and a little out */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * hx * eyeDir[0], hy * eyeDir[1], hz * eyeDir[2]]}>
-            <mesh material={unlitMat(P.eye)}>
-              <sphereGeometry args={[C.eye.radius, 14, 10]} />
-            </mesh>
-            <mesh position={[s * C.eye.radius * 0.62, C.eye.radius * 0.1, C.eye.radius * 0.45]} material={unlitMat(P.pupil)}>
-              <sphereGeometry args={[C.eye.radius / 2, 10, 8]} />
-            </mesh>
-          </group>
+          <Eye key={s} position={[s * hx * eyeDir[0], hy * eyeDir[1], hz * eyeDir[2]]} r={C.eye.radius} look={[s, 0.15, AHEAD]} face={[(s * eyeDir[0]) / hx, eyeDir[1] / hy, eyeDir[2] / hz]} pupil={P.pupil} white={P.eye} />
         ))}
         {/* the dorsal fin, a flat leaf half sunk into its back, raked toward the tail */}
         <mesh position={[0, hy * 0.92, -hz * 0.12]} rotation-x={-0.25} scale={[0.025, D.height, D.length / 2]} castShadow material={unlitMat(P.fin)}>

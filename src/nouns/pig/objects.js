@@ -18,7 +18,7 @@ const paint = {
 // seam, and a thin tail out of its rump curled into a tight spiral —
 // with a flat round disc of a snout on the head's front, two nostrils
 // dotted on it, two floppy triangular ears on top of the head tipped
-// forward, bead eyes, and, if it has them, a couple of darker patches
+// forward, white eyeballs with a dark pupil, and, if it has them, a couple of darker patches
 // painted over the back and a flank. It stands on the ground facing
 // +z, about 0.7 tall and 1.1 long: round and low.
 //

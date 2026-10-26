@@ -8,7 +8,7 @@
    through the buns and the sausage in the middle like a cookie cutter,
    the hot dog eased level round it so its rim is four straight, level
    lines; in it the roadster's two bucket seats, dashboard and steering
-   wheel, and an arched windshield standing upright on its front edge,
+   wheel, and an arched windshield raked back from its front edge,
    so the driver sits down in the bun. Squiggles of
    MUSTARD and KETCHUP wander along the sausage ahead of and behind the
    cockpit, each on its own switch. The roadster's headlights sit on
@@ -33,7 +33,7 @@ export const HOTDOGCAR = {
   mustardColor: 0xf2c431,
   ketchup: true,
   ketchupColor: 0xd12a1e,
-  trim: 0xf3e3b4, // seats, hubcaps, the windshield frame
+  trim: 0xf3e3b4, // seats, hubcaps
   dash: 0x3a3330, // the cockpit's floor, walls and lip, the dashboard, steering wheel and axles
   wheel: 0x232120,
   glass: 0xbfe3ec,

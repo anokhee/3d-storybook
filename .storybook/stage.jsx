@@ -57,6 +57,9 @@ export const useStage = create(() => ({
   ground: "flat", // or "planet" / "wide": a story's parameters.stage.ground
   lights: "look", // or "own": the story brings its own lights (the planets do)
   backdrop: "sky", // or "space": the planets' dark space, no ground
+  frame: null, // a number: the camera frames a cube this big (world units) centred on
+  // the object instead of the object itself, so a set of stories that give the
+  // same number (the bug cars) come out at the same zoom: a story's parameters.stage.frame
 }));
 
 // Where the lights stand. The dollies' sun and moon each have a bearing
@@ -193,6 +196,7 @@ function Slot() {
   const camera = useThree((s) => s.camera);
   const scene = useThree((s) => s.scene);
   const view = useStage((s) => s.view);
+  const frame = useStage((s) => s.frame);
   // Refit the camera when the OBJECT changes or the viewport resizes (the
   // Controls panel opening, say), but NOT when a slider moves: a color
   // change should not throw the view around. Bounds keeps the camera's
@@ -218,7 +222,18 @@ function Slot() {
       camera.lookAt(0, 1, 0);
       return;
     }
-    bounds.refresh().clip().fit();
+    bounds.refresh();
+    // A frame: a cube of the asked-for size stands in for the object, so the
+    // distance (the zoom) is the same for every story that asks for the same
+    // frame, whatever its own size. It stands over the object's middle, a
+    // fifth of its size up from the object's foot (not the object's own
+    // middle: a taller one would tip the camera and shift the horizon).
+    if (frame) {
+      const { box: own, center } = bounds.getSize();
+      center.y = own.min.y + frame * 0.2;
+      bounds.refresh(new THREE.Box3().setFromCenterAndSize(center, new THREE.Vector3(frame, frame, frame)));
+    }
+    bounds.clip().fit();
   }, [storyId, size.width, size.height]);
   // The look, applied to whatever just mounted (or re-applied when the
   // toolbar changes it). A story that brings its own lights (the planets:

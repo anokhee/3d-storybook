@@ -20,8 +20,8 @@ const paint = {
 // body so there is no seam, with a wide muzzle block out of the lower
 // half of its face, and a thin tail out of the top of its rump hanging
 // down and back — with a lighter muzzle painted over the end of the
-// nose, two dark nostrils and two bead eyes, two small ears out of the
-// sides of the head, and a dark TUFT, a bead, on the tail's tip. Either
+// nose, two dark nostrils and two white eyeballs with a dark pupil, two
+// small ears out of the sides of the head, and a dark TUFT, a bead, on the tail's tip. Either
 // side of the head, over the ears, sit the HORNS: each a curve of
 // tapered capsules of its own, a second lump in the horns' own pale
 // colour, sweeping out of the head's upper corners just above the ears

@@ -7,6 +7,7 @@ import { unlitMat } from "../../adjectives/unlit/material.js";
 
 import { lumpOf, tailBalls, tailParts, tailWeights, restOf, bendTail } from "../../world/lump.js";
 import { paintOn } from "../../world/paint.js";
+import { Eye } from "../../world/eye.jsx";
 import { LION } from "./objects.js";
 
 // Where everything sits, at size 1: the cat's standing frame (see
@@ -128,7 +129,7 @@ const whiskerDir = (s, fan) =>
 const FANS = [-0.16, 0, 0.16];
 const MUZZLE_R = 0.13, MUZZLE_DOWN = 0.1, MUZZLE_OUT = 0.03;
 const EAR_R = 0.075, EAR_INNER_R = 0.045;
-const EYE_X = 0.13, EYE_Y = 0.07, EYE_R = 0.042, IRIS_SPREAD = 0.8;
+const EYE_X = 0.13, EYE_Y = 0.07, EYE_R = 0.05;
 
 const Y = new THREE.Vector3(0, 1, 0);
 
@@ -193,11 +194,6 @@ export default function Lion({ config }) {
   const maneMat = unlitMat(paint.mane);
   const F = 0; // the face's middle is on the front surface
   const muzzle = head.clone().add(new THREE.Vector3(0, -MUZZLE_DOWN, F + MUZZLE_OUT));
-  // The iris: a cap of the bead's sphere, the front IRIS_SPREAD of it
-  // either way from straight ahead, a hair proud. Built round +y and
-  // turned to face +z.
-  const irisGeo = useMemo(() => new THREE.SphereGeometry(EYE_R + 0.002, 14, 6, 0, Math.PI * 2, 0, IRIS_SPREAD).rotateX(Math.PI / 2), []);
-  useEffect(() => () => irisGeo.dispose(), [irisGeo]);
   const noseGeo = useMemo(() => {
     const t = new THREE.Shape();
     t.moveTo(-0.05, 0.025);
@@ -242,15 +238,9 @@ export default function Lion({ config }) {
         <mesh position={[0, -MUZZLE_DOWN - 0.02, F + MUZZLE_OUT + MUZZLE_R - 0.024]} rotation-x={0.5} material={unlitMat(paint.pupil)}>
           <boxGeometry args={[0.014, 0.09, 0.014]} />
         </mesh>
-        {/* Eyes: a dark bead with the iris painted on its front — a cap
-            of a sphere a hair bigger than the bead, lying on it. */}
+        {/* Eyes: white eyeballs with a big round pupil (world/eye.jsx). */}
         {[-1, 1].map((s) => (
-          <group key={s} position={[s * EYE_X, EYE_Y, F + 0.004]}>
-            <mesh castShadow material={unlitMat(paint.pupil)}>
-              <sphereGeometry args={[EYE_R, 12, 8]} />
-            </mesh>
-            <mesh geometry={irisGeo} material={unlitMat(paint.eyes)} />
-          </group>
+          <Eye key={s} position={[s * EYE_X, EYE_Y, F + 0.004]} r={EYE_R} pupil={paint.pupil} />
         ))}
       </group>
       {/* Whiskers: three hair-thin cylinders a side, fanned, from the

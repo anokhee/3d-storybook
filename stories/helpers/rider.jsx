@@ -59,13 +59,18 @@ function backOf(group) {
     const z = box.min.z + ((i + 0.5) / COLUMNS) * size.z;
     if (hits(group, ray, [box.max.x + 1, box.min.y + FEET * size.y, z], [-1, 0, 0]).length) legs.push(z);
   }
-  if (!legs.length) return null;
   // ...split into the front pair and the back pair at the widest gap
   let cut = 1;
   for (let i = 1; i < legs.length; i++) if (legs[i] - legs[i - 1] > legs[cut] - legs[cut - 1]) cut = i;
   const mid = (a) => (a[0] + a[a.length - 1]) / 2;
-  const back = legs.length > 1 ? mid(legs.slice(0, cut)) : legs[0];
-  const front = legs.length > 1 ? mid(legs.slice(cut)) : legs[0];
+  let back = legs.length > 1 ? mid(legs.slice(0, cut)) : legs[0];
+  let front = legs.length > 1 ? mid(legs.slice(cut)) : legs[0];
+  // No front and back pair to sit between (a duck's two legs side by
+  // side, a rubber duck's none): the middle half of the body instead
+  if (!legs.length || front - back < 0.15 * size.z) {
+    back = box.min.z + 0.25 * size.z;
+    front = box.max.z - 0.25 * size.z;
+  }
   return (forward) => {
     const z = back + (front - back) * (0.5 + forward);
     const top = hits(group, ray, [0, box.max.y + 1, z], [0, -1, 0])[0];

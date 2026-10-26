@@ -2,7 +2,7 @@ import { solid } from "../../world/palette.js";
 
 // The donkey's own colours: a grey coat with a paler belly and muzzle,
 // a dark mane and tail tuft, dark hooves and a dark stripe down the
-// back, and dark eyes. The story's knobs write over these.
+// back, and dark pupils in white eyes. The story's knobs write over these.
 const paint = {
   coat: solid("#9A9399"),
   pale: solid("#E6DFDA"),
@@ -45,7 +45,8 @@ const paint = {
 //           straight up each leans, in degrees
 //   resolution  the lump's grid, cells a side: more is smoother, slower
 //   colors  `coat`; `pale` the muzzle and belly; `mane` the mane and
-//           tail tuft; `dark` the hooves and stripes; `eyes`
+//           tail tuft; `dark` the hooves and stripes; `eyes` the pupils
+//           (the eyeballs are white)
 export const DONKEY = {
   size: 1,
   wag: 0.5,
