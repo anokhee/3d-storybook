@@ -29,12 +29,15 @@ export async function saveJson(map) {
 }
 
 // The editor's own marks (a patch's plate and outline, `userData.editorOnly`)
-// are hidden while the file is written, so only the things go in it.
+// are hidden while the file is written, so only the things go in it. So is
+// an instanced mesh with no instances (a spring that dealt none of one rock):
+// the exporter writes it with no instance data, and a loader then fails the
+// whole file on it.
 export async function saveGlb(map, group) {
   if (!group) throw new Error("nothing on the stage yet");
   const hidden = [];
   group.traverse((o) => {
-    if (o.userData.editorOnly && o.visible) {
+    if ((o.userData.editorOnly || (o.isInstancedMesh && o.count === 0)) && o.visible) {
       o.visible = false;
       hidden.push(o);
     }

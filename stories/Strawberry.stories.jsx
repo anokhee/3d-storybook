@@ -7,7 +7,7 @@ import { knobStory } from "./helpers/knobs.js";
 const K = knobStory(STRAWBERRY, STRAWBERRY_KNOBS, {}, {});
 
 export default {
-  title: "Food/Fruits/Strawberry",
+  title: "Food/Produce/Strawberry",
   component: Strawberry,
   argTypes: K.argTypes,
   args: K.args,

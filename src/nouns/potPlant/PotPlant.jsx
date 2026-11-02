@@ -59,6 +59,7 @@ export default function PotPlant({ config }) {
   // middle by `tilt` and turned to its own bearing round the pot, its
   // foot in the soil — and what tips it, at its far end, tilted with it.
   const n = Math.max(1, Math.round(S.count));
+  const up = Math.max(0, Math.round(S.leaves ?? 0)); // blades up each stem
   const out = S.spread * T.radius;
   const length = Math.hypot(S.height, n === 1 ? 0 : out);
   const tilt = n === 1 ? 0 : Math.atan2(out, S.height);
@@ -107,6 +108,19 @@ export default function PotPlant({ config }) {
                 light={LIGHT}
               />
             </group>
+            {/* the blades up the stem: each a little higher, turned on
+                round it (by the golden angle, so no two line up), its
+                tip leaning out and up, its face to the sky */}
+            {Array.from({ length: up }, (_, j) => {
+              const k = K.size * (S.leafSize ?? 0.8) * (1 - 0.25 * (j / up));
+              return (
+                <group key={j} position-y={length * (0.18 + (0.72 * j) / up)} rotation-y={i * 1.3 + j * 2.4}>
+                  <group rotation-x={-0.75}>
+                    <mesh geometry={LEAF_GEO} material={paintOf(K.color, lightOf(LIGHT))} scale={[k, k * K.leaf.flat, k * K.leaf.aspect]} />
+                  </group>
+                </group>
+              );
+            })}
             <group
               position-y={
                 length + (bloom || K.kind === "leaf" ? 0 : K.size * 0.6)

@@ -5,6 +5,8 @@
 // https://storybook.js.org/docs/configure/user-interface/theming
 // Fonts are loaded in manager-head.html and preview-head.html; to use a
 // different one, change the <link> in both and the two font keys below.
+// Nunito is the body; Fredoka, the headers, is set in the CSS of those two
+// files (Storybook's theme has no key for headers); Plex Mono is for code.
 
 import { create } from "storybook/theming";
 
@@ -20,7 +22,7 @@ export const storyTheme = create({
   brandUrl: "https://github.com/anokhee/3d-storybook",
   // brandImage: "logo.svg",   // uncomment to show a logo instead of text
 
-  fontBase: '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace',
+  fontBase: '"Nunito", ui-rounded, system-ui, sans-serif',
   fontCode: '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace',
 
   colorPrimary: steel,

@@ -21,9 +21,13 @@ export const STATUSES = [
 export const statusOf = (value) => STATUSES.find((s) => s.value === value) ?? STATUSES[0];
 
 // Tags that wear their own colour on a card, the others staying plain:
-// "polymorphic" is an object dealt from many knobs (the dolly, the statue head)
+// "polymorphic" is an object dealt from many knobs (the dolly, the statue head);
+// "favorite" puts the object on the catalog's starred Favorites tab.
+export const FAVORITE_TAG = "favorite";
+export const isFavorite = (meta) => (meta?.tags ?? []).some((t) => t === FAVORITE_TAG || t === "favorites" || t === "favourite");
 export const SPECIAL_TAGS = {
   polymorphic: { background: "#F4D46A", border: "#D9B23F", color: "#5A4510" },
+  [FAVORITE_TAG]: { background: "#FFF1C2", border: "#E3B341", color: "#6B4E00" },
 };
 
 // Every entry's metadata, afresh from the file (never from the cache)

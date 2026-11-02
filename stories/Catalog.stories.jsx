@@ -19,7 +19,7 @@ import { toId, storyNameFromExport } from "storybook/internal/csf";
 // (the list of story modules is in helpers/entries.js)
 
 import { modules } from "./helpers/entries.js";
-import { STATUSES, statusOf, loadMeta, saveMeta, tagsOf, SPECIAL_TAGS } from "../.storybook/meta.js";
+import { STATUSES, statusOf, loadMeta, saveMeta, tagsOf, SPECIAL_TAGS, FAVORITE_TAG, isFavorite } from "../.storybook/meta.js";
 
 // Each entry: its sidebar name, section, story id (the picture's name),
 // tags (the object's and the story's own), and
@@ -54,12 +54,16 @@ function entriesOf() {
 }
 
 // The tabs, in the sidebar's order; anything new goes after.
+// The first tab: the objects tagged "favorite" (in the drawer, or in bulk).
+// It is the tab the catalog opens on.
+const FAVORITES = "Favorites";
 const ORDER = ["Primitives", "Furniture", "Lighting", "Machines", "Machine Parts", "Fixtures", "Buildings", "Nature", "Ornaments", "Sky", "Planets", "Animals", "Characters", "Toys", "Vehicles", "Instruments", "Monuments", "Misc"];
 
 // Clicking a card: the preview asks the shell to open that story.
 const open = (id) => addons.getChannel().emit("selectStory", { storyId: id });
 
-const mono = '"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
+const body = '"Nunito", ui-rounded, system-ui, sans-serif';
+const display = '"Fredoka", "Nunito", ui-rounded, system-ui, sans-serif';
 
 // An entry's status (set in the drawer, kept in public/library-meta.json)
 // wears a pill on its picture's top right corner; its tags (set there
@@ -282,11 +286,11 @@ function Catalog({ globals = {} }) {
   useEffect(() => savePlace({ picked: picked?.id ?? null }), [picked]);
   const tabs = useMemo(() => {
     const seen = new Set(entries.map((e) => e.top));
-    return ["All", ...ORDER.filter((o) => seen.has(o)), ...[...seen].filter((x) => !ORDER.includes(x)).sort()];
+    return [FAVORITES, "All", ...ORDER.filter((o) => seen.has(o)), ...[...seen].filter((x) => !ORDER.includes(x)).sort()];
   }, [entries]);
-  const [tab, setTab] = useState(place.tab ?? "All");
+  const [tab, setTab] = useState(place.tab ?? FAVORITES);
   useEffect(() => savePlace({ tab }), [tab]);
-  const shown = tab === "All" ? entries : entries.filter((e) => e.top === tab);
+  const shown = tab === "All" ? entries : tab === FAVORITES ? entries.filter((e) => isFavorite(metas[e.id])) : entries.filter((e) => e.top === tab);
   // Bulk mode: clicking a card ticks it; the ticked ones survive changing tab
   const [bulk, setBulk] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -299,9 +303,9 @@ function Catalog({ globals = {} }) {
     return () => window.removeEventListener("keydown", onKey);
   }, [bulk]);
   return (
-    <main style={{ fontFamily: mono, background: "#EEF2F5", minHeight: "100vh", padding: "28px 32px 48px", boxSizing: "border-box" }}>
+    <main style={{ fontFamily: body, background: "#EEF2F5", minHeight: "100vh", padding: "28px 32px 48px", boxSizing: "border-box" }}>
       <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 16 }}>
-        <h1 style={{ fontSize: 14, fontWeight: 600, margin: 0, color: "#2B3A47", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+        <h1 style={{ fontFamily: display, fontSize: 22, fontWeight: 600, margin: 0, color: "#2B3A47" }}>
           Object catalog
         </h1>
         <span style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
@@ -327,10 +331,16 @@ function Catalog({ globals = {} }) {
               color: tab === name ? "#EEF2F5" : "#2B3A47",
             }}
           >
+            {name === FAVORITES ? <span aria-hidden="true" style={{ marginRight: 5, color: tab === name ? "#FFD966" : "#E3B341" }}>★</span> : null}
             {name}
           </button>
         ))}
       </nav>
+      {tab === FAVORITES && !shown.length && (
+        <p style={{ fontSize: 11, color: "#66788A", margin: "0 0 20px" }}>
+          No favorites yet. Tag an object <b>{FAVORITE_TAG}</b> in its drawer (or several at once with Bulk edit) and it shows up here.
+        </p>
+      )}
       {bulk && <BulkBar ids={selected} shownIds={shown.map((e) => e.id)} metas={metas} onSaved={saved} onSelect={setSelected} />}
       <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
         <section style={{ flex: 1, minWidth: 0, display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "20px 16px" }}>

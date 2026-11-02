@@ -16,14 +16,16 @@ const paint = {
 //   stem    the stalk: `radius` its thickness, `height` how long it is,
 //           `lean` degrees off upright, `bend` how far it bows the other
 //           way as a share of its height, `color`
-//   leaf    the leaf at the stalk's tip: `length` and `width`, `color`;
+//   leaf    the leaf at the stalk's tip (none as made): `length` and
+//           `width`, `color`;
 //           or null for none
+const LEAF = { length: 0.7, width: 0.32, color: paint.leaf };
 export const CHERRY = {
   scale: CAT_HEIGHT / 8,
   radius: 0.5,
   detail: 2,
   stem: { radius: 0.05, height: 0.8, lean: 20, bend: 0.25, color: paint.stem },
-  leaf: { length: 0.7, width: 0.32, color: paint.leaf },
+  leaf: null,
   color: paint.fruit,
 };
 
@@ -36,5 +38,5 @@ export const CHERRY_KNOBS = [
   { label: "stem bend", path: "stem.bend", step: 0.05, min: -0.6, max: 0.6 },
   { label: "fruit", path: "color.hex", color: true },
   { label: "stem", path: "stem.color.hex", color: true },
-  { label: "leaf", path: "leaf.color.hex", color: true },
+  { label: "leaf", path: "leaf", bool: true, on: LEAF, off: null },
 ];

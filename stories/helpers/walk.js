@@ -146,9 +146,11 @@ function pose(rigs, L, angles, lifts) {
 const STILL = [0, 0, 0, 0];
 
 // Walk the animal in `root` at `speed` strides a second (0 stands it
-// still), lowering `bob` to keep its feet down; found again whenever
-// `deps` change (the animal rebuilt)
-export function useWalk(root, bob, speed, deps) {
+// still) — a number, or a ref ({ current }) read each frame, for an
+// animal whose pace changes as it goes (a street's cats) — lowering
+// `bob` to keep its feet down; found again whenever `deps` change (the
+// animal rebuilt)
+export function useWalk(root, bob, pace, deps) {
   const state = useRef({ dirty: true, rigs: null, L: null, phase: 0 });
   useEffect(() => { state.current.dirty = true; }, deps); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => () => { const s = state.current; if (s.rigs) pose(s.rigs, s.L, STILL, STILL); }, []);
@@ -163,6 +165,7 @@ export function useWalk(root, bob, speed, deps) {
       s.dirty = false;
     }
     if (!s.rigs) return;
+    const speed = typeof pace === "number" ? pace : pace?.current ?? 0;
     s.phase += Math.min(dt, 0.05) * speed * Math.PI * 2;
     const angles = PHASE.map((o) => SWING * Math.sin(s.phase + o) * (speed > 0 ? 1 : 0));
     const lifts = PHASE.map((o) => (speed > 0 ? LIFT * s.L.length * Math.max(0, Math.cos(s.phase + o)) : 0));

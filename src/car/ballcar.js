@@ -10,7 +10,7 @@
      cricket     red leather, a raised seam round its belt with two rows
                  of pale stitches either side
      golf        white, dimpled all over
-     whiffle     white plastic with eight oblong holes cut round the nose
+     whiffle     white plastic, round holes cut all over it
      basketball  orange, dark lines: the equator, a meridian over the
                  top and one circle either side of it
      bowling     deep purple, the three finger holes bored into the nose
@@ -49,7 +49,7 @@ import { COCKPIT, RAKE, leveller, cutThrough, fitCockpit } from "./tray.js";
 // hubcaps, `dash` the cockpit's floor, walls and lip, the dashboard and
 // steering wheel, `lamp` the headlights, `tail` the tail lights.
 export const TENNISBALL = {
-  scale: 1.6, // built 2.6 across; the game scales it up to fit a driver
+  scale: 1.165, // built 2.6 across; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   kind: "tennis",
   body: 0xcfe83a,
   seam: 0xfbfbf0,
@@ -241,6 +241,12 @@ function icoVertices() {
   return v;
 }
 
+// Where the lamps sit: `front` 1 on the nose or -1 on the tail, `az`
+// round from the middle to side `s`, all EL below the equator.
+const EL = -0.42;
+const lampDir = (front, az, s) => new THREE.Vector3(front * Math.cos(EL) * Math.cos(az), Math.sin(EL), s * Math.cos(EL) * Math.sin(az)).normalize();
+const LAMPS = [-1, 1].flatMap((s) => [lampDir(1, 0.34, s), lampDir(-1, 0.5, s)]);
+
 export function buildBallCar(finish, C = TENNISBALL) {
   const group = new THREE.Group(),
     wheels = [];
@@ -302,11 +308,16 @@ export function buildBallCar(finish, C = TENNISBALL) {
   // the holes a whiffle ball or bowling ball has, cut out of the shell
   const holes = [];
   if (C.kind === "whiffle") {
-    // eight oblong holes in a ring round the nose, 45 degrees off it,
-    // each lying along the ring, none straight over or under
-    for (let k = 0; k < 8; k++) {
-      const az = ((k + 0.5) / 8) * Math.PI * 2, d = new THREE.Vector3(Math.SQRT1_2, Math.SQRT1_2 * Math.cos(az), Math.SQRT1_2 * Math.sin(az));
-      holes.push(hole(d, 0.2, 0.1, X.clone().cross(d)));
+    // round holes all over the ball, HOLES of them spread evenly over
+    // the sphere (a Fibonacci spiral), each HOLE_R radians across; all
+    // but those the cockpit cuts, those under the belly and those where
+    // a lamp sits
+    const HOLES = 30, HOLE_R = 0.2, spiral = Math.PI * (3 - Math.sqrt(5));
+    for (let i = 0; i < HOLES; i++) {
+      const y = 1 - (2 * (i + 0.5)) / HOLES, r = Math.sqrt(1 - y * y), a = i * spiral;
+      const d = new THREE.Vector3(r * Math.cos(a), y, r * Math.sin(a));
+      if (!shown(d, () => HOLE_R + 0.06) || LAMPS.some((l) => l.angleTo(d) < HOLE_R + 0.16)) continue;
+      holes.push(hole(d, HOLE_R, HOLE_R));
     }
   } else if (C.kind === "bowling") {
     // two finger holes side by side high on the nose, the thumb hole
@@ -408,8 +419,6 @@ export function buildBallCar(finish, C = TENNISBALL) {
   // tail, a little wider apart, clear of the pentagon under the tail
   const lampGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.08, 16).translate(0, 0.04, 0);
   const tailGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.06, 14).translate(0, 0.03, 0);
-  const EL = -0.42; // elevation below the equator
-  const lampDir = (front, az, s) => new THREE.Vector3(front * Math.cos(EL) * Math.cos(az), Math.sin(EL), s * Math.cos(EL) * Math.sin(az)).normalize();
   for (const s of [-1, 1]) {
     stickOn(lampDir(1, 0.34, s), lampGeo, C.lamp, { emissive: C.lamp, emissiveIntensity: 0.6 }, 0.03);
     stickOn(lampDir(-1, 0.5, s), tailGeo, C.tail, { emissive: C.tail, emissiveIntensity: 0.5 }, 0.02);

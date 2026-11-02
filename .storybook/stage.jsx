@@ -22,11 +22,11 @@
 //   the ground    the <mesh> with the circleGeometry
 //   margin        on <Bounds>, how much air is left round an object
 
-import React, { Suspense, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { create } from "zustand";
 import * as THREE from "three";
-import { Canvas, useThree } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Bounds, OrbitControls, useBounds } from "@react-three/drei";
 
 // These came with the objects, so the stage lights them the way
@@ -187,6 +187,11 @@ export function applyLook(scene, lighting) {
   });
 }
 
+// How long after a fit the object is watched for settling (frames), and
+// how much its size must change (a fraction) for the camera to refit.
+const SETTLE_FRAMES = 60;
+const SETTLE_TOLERANCE = 0.1;
+
 // Renders whatever object is in the store, and refits the camera to it.
 function Slot() {
   const node = useStage((s) => s.node);
@@ -209,7 +214,36 @@ function Slot() {
   // after it until the page is reloaded. So the fit is skipped for one,
   // and the controls' target is put back on the ground, with a warning
   // naming the story.
+  //
+  // Some objects settle a moment after they mount: a mountable animal
+  // (stories/helpers/rider.jsx) is drawn as built, measured, then scaled
+  // to cat height a frame or two later, so a camera fit to it on mount
+  // was fit to the smaller animal, and the pictures came out too close.
+  // So for a short while after a fit the object is measured again each
+  // frame, and if it has grown or shrunk by much the camera is refit once
+  // more. Only then: a slider moved later does not throw the view around.
   const controls = useThree((s) => s.controls);
+  const settle = useRef({ frames: 0, size: 0 });
+  const holder = useRef(); // the group the object is rendered into, for measuring it
+  const measured = useMemo(() => new THREE.Box3(), []);
+  // Measures the object and fits the camera to it; returns the object's
+  // own largest dimension, or NaN for one with no finite bounds.
+  const fit = () => {
+    bounds.refresh();
+    const { box: own, size: extent, center } = bounds.getSize();
+    if (!Number.isFinite(own.min.lengthSq() + own.max.lengthSq())) return NaN;
+    // A frame: a cube of the asked-for size stands in for the object, so the
+    // distance (the zoom) is the same for every story that asks for the same
+    // frame, whatever its own size. It stands over the object's middle, a
+    // fifth of its size up from the object's foot (not the object's own
+    // middle: a taller one would tip the camera and shift the horizon).
+    if (frame) {
+      center.y = own.min.y + frame * 0.2;
+      bounds.refresh(new THREE.Box3().setFromCenterAndSize(center, new THREE.Vector3(frame, frame, frame)));
+    }
+    bounds.clip().fit();
+    return Math.max(extent.x, extent.y, extent.z);
+  };
   useEffect(() => {
     if (!storyId) return;
     if (view === "front") camera.position.set(0, 2.5, 20);
@@ -220,21 +254,24 @@ function Slot() {
     if (!Number.isFinite(box.min.lengthSq() + box.max.lengthSq())) {
       console.warn(`stage: ${storyId} has no finite bounds (a NaN size somewhere?); not fitting the camera to it`);
       camera.lookAt(0, 1, 0);
+      settle.current.frames = 0;
       return;
     }
-    bounds.refresh();
-    // A frame: a cube of the asked-for size stands in for the object, so the
-    // distance (the zoom) is the same for every story that asks for the same
-    // frame, whatever its own size. It stands over the object's middle, a
-    // fifth of its size up from the object's foot (not the object's own
-    // middle: a taller one would tip the camera and shift the horizon).
-    if (frame) {
-      const { box: own, center } = bounds.getSize();
-      center.y = own.min.y + frame * 0.2;
-      bounds.refresh(new THREE.Box3().setFromCenterAndSize(center, new THREE.Vector3(frame, frame, frame)));
-    }
-    bounds.clip().fit();
+    settle.current = { frames: SETTLE_FRAMES, size: fit() };
   }, [storyId, size.width, size.height]);
+  // (Measured with a box of its own: Bounds' refresh() forgets the goal
+  // of a fit still under way, and so would stop the camera mid-move.)
+  useFrame(() => {
+    const s = settle.current;
+    if (s.frames <= 0 || !holder.current) return;
+    s.frames -= 1;
+    holder.current.updateWorldMatrix(true, true);
+    measured.setFromObject(holder.current);
+    if (measured.isEmpty() || !Number.isFinite(measured.min.lengthSq() + measured.max.lengthSq())) return;
+    const extent = measured.getSize(new THREE.Vector3());
+    const now = Math.max(extent.x, extent.y, extent.z);
+    if (s.size > 0 && Math.abs(now - s.size) / s.size > SETTLE_TOLERANCE) s.size = fit();
+  });
   // The look, applied to whatever just mounted (or re-applied when the
   // toolbar changes it). A story that brings its own lights (the planets:
   // lights "own") keeps its own materials too, whatever the toolbar says:
@@ -250,7 +287,7 @@ function Slot() {
   useEffect(() => {
     window.__stage = { scene, camera, bounds };
   }, [scene, camera, bounds]);
-  return node;
+  return <group ref={holder}>{node}</group>;
 }
 
 function Stage() {

@@ -13,9 +13,9 @@
 // piece of terrain ("terrain-…", ../runtime/terrain.js: a plateau or a
 // ramp) are placements too, shaped by their args. `role` is what it is to a game: "prop" (scenery, baked as it
 // stands — a placed car or animal is scenery too), or "player", the one
-// START the game fills itself: where you begin, and as what. `terrain`
-// names a snapshot of a game's ground (a glb in the map's folder, which the
-// game exports) to lay things out on and see, or "" for the plain ball.
+// START the game fills itself: where you begin, and as what. The map is
+// the ground's one source: a game builds its ball, its water, its cliffs
+// and its roads from the map, and the editor shows the same.
 //
 // Every change to the placements goes through `commit`, which keeps the
 // one before for undo. The map in hand is kept in localStorage, so a reload
@@ -23,8 +23,8 @@
 import * as THREE from "three";
 import { create } from "zustand";
 import { ENTRY } from "./catalog.js";
-import { isCover, isRoad, roadKnots, COVER } from "../runtime/cover.js";
-import { isTerrain, cliffLayerAt, MAX_LAYERS } from "../runtime/terrain.js";
+import { isCover, isRoad, isWater, coverType, roadKnots, coverLobes, lobeDistance, onRoadLobe, COVER } from "../runtime/cover.js";
+import { isTerrain, terrainType, terrainLobes, cliffLayerAt, MAX_LAYERS, CLIFF_ARGS } from "../runtime/terrain.js";
 import { growTerrain, AMOUNTS } from "./seed.js";
 
 const KEY = "mapmaker-map";
@@ -36,16 +36,11 @@ export const blankMap = (name = "untitled") => ({
   surface: { kind: "planet", radius: 36 },
   look: { daylight: 1, ground: "#6E9B5E" },
   folder: "maps",
-  terrain: "terrain",
   // the TERRAIN SEED (seed.js): the word the ground was last grown from, and how much of each it grows
   seed: { word: "", ...AMOUNTS },
   placements: [],
-  dismissed: [], // adopted things (ids from the game's adopt.json) taken off the map, not to be offered again
 });
 
-// The game's own houses and trees, offered through adopt.json beside its
-// terrain, are told by their ids.
-export const isAdopted = (id) => String(id).startsWith("adopt-");
 
 export const ROLES = {
   prop: { label: "scenery", color: null },
@@ -115,13 +110,32 @@ function layered(args, entry, dir, all, R) {
   const under = cliffLayerAt(all, dir, R);
   if (under > 0) args.layer = Math.min(MAX_LAYERS, under + 1);
 }
-export const tidy = (m) => ({
+// A placed thing whose story has moved: a car placed under Vehicles/Car
+// that is now under Bug Cars, Food Cars (and so on — the catalog's vehicle
+// sections) keeps its name, so it is found where it is now. A game reads
+// cars by name across those sections too (the car game's carEntryOf).
+const CAR_SECTIONS = ["vehicles-car-", "vehicles-ball-cars-", "vehicles-bug-cars-", "vehicles-fish-cars-", "vehicles-food-cars-"];
+const moved = (entry) => {
+  if (ENTRY[entry]) return entry;
+  const section = CAR_SECTIONS.find((s) => entry.startsWith(s));
+  if (!section) return entry;
+  const rest = entry.slice(section.length);
+  return CAR_SECTIONS.map((s) => s + rest).find((id) => ENTRY[id]) ?? entry;
+};
+// What a placed thing keeps the groundcover back round it, when the map
+// does not say: a building its lot, everything else nothing.
+export const clearingFor = (entry) => (ENTRY[entry]?.top === "Buildings" ? 5 : 0);
+// (an older map's `terrain`, a snapshot of a game's ground, and `dismissed`,
+// the game's things it once took over, are dropped: the map is the ground now)
+export const tidy = ({ terrain: _snapshot, dismissed: _dismissed, ...m }) => ({
   ...blankMap(),
   ...m,
   seed: { ...blankMap().seed, ...(m.seed ?? {}) },
   placements: (m.placements ?? []).map((p) => {
-    const entry = p.entry === "terrain-plateau" ? "terrain-cliff" : p.entry;
-    return ROLES[p.role] && entry === p.entry ? p : { ...p, entry, role: ROLES[p.role] ? p.role : "prop" };
+    const entry = moved(p.entry === "terrain-plateau" ? "terrain-cliff" : p.entry);
+    const shape = isCover(entry) || isTerrain(entry);
+    const clearing = shape ? undefined : typeof p.clearing === "number" ? p.clearing : clearingFor(entry);
+    return ROLES[p.role] && entry === p.entry && (shape || clearing === p.clearing) ? p : { ...p, entry, role: ROLES[p.role] ? p.role : "prop", ...(shape ? {} : { clearing }) };
   }),
 });
 
@@ -149,8 +163,55 @@ const keptMode = (() => {
   }
 })();
 
+// THE SCULPT BRUSH (Scene.jsx's sculpt): its `radius`, the `height` of
+// what it raises (3.2 by default — taller than about 2.9 a cliff's edge is a
+// wall, not a bank you can walk up, so it comes out as a cliff; the stock
+// CLIFF_ARGS.height gives a bank), how softly its stamps run together
+// (`soft`, the blend as a share of the radius) and its edge's `wobble`.
+// Kept in the browser between sessions.
+export const BRUSH = { radius: 4, height: 3.2, soft: 1, wobble: CLIFF_ARGS.wobble };
+export const BRUSH_RANGE = { radius: [1, 16], height: [0.5, 12], soft: [0, 2], wobble: [0, 1.5] };
+const keptBrush = (() => {
+  try {
+    return { ...BRUSH, ...(JSON.parse(localStorage.getItem("mapmaker-brush")) ?? {}) };
+  } catch {
+    return { ...BRUSH };
+  }
+})();
+
+// The SPIN: the world turning slowly on its own, `speed` turns a minute.
+// Kept in the browser between sessions, like the brush.
+export const SPIN_RANGE = [0.05, 4];
+const keptSpin = (() => {
+  try {
+    return { on: false, speed: 0.5, ...(JSON.parse(localStorage.getItem("mapmaker-spin")) ?? {}) };
+  } catch {
+    return { on: false, speed: 0.5 };
+  }
+})();
+
 export const useMap = create((set, get) => ({
   map: kept ?? blankMap(),
+  spin: keptSpin,
+  setSpin: (patch) =>
+    set((s) => {
+      const spin = { ...s.spin, ...patch };
+      spin.speed = Math.min(SPIN_RANGE[1], Math.max(SPIN_RANGE[0], +spin.speed));
+      try {
+        localStorage.setItem("mapmaker-spin", JSON.stringify(spin));
+      } catch {}
+      return { spin };
+    }),
+  brush: keptBrush,
+  setBrush: (patch) =>
+    set((s) => {
+      const brush = { ...s.brush };
+      for (const [k, v] of Object.entries(patch)) if (BRUSH_RANGE[k]) brush[k] = Math.min(BRUSH_RANGE[k][1], Math.max(BRUSH_RANGE[k][0], +(+v).toFixed(2)));
+      try {
+        localStorage.setItem("mapmaker-brush", JSON.stringify(brush));
+      } catch {}
+      return { brush };
+    }),
   undo: [],
   redo: [],
   dirty: false,
@@ -182,7 +243,6 @@ export const useMap = create((set, get) => ({
   setFolder: (folder) => set((s) => ({ map: { ...s.map, folder }, dirty: true })),
   setLook: (patch) => set((s) => ({ map: { ...s.map, look: { ...s.map.look, ...patch } }, dirty: true })),
   setSurface: (patch) => set((s) => ({ map: { ...s.map, surface: { ...s.map.surface, ...patch } }, dirty: true })),
-  setTerrain: (terrain) => set((s) => ({ map: { ...s.map, terrain }, dirty: true })),
   setSeed: (patch) => set((s) => ({ map: { ...s.map, seed: { ...s.map.seed, ...patch } }, dirty: true })),
   // THE TERRAIN SEED: the ground grown from the seed's word (seed.js) in
   // one undo step. The ground's shapes drawn by hand (cliffs, ramps,
@@ -193,9 +253,13 @@ export const useMap = create((set, get) => ({
     const grown = growTerrain(map.seed.word, map.surface.radius, map.seed);
     const base = keep ? map.placements : map.placements.filter((p) => !isShapeEntry(p.entry));
     get().commit([...base, ...grown]);
+    // the roads that grew lie over everything: what was kept under them goes too (within the one step)
+    for (const g of grown) if (isRoad(g.entry)) get().clearUnderRoad(g.id);
     set((s) => ({ selected: s.map.placements.some((p) => p.id === selected) ? selected : null, placing: null, hover: null }));
     return grown.length;
   },
+  // A placement made into another entry where it stands (the player swapped for another character); its knobs start over.
+  setEntry: (id, entry) => get().commit(get().map.placements.map((p) => (p.id === id ? { ...p, entry, args: {} } : p))),
   setRole: (id, role) => get().commit(withRole(get().map.placements, id, role)),
   select: (selected) => set({ selected, placing: null, knot: null }),
   // Picking a thing to place puts the editor in that thing's mode.
@@ -237,7 +301,8 @@ export const useMap = create((set, get) => ({
     // a road takes the last road's width and verge, so one road reads like the next
     const args = isRoad(entry) && like ? { ...like.args } : {};
     layered(args, entry, dir, all, get().map.surface.radius);
-    const p = { id: uid(), entry, args, dir, yaw: 0, scale: isCover(entry) || isTerrain(entry) ? 1 : like?.scale ?? 1, lift: 0, ...extra, role };
+    const shape = isCover(entry) || isTerrain(entry);
+    const p = { id: uid(), entry, args, dir, yaw: 0, scale: shape ? 1 : like?.scale ?? 1, lift: 0, ...(shape ? {} : { clearing: like?.clearing ?? clearingFor(entry) }), ...extra, role };
     get().commit(withRole([...all, p], p.id, p.role));
     return p.id;
   },
@@ -252,6 +317,11 @@ export const useMap = create((set, get) => ({
     const p = { id: uid(), entry, args, dir, yaw: 0, scale: 1, lift: 0, role: "prop", ...extra };
     set((s) => ({ map: { ...s.map, placements: [...s.map.placements, p] } }));
     return p.id;
+  },
+  // A placement taken off as a change still going (a sculpt stroke's): endLive makes the one undo step.
+  removeLive: (id) => {
+    get().beginLive();
+    set((s) => ({ map: { ...s.map, placements: s.map.placements.filter((p) => p.id !== id) }, selected: s.selected === id ? null : s.selected }));
   },
   // A road's knot picked (its index), to drag or delete; none with null.
   knot: null,
@@ -269,14 +339,6 @@ export const useMap = create((set, get) => ({
     if (p && all[0] !== p) get().commit([p, ...all.filter((q) => q !== p)]);
   },
   // The game's houses and trees taken onto the map (those not already on it, or sent away).
-  adopt: (offer) => {
-    const { placements, dismissed } = get().map;
-    const have = new Set(placements.map((p) => p.id));
-    const gone = new Set(dismissed ?? []);
-    const fresh = offer.filter((p) => !have.has(p.id) && !gone.has(p.id));
-    if (fresh.length) get().commit([...placements, ...fresh]);
-    return fresh.length;
-  },
   patch: (id, patch) => get().commit(get().map.placements.map((p) => (p.id === id ? { ...p, ...patch } : p))),
   patchArgs: (id, args) => get().commit(get().map.placements.map((p) => (p.id === id ? { ...p, args: { ...p.args, ...args } } : p))),
   resetArgs: (id) => get().commit(get().map.placements.map((p) => (p.id === id ? { ...p, args: {} } : p))),
@@ -289,10 +351,44 @@ export const useMap = create((set, get) => ({
     get().commit(all.filter((p) => p.id !== j.id).map((p) => (p.id === id ? { ...p, knots, dir: knots[0], closed: false } : p)));
     return true;
   },
+  // The things under road `id` — on its tarmac or its verge — taken off
+  // the map: the placed things (a tree, a bench, a car) standing on it,
+  // not the player start; and the ground's own shapes it runs over — a
+  // patch of grass, flowers, pebbles or bare ground, a cliff, a dirt ramp
+  // — whole, since a road lies over everything. Water stays: a road over
+  // water is a bridge. Other roads stay: roads cross. Set live, within
+  // whatever edit is in hand, so it undoes with the road. Returns how
+  // many went.
+  clearUnderRoad: (id) => {
+    const all = get().map.placements;
+    const R = get().map.surface.radius;
+    const road = coverLobes(all.filter((p) => p.id === id), R)[0];
+    if (!road || road.type !== "road") return 0;
+    const reach = road.width / 2 + road.verge;
+    // a shape the road's tarmac or verge overlaps anywhere along it
+    const shapes = new Map([...coverLobes(all, R), ...terrainLobes(all, R)].map((l) => [l.id, l]));
+    const overlaps = (l) => road.samples.some((s) => lobeDistance(l, s.dir) < reach);
+    const under = (p) => {
+      if (p.id === id || p.role === "player") return false;
+      if (isCover(p.entry)) return !isRoad(p.entry) && !isWater(coverType(p.entry)) && !!shapes.get(p.id) && overlaps(shapes.get(p.id));
+      if (isTerrain(p.entry)) return !(terrainType(p.entry) === "ramp" && p.args?.road) && !!shapes.get(p.id) && overlaps(shapes.get(p.id));
+      return onRoadLobe(road, new THREE.Vector3().fromArray(p.dir).normalize());
+    };
+    const gone = all.filter(under);
+    if (!gone.length) return 0;
+    set((s) => ({ map: { ...s.map, placements: s.map.placements.filter((p) => !under(p)) } }));
+    if (gone.some((p) => p.id === get().selected)) set({ selected: null });
+    return gone.length;
+  },
   remove: (id) => {
     get().commit(get().map.placements.filter((p) => p.id !== id));
-    if (isAdopted(id)) set((s) => ({ map: { ...s.map, dismissed: [...(s.map.dismissed ?? []), id] } }));
     if (get().selected === id) set({ selected: null });
+  },
+  // several at once (a cliff's whole shape, Terrain.jsx's shapeOf), one undo step
+  removeMany: (ids) => {
+    const gone = new Set(ids);
+    get().commit(get().map.placements.filter((p) => !gone.has(p.id)));
+    if (gone.has(get().selected)) set({ selected: null });
   },
   duplicate: (id) => {
     const p = get().map.placements.find((p) => p.id === id);
@@ -315,11 +411,7 @@ export const useMap = create((set, get) => ({
       const next = s.redo[s.redo.length - 1];
       return { map: { ...s.map, placements: next }, redo: s.redo.slice(0, -1), undo: [...s.undo, s.map.placements], dirty: true };
     }),
-  clear: () => {
-    const adopted = get().map.placements.filter((p) => isAdopted(p.id)).map((p) => p.id);
-    get().commit([]);
-    if (adopted.length) set((s) => ({ map: { ...s.map, dismissed: [...(s.map.dismissed ?? []), ...adopted] } }));
-  },
+  clear: () => get().commit([]),
 }));
 
 // Kept in the browser as it changes.

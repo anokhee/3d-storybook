@@ -26,7 +26,10 @@ const paint = {
 //            how far the cloth curves in between rib tips, as a share of
 //            the reach
 //   shaft    `radius` of the pole, `ferrule` how far it pokes above the apex
-//   handle   `hook` the crook's radius and `radius` how thick its tube is
+//   handle   `show` whether it has the crook (without it, as a parasol, the
+//            shaft runs straight down to the ground); `hook` the crook's
+//            radius and `radius` how thick its tube is
+//   tips     whether a bead sits on each rib tip round the rim
 //   colors   `canopyA` and `canopyB` the gores, `handle` the crook, `shaft`
 //            the pole, ferrule, rib tips and strap
 export const UMBRELLA = {
@@ -36,7 +39,8 @@ export const UMBRELLA = {
   panels: 8,
   canopy: { sag: 0.42, scallop: 0.07 },
   shaft: { radius: 0.035, ferrule: 0.18 },
-  handle: { hook: 0.22, radius: 0.05 },
+  handle: { show: true, hook: 0.22, radius: 0.05 },
+  tips: true,
   colors: {
     canopyA: paint.canopyA,
     canopyB: paint.canopyB,

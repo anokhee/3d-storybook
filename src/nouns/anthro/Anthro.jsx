@@ -33,7 +33,10 @@ import { Eye, CAT_PUPIL } from "../../world/eye.jsx";
 // from level out to the side, `f` swung forward from straight out. The
 // walk steps the right foot forward and the left arm with it; the run
 // is a longer stride with the elbows bent; the jump tucks the knees and
-// throws the arms up, `lift` off the ground.
+// throws the arms up, `lift` off the ground. The swim (see SWIM) lays the
+// whole figure forward in the water: `lean` is its pitch, radians forward
+// from upright, about the ground under its feet, and `float` how far under
+// the water's surface that point sits.
 // Things held, in the wield poses: each a few plain shapes in colours of
 // their own, laid out from the grip — the middle of the hand that holds
 // it, or between both hands — at size 1. In its own frame `y` is up the
@@ -67,6 +70,21 @@ const HELD = {
       { shape: "cylinder", args: [0.135, 0.135, 0.04, 24], at: [0, 0.65, -0.17], rot: [Math.PI / 2, 0, 0], hex: "#F2C94C" },
     ],
     tip: [0, 0.65, 0],
+  },
+  // a lit cigarette, pinched in the fingers: a tan filter, a white paper
+  // body, a glowing ember on the end, and a faint wisp of smoke curling up
+  // off it (out past the mitten of a hand, which would swallow its root)
+  cigarette: {
+    aims: "z",
+    parts: [
+      { shape: "cylinder", args: [0.009, 0.009, 0.03, 10], at: [0, 0, 0.075], rot: [Math.PI / 2, 0, 0], hex: "#D9A066" },
+      { shape: "cylinder", args: [0.009, 0.009, 0.07, 10], at: [0, 0, 0.125], rot: [Math.PI / 2, 0, 0], hex: "#F7F4EE" },
+      { shape: "cylinder", args: [0.0095, 0.0095, 0.012, 10], at: [0, 0, 0.165], rot: [Math.PI / 2, 0, 0], hex: "#FF7A2E" },
+      { shape: "sphere", args: [0.016, 10, 8], at: [0, 0.045, 0.172], rot: [0, 0, 0], hex: "#E9E6EE" },
+      { shape: "sphere", args: [0.022, 10, 8], at: [0.012, 0.1, 0.168], rot: [0, 0, 0], hex: "#E9E6EE" },
+      { shape: "sphere", args: [0.028, 10, 8], at: [-0.006, 0.17, 0.176], rot: [0, 0, 0], hex: "#E9E6EE" },
+    ],
+    tip: [0, 0, 0.17],
   },
   // a white parachute: a dome of a canopy high over the grip, lines
   // running down from its rim to a bar held in both hands
@@ -137,9 +155,41 @@ export const WIELDS = {
 export const PARACHUTE_MIN_DROP = CLIFF_ARGS.height;
 export const opensParachute = (drop) => drop >= PARACHUTE_MIN_DROP;
 const PARACHUTE = { arms: [[1.2, 0.25, 1.3, 0.1], [1.2, 0.25, 1.3, 0.1]], held: { thing: "parachute", both: true, aim: [0, 1, 0] } };
+// A cycle of `n` frames, each held `hold`, through one turn of a phase:
+// `legOf(sin, cos)` and `armOf(sin, cos)` give the [left, right] legs and
+// arms, the left half a turn behind the right.
+const swing = (n, hold, legOf, armOf) => Array.from({ length: n }, (_, i) => {
+  const th = (i / n) * Math.PI * 2;
+  const leg = (s) => legOf(Math.sin(th + (s < 0 ? Math.PI : 0)), Math.cos(th + (s < 0 ? Math.PI : 0)));
+  const arm = (s) => armOf(Math.sin(th + (s < 0 ? Math.PI : 0)), Math.cos(th + (s < 0 ? Math.PI : 0)));
+  return { hold, pose: { legs: [leg(-1), leg(1)], arms: [arm(-1), arm(1)] } };
+});
+// The swim, a crawl: the whole figure lain forward in the water, `lean`
+// from upright, the head up out of it and the legs trailing, sunk so the
+// ground under its feet is `float` under the surface (the chest at the
+// waterline, the head clear of it). The legs flutter-kick, the thighs
+// scissoring a little, the shins trailing, the toes pointed; the arms
+// stroke in turn, each reaching out ahead past the head (up, before the
+// lean), pulling down under the chest to the hip, then swinging back up
+// over the water, the elbow bent, to reach again. On the stage it lies
+// just over the floor, as if that were the water.
+const SWIM = { lean: 1.05, float: 0.4 };
+const SWIM_FRAMES = swing(8, 0.11,
+  (v) => ({ a: 0.3 * v, b: 0.3 * v - 0.35, tilt: -0.9 }),
+  (v, c) => { const e = 1.05 * c, f = 0.9 * v + 0.25; return [e, f, e - 0.6 * Math.abs(v), f + 0.2 * v]; },
+).map((f) => ({ ...f, pose: { ...f.pose, ...SWIM } }));
 const STILL = [{ a: 0, b: 0 }, { a: 0, b: 0 }];
+// The cigarette's arm (the right: x > 0, as a wield's), held up by the
+// shoulder between drags, and the cigarette in it (see POSES.smoke)
+const SMOKE_ARM = [-0.55, 0.6, 1.25, 2.3];
+const CIGARETTE = { thing: "cigarette", aim: [0.75, 0.3, 0.6] };
 const POSES = {
+  // afloat, mid-stroke (see SWIM)
+  swim: SWIM_FRAMES[2].pose,
   "t-pose": { legs: [{ a: 0, b: 0 }, { a: 0, b: 0 }], arms: [[0, 0, 0, 0], [0, 0, 0, 0]] },
+  // stood still, the arms hanging at the sides (the walk's, mid-stride,
+  // with the legs together): a café's host behind the stand
+  stand: { legs: STILL, arms: [[-1.1, 0, -0.9, 0.2], [-1.1, 0, -0.9, 0.2]] },
   // stood holding something (see WIELDS): the water gun in one hand, the
   // whack-a-mole mallet in both
   "wield (1-handed)": { legs: STILL, ...WIELDS["water gun"] },
@@ -164,6 +214,17 @@ const POSES = {
     arms: [[0.9, 0.2, 1.1, 0.1], [0.9, 0.2, 1.1, 0.1]],
     lift: 0.3,
   },
+  // stood having a cigarette, between drags: the right hand held up by the
+  // shoulder, out past the mask's edge (a spirit's mask is drawn over its
+  // body, so a hand at the mouth would vanish behind it), the cigarette
+  // pointing out and a little up, its smoke rising clear of the face; the
+  // left arm folded across the belly (angles worked back from where the
+  // hands should be, as the wields' were)
+  smoke: {
+    legs: STILL,
+    arms: [[-1, 1.5, 0.35, 2.95], SMOKE_ARM],
+    held: CIGARETTE,
+  },
   // dropping from a cliff's height or more, a white parachute held overhead
   parachute: { legs: [{ a: 0.35, b: 0.1 }, { a: 0.25, b: 0 }], ...PARACHUTE, lift: 0.3 },
 };
@@ -184,14 +245,9 @@ const poseOf = (C) => (C.pose === "ride" ? ridePose(C.straddle) : POSES[C.pose] 
 // once per frame, never per tick), shown in turn like a stop-motion toy.
 // The walk and the run step through a stride, the legs and then the
 // arms opposite them, `sin` of the phase; the jump goes crouch, push,
-// rise, tuck, fall, land.
-const swing = (n, hold, legOf, armOf) => Array.from({ length: n }, (_, i) => {
-  const th = (i / n) * Math.PI * 2;
-  const leg = (s) => legOf(Math.sin(th + (s < 0 ? Math.PI : 0)), Math.cos(th + (s < 0 ? Math.PI : 0)));
-  const arm = (s) => armOf(Math.sin(th + (s < 0 ? Math.PI : 0)));
-  return { hold, pose: { legs: [leg(-1), leg(1)], arms: [arm(-1), arm(1)] } };
-});
+// rise, tuck, fall, land; the swim strokes (see SWIM).
 const CYCLES = {
+  swim: SWIM_FRAMES,
   walk: swing(8, 0.09,
     (v, c) => ({ a: 0.45 * v, b: 0.45 * v - 0.15 - 0.5 * Math.max(0, c) }),
     (v) => [-1.1, -0.5 * v, -0.9, -0.5 * v + 0.2]),
@@ -229,6 +285,61 @@ export const seatOf = (C) => Math.min(0.58 - C.body.radius, 0.68 - C.body.belly)
 // A ridden leg, at size 1 (see rider.jsx): the hips' half-width, the
 // thigh and shin, and how far forward the thigh rises
 export const RIDE = { hipX: HIP_X, thigh: 0.26, shin: 0.27, a: 0.85, tall: (C) => C.head.y + C.head.height / 2 };
+// The cycle (see src/nouns/bicycle): sat on a saddle, each foot on a pedal
+// going round, both hands ahead on the handlebar. The pedals are the
+// bicycle's, so this is where they are, at size 1 in the figure's own
+// standing frame (the hips at y HIP_Y, z 0, facing +z): the cranks turn
+// about `crank` [z, y], each pedal `radius` out, the right one at the top
+// on the first frame and coming forward over it (the left half a turn
+// behind); `nominal` the seat height (seatOf) the bicycle is built for.
+// Each frame's legs are worked out from where its pedal is — the ankle
+// held `ankle` [z, y] off the pedal, so the foot's middle is on it — the
+// knee always bent forward; `frames` frames a turn, each held `hold`, so
+// a bicycle turns its cranks in the same steps. `arms` reach ahead and
+// down to the grips, as the drive's do to a wheel.
+export const PEDAL = {
+  crank: [0.08, 0.18], radius: 0.075, ankle: [-0.06, 0.05], nominal: 0.4,
+  frames: 8, hold: 0.09,
+  arms: [-0.6, 1.35, -0.15, 1.45],
+};
+// A leg's { a, b } with its ankle at [z, y] (from the hip), knee forward
+const legTo = (z, y) => {
+  const T = RIDE.thigh, S = RIDE.shin, dz = z, dy = y - HIP_Y;
+  const D = Math.min(Math.hypot(dz, dy), T + S - 1e-4);
+  const a = Math.atan2(dz, -dy) + Math.acos((T * T + D * D - S * S) / (2 * T * D));
+  const kz = T * Math.sin(a), ky = HIP_Y - T * Math.cos(a);
+  return { a, b: Math.atan2(z - kz, -(y - ky)) };
+};
+const pedalLeg = (sin, cos) => legTo(PEDAL.crank[0] + PEDAL.radius * sin + PEDAL.ankle[0], PEDAL.crank[1] + PEDAL.radius * cos + PEDAL.ankle[1]);
+const CYCLE_FRAMES = swing(PEDAL.frames, PEDAL.hold, pedalLeg, () => PEDAL.arms).map((f) => ({ ...f, pose: { ...f.pose, seat: true } }));
+POSES.cycle = CYCLE_FRAMES[0].pose;
+CYCLES.cycle = CYCLE_FRAMES;
+// Stopped on a bicycle, waiting (at a crossing, say): still sat on the
+// saddle, the right foot up and forward on its pedal ready to push off —
+// where it is on the cycle's frame CYCLE_STOP_FRAME, so a rider who stops
+// there keeps that foot where it was — the left put down on the road,
+// straight, out to the side clear of the frame; both hands on the grips.
+export const CYCLE_STOP_FRAME = 1;
+POSES["cycle stop"] = {
+  legs: [{ a: 0.12, b: -0.05, out: 0.18 }, CYCLE_FRAMES[CYCLE_STOP_FRAME].pose.legs[1]],
+  arms: [PEDAL.arms, PEDAL.arms],
+  seat: true,
+};
+// Sat on a bench (or any seat): thighs out level along the seat, shins
+// hanging off its front edge (a bench is a little tall for these legs, so
+// the feet swing clear of the ground), the hands resting on the knees.
+// Seated: the bottom of its trunk at y = 0, on the seat.
+POSES.sit = {
+  legs: [{ a: 1.45, b: 0.12 }, { a: 1.45, b: 0.12 }],
+  arms: [[-1.2, 0.2, 0.4, 1.91], [-1.2, 0.2, 0.4, 1.91]],
+  seat: true,
+};
+// SMOKING, sat or on the move: the sit, or the walk (its every frame), with
+// the right arm up by the shoulder holding a cigarette, as the stood smoke's
+// — the left hand in the lap, or swinging free (to carry a bag in)
+POSES["sit smoke"] = { ...POSES.sit, arms: [POSES.sit.arms[0], SMOKE_ARM], held: CIGARETTE };
+POSES["walk smoke"] = { ...POSES.walk, arms: [POSES.walk.arms[0], SMOKE_ARM], held: CIGARETTE };
+CYCLES["walk smoke"] = CYCLES.walk.map((f) => ({ ...f, pose: { ...f.pose, arms: [f.pose.arms[0], SMOKE_ARM], held: CIGARETTE } }));
 function layoutOf(C, P) {
   const B = C.body, H = C.head, A = C.arm, L = C.legs;
   const main = [], accents = [], crest = [], eyes = [], whiskers = [], noses = [], props = [];
@@ -275,7 +386,8 @@ function layoutOf(C, P) {
   // swung forward from straight out — see POSES; a leg's `out` and
   // `shinOut` swing the thigh and the shin out to the side (the ride's).
   // The whole figure is lifted so the lowest foot is on the ground, or
-  // by `lift` off it, or (a `seat`ed pose) so its seat is at y = 0.
+  // by `lift` off it, or (a `seat`ed pose) so its seat is at y = 0, and
+  // pitched forward `lean` (a swim) about the origin, by whoever draws it.
   // `P` is the pose, one of POSES or a frame of a cycle (see CYCLES).
   const thigh = 0.26, shin = 0.27;
   const legs = [-1, 1].map((s) => {
@@ -286,7 +398,10 @@ function layoutOf(C, P) {
     const ankle = [knee[0] + s * shin * Math.sin(so), knee[1] - shin * Math.cos(l.b) * Math.cos(so), knee[2] + shin * Math.sin(l.b) * Math.cos(so)];
     return { s, hip, knee, ankle, tilt: l.tilt ?? 0 };
   });
-  const ground = P.seat ? -seatOf(C) : P.lift ?? 0.07 - Math.min(...legs.map((l) => l.ankle[1]));
+  // (a leaned pose's lowest foot is found once it is leaned, about the origin)
+  const lean = P.lean ?? 0;
+  const leaned = (p) => p[1] * Math.cos(lean) - p[2] * Math.sin(lean);
+  const ground = P.seat ? -seatOf(C) : P.lift ?? 0.07 - Math.min(...legs.map((l) => leaned(l.ankle)));
   for (const { s, hip, knee, ankle, tilt } of legs) {
     const foot = [ankle[0], ankle[1] - 0.03, ankle[2] + 0.06];
     if (L.bare) {
@@ -670,12 +785,16 @@ function layoutOf(C, P) {
     }
     default:
   }
-  return { main, accents, crest, eyes, whiskers, noses, mouth, mouthR, props, lumps, ground, held };
+  return { main, accents, crest, eyes, whiskers, noses, mouth, mouthR, props, lumps, ground, lean, float: P.float ?? 0, held };
 }
 
 // One creature, standing on the ground at y = 0 in a T-pose facing +z.
 // `config` overrides any of ANTHRO's fields for this one instance.
-export default function Anthro({ config }) {
+// `tempo` (a number, or a ref to one, read every frame) runs the flipbook
+// faster or slower than its own beat: a walker's speed over the speed its
+// stride is made for, so the feet keep pace with the ground. At 0 it stands
+// still, on the cycle's first frame (the walk's has the legs together).
+export default function Anthro({ config, tempo = 1 }) {
   const C = useMemo(() => merge(ANTHRO, config), [config]);
   const paint = C.colors;
 
@@ -701,34 +820,42 @@ export default function Anthro({ config }) {
   useEffect(() => () => mouth?.dispose(), [mouth]);
 
   // The flipbook: show the frame whose turn it is, and lift the whole
-  // figure by that frame's ground offset.
+  // figure by that frame's ground offset, leaned forward if it is (a swim).
+  // Each frame's group carries `userData.frame` (its index), so whoever
+  // holds a stride from outside can find the frames and leave the face be.
   const group = useRef();
   const shown = useRef([]);
   const clock = useRef({ t: 0, i: 0 });
   useFrame((_, delta) => {
     const c = clock.current;
-    c.t += Math.min(delta, 0.1);
+    const rate = typeof tempo === "number" ? tempo : tempo?.current ?? 1;
+    if (rate <= 0) { c.t = 0; c.i = 0; }
+    c.t += Math.min(delta, 0.1) * Math.max(0, rate);
     while (c.t >= frames[c.i % frames.length].hold) { c.t -= frames[c.i % frames.length].hold; c.i++; }
     const at = frames.length > 1 ? c.i % frames.length : 0;
     shown.current.forEach((g, i) => { if (g) g.visible = i === at; });
-    if (group.current) group.current.position.y = frames[at].lay.ground * C.size;
+    if (group.current) {
+      group.current.position.y = frames[at].lay.ground * C.size;
+      group.current.rotation.x = frames[at].lay.lean;
+    }
   });
 
   return (
-    <group scale={C.size} position-y={lay.ground * C.size} ref={group}>
+    <group scale={C.size} position-y={lay.ground * C.size} rotation-x={lay.lean} ref={group}>
       {frames.map((f, i) => (
-        <group key={i} ref={(g) => { shown.current[i] = g; }} visible={i === 0}>
+        <group key={i} ref={(g) => { shown.current[i] = g; }} visible={i === 0} userData={{ frame: i }}>
           {/* The lump: body, head, legs and arms, one form. */}
           <mesh geometry={f.body} castShadow receiveShadow material={unlitMat(paint.coat)} />
           {/* The beak, bill, bare legs or ears, in the accent colour. */}
           {f.accent && <mesh geometry={f.accent} castShadow receiveShadow material={unlitMat(paint.accent)} />}
           {/* The skin, hair, stem or chin, each in its own colour. */}
           {f.extras.map((e) => <mesh key={e.key} geometry={e.geo} castShadow receiveShadow material={unlitMat(paint[e.key])} />)}
-          {/* What a wield pose holds: the water gun, the mallet. */}
+          {/* What a wield pose holds: the water gun, the mallet, the
+              cigarette (`held`: a spirit leaves it its own colours). */}
           {f.lay.held?.parts.map((p, j) => {
             const Geo = { cone: "coneGeometry", cylinder: "cylinderGeometry", sphere: "sphereGeometry", box: "boxGeometry" }[p.shape];
             return (
-              <mesh key={`held${j}`} position={p.at} rotation={p.rot} scale={p.scale ?? [1, 1, 1]} castShadow material={unlitMat({ hex: p.hex })}>
+              <mesh key={`held${j}`} position={p.at} rotation={p.rot} scale={p.scale ?? [1, 1, 1]} castShadow material={unlitMat({ hex: p.hex })} userData={{ held: true }}>
                 <Geo args={p.args} />
               </mesh>
             );

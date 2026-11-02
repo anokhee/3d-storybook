@@ -10,6 +10,10 @@
 //   of fields, one knob writing them all; `also: { "backFrame.apart": (w) => w / 2 - 0.5 }` has
 //   the knob write other fields as a function of its value (a bench's back follows its seat).
 //   A keyed form is read too: { argName: { path, range: [min, max, step], color, ... } }.
+//   `if: { arg: "drink", eq: "glass" }` shows the knob only while another
+//   knob (by its arg name: its path in camelCase) is at that value — Storybook's
+//   conditional controls (`neq`, `truthy` too). Hidden, it leaves the config
+//   alone.
 //
 // knobStory(DEFAULTS, KNOBS, fixed, overrides) turns that into what a story
 // needs: `argTypes` (the controls), `args` (the starting values, read from
@@ -33,17 +37,22 @@ const round = (v, step) => +(Math.round(v / step) * step).toFixed(6); // and no 
 // Every knob as { name, paths (without .hex), kind, ... }, whichever form it came in
 function normal(KNOBS) {
   const list = Array.isArray(KNOBS) ? KNOBS.map((k) => [null, k]) : Object.entries(KNOBS);
-  return list.map(([key, k]) => {
+  return list.map(([key, k]) => ({ ...one(key, k), cond: k.if }));
+}
+function one(key, k) {
+  {
     const paths = (Array.isArray(k.path) ? k.path : [k.path]).map((p) => p.replace(/\.hex$/, ""));
     const name = key ?? camel(paths[0]);
     const label = k.label ?? k.name;
     const also = k.also ?? {};
     if (k.color) return { name, label, paths, also, kind: "color", block: k.color === "block" };
-    if (k.options) return { name, label, paths, also, kind: "options", options: k.options };
-    if (k.bool || k.boolean) return { name, label, paths, also, kind: "bool", on: k.on ?? true, off: k.off ?? false };
+    // (`value`: a starting value the settings do not hold — a knob into a
+    // field the defaults leave blank, as a shop interior's floor mosaic)
+    if (k.options) return { name, label, paths, also, kind: "options", options: k.options, value: k.value };
+    if (k.bool || k.boolean) return { name, label, paths, also, kind: "bool", on: k.on ?? true, off: k.off ?? false, value: k.value };
     const step = k.step ?? k.range?.[2] ?? 0.1;
     return { name, label, paths, also, kind: "range", step, min: k.min ?? k.range?.[0], max: k.max ?? k.range?.[1], value: k.value };
-  });
+  }
 }
 
 export function knobStory(DEFAULTS, KNOBS, fixed = {}, overrides = {}) {
@@ -62,12 +71,23 @@ export function knobStory(DEFAULTS, KNOBS, fixed = {}, overrides = {}) {
       args[k.name] = d;
     }
     if (k.label) argTypes[k.name].name = k.label;
+    if (k.cond) argTypes[k.name].if = k.cond;
   }
   Object.assign(args, overrides);
+  // a knob hidden by its `if` leaves the config alone
+  const shown = (k, a) => {
+    const f = k.cond;
+    if (!f) return true;
+    const v = a[f.arg];
+    if ("eq" in f) return v === f.eq;
+    if ("neq" in f) return v !== f.neq;
+    if ("truthy" in f) return !!v === !!f.truthy;
+    return true;
+  };
   const configOf = (a) => {
     const c = copy(fixed);
     for (const k of knobs) {
-      if (!(k.name in a)) continue;
+      if (!(k.name in a) || !shown(k, a)) continue;
       const v = k.kind === "color" ? (k.block ? block(a[k.name]) : solid(a[k.name])) : k.kind === "bool" ? (a[k.name] ? k.on : k.off) : a[k.name];
       for (const p of k.paths) set(c, p, v);
       for (const [p, f] of Object.entries(k.also)) set(c, p, f(a[k.name]));

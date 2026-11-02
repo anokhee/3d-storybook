@@ -9,6 +9,15 @@ import { BODIES, bodyOf } from "./bodies.js";
 const BodyContext = createContext(BODIES.planet);
 export const useBody = () => useContext(BodyContext);
 
+// Flat ground: whatever is inside stands on a ball so big it is flat to
+// a hair — for things built to stand on the planet (a fence: its posts
+// dropped onto the ball, each upright to its own bit) put up somewhere
+// that is not the ball's surface, as a balcony's railing on a shopfront.
+const FLAT = { ...BODIES.planet, name: "flat", radius: 1e7 };
+export function FlatGround({ children }) {
+  return <BodyContext.Provider value={FLAT}>{children}</BodyContext.Provider>;
+}
+
 // Stands whatever is inside on the ball — `body` by name, the planet unless
 // said otherwise — at lat/lon: moved out to the surface there and turned so
 // its +y is the ground's up. Everything inside is plain +y-up with the

@@ -8,7 +8,7 @@ import { knobStory } from "./helpers/knobs.js";
 const K = knobStory(MUG, MUG_KNOBS, {}, {});
 
 export default {
-  title: "Props/Kitchen/Mug",
+  title: "Food/Kitchen/Mug",
   component: Mug,
   argTypes: K.argTypes,
   args: K.args,

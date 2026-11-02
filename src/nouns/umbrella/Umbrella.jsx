@@ -146,7 +146,8 @@ export default function Umbrella({ config }) {
     return list;
   }, [C, R, N]);
 
-  const shaftFrom = parts.crook.top;
+  const crook = C.handle.show !== false;
+  const shaftFrom = crook ? parts.crook.top : 0;
   const shaftTo = C.height + C.shaft.ferrule;
   // the strap, a ring round the furled cloth, only while it is near shut
   const strapAt = 0.55;
@@ -157,7 +158,7 @@ export default function Umbrella({ config }) {
     <group>
       <mesh geometry={parts.canopyA} material={unlitMat(paint.canopyA)} castShadow receiveShadow />
       <mesh geometry={parts.canopyB} material={unlitMat(paint.canopyB)} castShadow receiveShadow />
-      {tips.map((p, i) => (
+      {C.tips !== false && tips.map((p, i) => (
         <mesh key={i} position={p} material={unlitMat(paint.shaft)} castShadow receiveShadow>
           <sphereGeometry args={[0.05, 8, 6]} />
         </mesh>
@@ -168,10 +169,12 @@ export default function Umbrella({ config }) {
       <mesh position-y={shaftTo + 0.02} material={unlitMat(paint.shaft)} castShadow receiveShadow>
         <sphereGeometry args={[0.05, 8, 6]} />
       </mesh>
-      <mesh geometry={parts.crook.geometry} material={unlitMat(paint.handle)} castShadow receiveShadow />
-      <mesh position={parts.crook.tip} material={unlitMat(paint.handle)} castShadow receiveShadow>
-        <sphereGeometry args={[C.handle.radius, 8, 6]} />
-      </mesh>
+      {crook && <mesh geometry={parts.crook.geometry} material={unlitMat(paint.handle)} castShadow receiveShadow />}
+      {crook && (
+        <mesh position={parts.crook.tip} material={unlitMat(paint.handle)} castShadow receiveShadow>
+          <sphereGeometry args={[C.handle.radius, 8, 6]} />
+        </mesh>
+      )}
       {R.open < 0.35 && (
         <mesh position-y={strapY} rotation-x={Math.PI / 2} material={unlitMat(paint.shaft)} castShadow receiveShadow>
           <torusGeometry args={[strapR, 0.022, 6, 16]} />

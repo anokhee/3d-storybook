@@ -1,18 +1,34 @@
 {/* The landing page. Plain Markdown with one line of setup at the top.
     `title` is its sidebar name; preview.jsx pins "About" to the top. */}
 import { Meta } from "@storybook/addon-docs/blocks";
+import { addons } from "storybook/preview-api";
+
+{/* The button: asks the manager to open the Catalog grid (the same message
+    the catalog's own Open buttons send), so the sidebar follows along. */}
+export const OpenCatalog = () => (
+  <button
+    onClick={() => addons.getChannel().emit("selectStory", { storyId: "catalog--default" })}
+    style={{ font: "inherit", fontSize: 14, padding: "8px 16px", borderRadius: 4, cursor: "pointer", border: "1px solid #C3CED7", background: "#F6F8FA", color: "#2B3A47", margin: "8px 0 20px" }}
+  >
+    Open catalog
+  </button>
+);
 
 <Meta title="About" />
 
-# An object catalog
+# Object Catalog
 
-Every 3D object I have made, taken out of the project it was built for and
-stood on its own so it can be turned over, recolored and resized.
+I'm building this catalog of stylized 3D objects in Three.js. I feel most
+comfortable writing objects in code rather than hand-modeling them, because
+coding them produces a very particular, noticeable style: almost symmetrical
+and clay-like, but still a little whimsical and weird.
 
-Pick an object in the sidebar. Drag to orbit, scroll to zoom. The
-lightbulb in the toolbar shows each one under the Wooden Dollies toon light
-or the albatross flat light; the slider beside it runs the day from night
-to noon. Some objects have **Controls** on the right for their colors and
-sizes.
+The objects are modular and swappable, and can be combined in funny ways,
+which I enjoy. It's like digital Legos. It's a relaxing project. Everything
+can be exported as a .glb and reused in a game engine like Unreal or Godot,
+but for now I find it most comfortable to build and tweak the assets in this
+little collection I'm hosting online.
 
-Built by Anokhee Jandhyala.
+<OpenCatalog />
+
+Built by [Anokhee Jandhyala](https://anokhee.dev/).

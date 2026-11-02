@@ -1,44 +1,45 @@
 /* ============================================================
-   APPLE CAR: the roadster (car.js) remade as an apple. The body is one
-   plump round apple standing the way an apple stands, a little wider
-   than tall, fat in the shoulders and drawn in toward its base, with
-   the dimple at its top; it is leant back a touch and set back over the
-   axles, so the dimple and the short brown stem rising out of it, with
-   a leaf on the stem, are behind the cockpit. A BITE is taken out of
-   the right flank (+z, the side the catalog sees), high and toward the
-   front, showing the pale flesh, and out of the flesh a WORM comes
-   curling up and out: a green tube with a round head and two eyes,
-   looking out of the bite. A small pale highlight sits high on each
-   shoulder. The COCKPIT is the cut-out cars' (tray.js), cut into
-   the top of the apple ahead of the dimple like a cookie cutter, the
-   skin eased level round it so its rim is four straight, level lines,
-   its floor, walls and lip in a darker colour; in it the roadster's two
-   bucket seats, dashboard and steering wheel, and an arched windshield
-   raked back from its front edge. Headlights in dark rims on the front
-   slope, tail lights on the back one, four wheels with hubcaps on two
-   axles under the belly. Faces +X; its origin on the ground under the
-   axles. Up is +Y.
+   APPLE CAR: the roadster (car.js) remade as an apple, built the way
+   the ball cars are (ballcar.js). The body is one plump round apple,
+   near enough a ball, standing the way an apple stands: fat in the
+   shoulders and drawn in toward its base, with the dimple at its top;
+   leant back a touch so the dimple, and the short brown stem rising
+   out of it with a leaf on the stem, are behind the cockpit. A BITE is
+   taken out of the right flank (+z, the side the catalog sees), high
+   and toward the front, showing the pale flesh, and out of the flesh a
+   WORM comes curling up and out: a green tube with a round head and
+   two eyes, looking out of the bite. A small pale highlight sits high
+   on each shoulder. It is a ONE-SEATER: the COCKPIT is a narrow well
+   cut into the top of the apple ahead of the dimple like a cookie
+   cutter (tray.js), the skin eased up to its rim so its rim is four
+   straight, level lines, its floor, walls and lip in a darker colour;
+   in it one bucket seat in the middle, a dashboard and steering wheel
+   before it, and a framed windshield raked back. Headlights in dark
+   rims low on the nose, tail lights low on the tail, and under it the
+   roadster's four wheels with hubcaps on two axles hung from a dark
+   chassis beam, tucked up under the belly so the apple sits low over
+   them. Faces +X; its origin on the ground under the axles. Up is +Y.
 
    The apple is a sphere pushed into shape by `local(dx, dy, dz)` (a
    unit direction from its centre to the skin, in the apple's own
-   upright frame), then leant and set back by `toWorld`; `inside(p)`
-   says whether a world point is within the skin, which is how the bite
-   is cut. Where something has to sit ON the skin (the lamps, the
-   highlights) its place is found by casting a ray at the body and
-   taking the hit. `finish(color, extra)` makes every material, so a
-   page can hand in its own (the game's toon, or the stage's).
-   `roll(dt, speed)` turns the wheels as the game does for a car going
-   `speed` world units a second.
+   upright frame), then leant by `toWorld`; `inside(p)` says whether a
+   world point is within the skin, which is how the bite is cut. Where
+   something has to sit ON the skin (the lamps, the highlights) its
+   place is found by casting a ray at the body and taking the hit.
+   `finish(color, extra)` makes every material, so a page can hand in
+   its own (the game's toon, or the stage's). `roll(dt, speed)` turns
+   the wheels as the game does for a car going `speed` world units a
+   second; `seat` is where the driver sits, the top of the one cushion.
    ============================================================ */
 import * as THREE from "three";
 import { mergeVertices } from "three/addons/utils/BufferGeometryUtils.js";
-import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
+import { COCKPIT, RAKE, leveller, cutThrough, fitCockpit } from "./tray.js";
 
 // `skin` the apple, `flesh` the bite, `worm` the worm in it, `shine`
-// the highlight patches, `stem` and `leaf` the top, `trim` the seats
+// the highlight patches, `stem` and `leaf` the top, `trim` the seat
 // and hubcaps, `well` the cockpit's floor, walls and lip.
 export const APPLECAR = {
-  scale: 1.45, // built about 3.2 long and nearly as tall; the game scales it up to fit a driver
+  scale: 1.165, // built about 2.8 across; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   skin: 0xd8281f,
   flesh: 0xfff3d2,
   worm: 0x9bd36b,
@@ -47,7 +48,7 @@ export const APPLECAR = {
   leaf: 0x4f9d3a,
   trim: 0xf3e3b4,
   well: 0x5a1612,
-  dash: 0x3a3330, // the dashboard and the steering wheel
+  dash: 0x3a3330, // the dashboard, the steering wheel, the chassis and the axles
   wheel: 0x232120,
   glass: 0xbfe3ec,
   lamp: 0xfff2b0,
@@ -56,21 +57,18 @@ export const APPLECAR = {
 };
 
 // The apple, in the car's own units (before `scale`): RX long, RZ
-// across and RY tall at the unit sphere (a little oval, long-ways), its
-// shoulders swelled and its base drawn in, the top dimple DIMPLE deep;
-// its centre at (OX, CY), leant back TILT radians (which lifts its
-// nose a touch). The BITE is a sphere, where it meets the skin. The WELL
-// is the cockpit, its rim at TOP and its floor FLOOR; the skin is eased
-// to the rim round it.
-const RX = 1.6, RZ = 1.5, RY = 1.35, DIMPLE = 0.3, OX = -0.15, CY = 1.5, TILT = 0.3;
-const BITE = { at: new THREE.Vector3(0.5, 2.0, 1.55), r: 0.6 };
-const WELL = { x0: -0.1, x1: -0.1 + COCKPIT.len, z1: COCKPIT.half }, TOP = 2.3, FLOOR = TOP - COCKPIT.depth;
-// the skin is eased to the rim round the well, but only the skin up at
-// the rim's height: the apple is round, so its nose and tail slope down
-// past the rim not far ahead of and behind the well, and they must keep
-// their shape
-const EASE = leveller(WELL, TOP, { cap: false });
-const LEVEL = { ...EASE, reshaped: (h, x, z) => h > TOP - 0.05 && EASE.reshaped(h, x, z) };
+// across and RY tall at the unit sphere, its shoulders swelled and its
+// base drawn in, the top dimple DIMPLE deep; its centre CY up, leant
+// back TILT radians. The BITE is a sphere, where it meets the skin. The
+// WELL is the one-seat cockpit (tray.js) cut into the top ahead of the
+// dimple, as long as every car's but narrower, its rim TOP a hair over
+// the skin at its highest corner, so the skin is eased up to the rim
+// all round it, and its floor FLOOR. The wheels sit on AXLES, TRACK
+// either side of the middle, tucked under the belly as the balls' are.
+const RX = 1.35, RZ = 1.35, RY = 1.3, DIMPLE = 0.3, CY = 1.45, TILT = 0.35;
+const BITE = { at: new THREE.Vector3(0.45, 1.95, 1.4), r: 0.55 };
+const WELL = { x0: -0.15, x1: -0.15 + COCKPIT.len, z1: 0.42 };
+const AXLES = [-0.8, 0.8], TRACK = 0.74;
 const Y = new THREE.Vector3(0, 1, 0), Z = new THREE.Vector3(0, 0, 1);
 
 // the skin in the apple's own frame for a unit direction (dx, dy, dz)
@@ -81,8 +79,8 @@ function local(dx, dy, dz, out = new THREE.Vector3()) {
   const y = dy * RY - DIMPLE * Math.exp(-r2 / 0.1) * Math.max(dy, 0);
   return out.set(dx * RX * shoulder, y, dz * RZ * shoulder);
 }
-const toWorld = (v) => v.applyAxisAngle(Z, TILT).add(new THREE.Vector3(OX, CY, 0));
-const fromWorld = (v) => v.clone().sub(new THREE.Vector3(OX, CY, 0)).applyAxisAngle(Z, -TILT);
+const toWorld = (v) => v.applyAxisAngle(Z, TILT).add(new THREE.Vector3(0, CY, 0));
+const fromWorld = (v) => v.clone().sub(new THREE.Vector3(0, CY, 0)).applyAxisAngle(Z, -TILT);
 // whether a world point is within the skin (the apple is star-shaped
 // about its centre, so it is a matter of how far out it is along its
 // own direction)
@@ -91,6 +89,24 @@ const inside = (p) => {
   if (d < 1e-6) return true;
   return d < local(l.x / d, l.y / d, l.z / d).length();
 };
+// the skin's height over (x, z), on top of the apple, found by halving
+function heightAt(x, z) {
+  let lo = CY, hi = CY + RY + 1;
+  for (let i = 0; i < 40; i++) {
+    const m = (lo + hi) / 2;
+    if (inside(new THREE.Vector3(x, m, z))) lo = m;
+    else hi = m;
+  }
+  return (lo + hi) / 2;
+}
+const corners = [WELL.x0, WELL.x1].flatMap((x) => [-WELL.z1, WELL.z1].map((z) => heightAt(x, z)));
+const TOP = Math.max(...corners) + 0.02, FLOOR = TOP - COCKPIT.depth;
+// the skin is eased to the rim round the well, but only the skin up
+// near the rim's height (down to the well's lowest corner): the apple
+// is round, so its nose and tail slope down past the rim not far ahead
+// of and behind the well, and they must keep their shape
+const EASE = leveller(WELL, TOP, { cap: false }), SLOPE = TOP - Math.min(...corners) + 0.05;
+const LEVEL = { ...EASE, reshaped: (h, x, z) => h > TOP - SLOPE && EASE.reshaped(h, x, z) };
 
 export function buildAppleCar(finish, C = APPLECAR) {
   const group = new THREE.Group(),
@@ -196,7 +212,7 @@ export function buildAppleCar(finish, C = APPLECAR) {
   // a small pale highlight high on each shoulder, toward the front
   const shineGeo = new THREE.SphereGeometry(1, 16, 10).scale(0.2, 0.03, 0.11);
   for (const s of [-1, 1]) {
-    const h = hit(0.4, CY + 2, s * 1.2, -0.15, -1, -s * 0.3);
+    const h = hit(0.4, CY + 2, s * 1.1, -0.15, -1, -s * 0.3);
     if (!h) continue;
     stickOn(h, shineGeo, C.shine, undefined, 0.012).rotateY(s * 0.7);
   }
@@ -221,14 +237,14 @@ export function buildAppleCar(finish, C = APPLECAR) {
   add(leafGeo, C.leaf, 0, 0, 0, { side: THREE.DoubleSide }, leafHold);
   add(new THREE.BoxGeometry(0.5, 0.012, 0.03).translate(0.29, 0, 0), C.stem, 0, 0, 0.012, undefined, leafHold); // the midrib
 
-  // headlights on the front slope and tail lights on the back one,
-  // each in a dark rim (lit for the night)
+  // headlights low on the nose and tail lights low on the tail, as the
+  // balls have them, each in a dark rim (lit for the night)
   const lampGeo = new THREE.CylinderGeometry(0.09, 0.09, 0.08, 14).translate(0, 0.04, 0);
   const rimGeo = new THREE.TorusGeometry(0.1, 0.018, 8, 20).rotateX(Math.PI / 2).translate(0, 0.055, 0);
   const tailGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.05, 12).translate(0, 0.025, 0);
   const tailRim = new THREE.TorusGeometry(0.07, 0.015, 8, 20).rotateX(Math.PI / 2).translate(0, 0.035, 0);
   for (const s of [-1, 1]) {
-    const f = hit(4, 1.3, s * 0.55, -1, 0, 0), b = hit(-4, 1.3, s * 0.55, 1, 0, 0);
+    const f = hit(4, 0.95, s * 0.5, -1, 0, 0), b = hit(-4, 0.95, s * 0.6, 1, 0, 0);
     if (f) {
       stickOn(f, lampGeo, C.lamp, { emissive: C.lamp, emissiveIntensity: 0.6 }, 0.03);
       stickOn(f, rimGeo, C.dash, undefined, 0.03);
@@ -239,16 +255,18 @@ export function buildAppleCar(finish, C = APPLECAR) {
     }
   }
 
-  // the cockpit, cut into the skin (tray.js)
-  const seat = fitCockpit({ group, add, box }, C, WELL, FLOOR, TOP, C.well);
+  // the cockpit, cut into the top (tray.js): one seat, in the middle
+  const seat = fitCockpit({ group, add, box }, C, WELL, FLOOR, TOP, C.well, RAKE, 1);
 
-  // four wheels, each with a hubcap, turning on an axle along z under the belly
+  // the chassis: a dark beam under the belly, the two axles across it,
+  // and four wheels, each with a hubcap, turning on an axle along z
+  box(2.0, 0.16, 0.3, C.dash, 0, C.wheelR + 0.06, 0);
+  const axleGeo = new THREE.CylinderGeometry(0.045, 0.045, 2 * TRACK + 0.2, 10).rotateX(Math.PI / 2);
   const wheelGeo = new THREE.CylinderGeometry(C.wheelR, C.wheelR, 0.22, 18).rotateX(Math.PI / 2);
   const capGeo = new THREE.CylinderGeometry(C.wheelR * 0.45, C.wheelR * 0.45, 0.25, 12).rotateX(Math.PI / 2);
-  const axleGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.9, 10).rotateX(Math.PI / 2);
-  for (const x of [-0.9, 0.9]) {
-    add(axleGeo, C.wheel, x, C.wheelR, 0);
-    for (const z of [-0.95, 0.95]) {
+  for (const x of AXLES) {
+    add(axleGeo, C.dash, x, C.wheelR, 0);
+    for (const z of [-TRACK, TRACK]) {
       const w = add(wheelGeo, C.wheel, x, C.wheelR, z);
       add(capGeo, C.trim, 0, 0, 0, undefined, w);
       wheels.push(w);

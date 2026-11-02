@@ -20,7 +20,15 @@ import { PALETTE } from "../../world/palette.js";
 //   light    how it is lit (see LIGHT) — unlit is a board; a "glowing" one
 //            is a pane of glass
 //   color    its own, a swatch from PALETTE
+//   text     what it says, or null for a blank board: the library's
+//            Lettering (Buildings/Lettering) — `say` the word, and any of
+//            LETTERING's other fields (font, color, how `wrong`) — stood
+//            on the board's face. Its size is the board's: see fit
+//   fit      how much of the board the lettering may take, `across` of
+//            its width and `up` of its height
 export const SIGN = {
+  text: null,
+  fit: { across: 0.86, up: 0.6 },
   width: 7.5,
   height: 2,
   depth: 0.25,

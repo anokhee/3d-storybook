@@ -37,7 +37,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // calyx and stem, `sepals` how many sepals, `trim` the seats and
 // hubcaps, `well` the cockpit's floor, walls and lip.
 export const STRAWBERRYCAR = {
-  scale: 1.6, // built about 3.4 long; the game scales it up to fit a driver
+  scale: 1.165, // built about 3.4 long; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   berry: 0xe23b4e,
   seed: 0xffd98a,
   seeds: 90,

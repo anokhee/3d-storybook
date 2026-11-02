@@ -17,7 +17,7 @@ import * as THREE from "three";
 import { seatHeadrest } from "./seat.js";
 
 export const CAR = {
-  scale: 1.6, // built about 2.9 long; the game scales it up to fit a driver
+  scale: 1.165, // built about 2.9 long; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   body: 0xd9534f,
   trim: 0xf3e3b4, // seats, bumpers, hubcaps, the windshield frame
   dash: 0x3a3330, // the dashboard, the steering wheel, the grille

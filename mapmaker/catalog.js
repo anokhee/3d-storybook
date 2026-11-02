@@ -10,7 +10,7 @@
 import { createElement, useMemo } from "react";
 import { COVER, patchOf } from "../runtime/cover.js";
 import { FENCE_KINDS } from "../runtime/fence.js";
-import { TERRAIN, CLIFF_ARGS, RAMP_ARGS } from "../runtime/terrain.js";
+import { TERRAIN, CLIFF_ARGS, RAMP_ARGS, CUT_ARGS } from "../runtime/terrain.js";
 
 // (the Catalog page itself is left out: it is Storybook's, not an object)
 const modules = import.meta.glob(["../stories/*.stories.jsx", "!../stories/Catalog.stories.jsx"], { eager: true });
@@ -111,24 +111,44 @@ function coverEntries() {
 
 // TERRAIN is this catalog's own too: cliffs and ramps (../runtime/terrain.js),
 // drawn by mapmaker/Terrain.jsx. A cliff's knobs are its shape and height;
-// a ramp's its shape — its heights it reads off the cliffs at its ends.
+// a ramp's its shape — its heights it reads off the cliffs at its ends. A
+// cut (what the sculpt brush's right click lays) is kept out of the picker,
+// and so is the cliff: the sculpt brush lays them (round, its size) and a
+// picked one still has its knobs.
+// The SCULPT brush is a tool, not a thing: picked, a left click raises the
+// ground (round cliffs of the brush's size) and a right click lowers it
+// (Scene.jsx's sculpt); its size and height are the store's `brush`.
+export const SCULPT = "terrain-sculpt";
 function terrainEntries() {
   const shared = (id, kind, args, argTypes) => ({ id, file: null, name: TERRAIN[kind].label, section: "Terrain", top: "Terrain", terrain: kind, swatch: TERRAIN[kind].tint, argTypes, args, render: () => null });
   return [
-    shared("terrain-cliff", "cliff", { ...CLIFF_ARGS }, {
-      width: range("width", 2, 60, 0.5),
-      length: range("length", 2, 60, 0.5),
-      corner: range("corner", 0, 30, 0.5),
-      blend: range("blend", 0, 8, 0.25),
-      height: range("height", 0.5, 16, 0.1),
-      layer: range("layer", 1, 3, 1),
-      wobble: range("edge wobble", 0, 1.5, 0.05),
-    }),
+    { id: SCULPT, file: null, name: "sculpt", section: "Terrain", top: "Terrain", terrain: "sculpt", tool: true, swatch: `linear-gradient(135deg, ${TERRAIN.cliff.tint} 50%, ${TERRAIN.cut.tint} 50%)`, argTypes: {}, args: {}, render: () => null },
+    {
+      ...shared("terrain-cliff", "cliff", { ...CLIFF_ARGS }, {
+        width: range("width", 2, 60, 0.5),
+        length: range("length", 2, 60, 0.5),
+        corner: range("corner", 0, 30, 0.5),
+        blend: range("blend", 0, 8, 0.25),
+        height: range("height", 0.5, 16, 0.1),
+        layer: range("layer", 1, 3, 1),
+        wobble: range("edge wobble", 0, 1.5, 0.05),
+      }),
+      hidden: true,
+    },
     shared("terrain-ramp", "ramp", { ...RAMP_ARGS, corner: 0 }, {
       width: range("width", 2, 20, 0.5),
       length: range("length", 2, 40, 0.5),
       road: { name: "road", control: { type: "boolean" } },
     }),
+    {
+      ...shared("terrain-cut", "cut", { ...CUT_ARGS }, {
+        width: range("width", 1, 60, 0.5),
+        length: range("length", 1, 60, 0.5),
+        corner: range("corner", 0, 30, 0.5),
+        tier: range("cut into (height)", 0.5, 48, 0.1),
+      }),
+      hidden: true,
+    },
   ];
 }
 

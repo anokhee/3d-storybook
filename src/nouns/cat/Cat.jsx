@@ -245,6 +245,22 @@ const along = (dir) => new THREE.Euler().setFromQuaternion(new THREE.Quaternion(
 
 const Y = new THREE.Vector3(0, 1, 0);
 
+// THE POUR, KEPT: a cat's lump is the slowest thing about it (marching
+// cubes over the whole grid, see world/lump.js), and two cats of the same
+// pose and size are the same lump — so it is poured once per layout (its
+// parts, its tail, the grid) and kept here, with which of its vertices are
+// tail; each Cat takes a copy of the geometry to bend as its own.
+const POURS = new Map();
+function pouredCat(lay, tail, resolution) {
+  const key = JSON.stringify([lay.parts, lay.tail, resolution]);
+  let poured = POURS.get(key);
+  if (!poured) {
+    const geo = lumpOf([...lay.parts, ...tailParts(tail)], { resolution });
+    POURS.set(key, (poured = { geo, ...tailWeights(geo, tail) }));
+  }
+  return poured;
+}
+
 // One cat, standing on the ground at y = 0 facing +z. `config` overrides
 // any of CAT's fields for this one instance; the coat it names lays its
 // colours and markings under the rest of it.
@@ -258,8 +274,9 @@ export default function Cat({ config }) {
   // which are tail, for the swish to bend.
   const tail = useMemo(() => tailBalls(lay.tail), [lay]);
   const lump = useMemo(() => {
-    const geo = lumpOf([...lay.parts, ...tailParts(tail)], { resolution: C.resolution });
-    return { geo, rest: restOf(geo), ...tailWeights(geo, tail), root: new THREE.Vector3(...lay.tail.points[0]) };
+    const { geo: poured, weights, index } = pouredCat(lay, tail, C.resolution);
+    const geo = poured.clone(); // its own copy to bend (the swish moves its vertices); the pour itself is shared
+    return { geo, rest: restOf(geo), weights, index, root: new THREE.Vector3(...lay.tail.points[0]) };
   }, [lay, tail, C.resolution]);
   useEffect(() => () => lump.geo.dispose(), [lump]);
 

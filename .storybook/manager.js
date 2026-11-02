@@ -22,6 +22,8 @@ import { loadMeta } from "./meta.js"; // each entry's description, tags and stat
 // the object's first variant on the stage; the open object's card is
 // outlined. A toggle in the sidebar's header picks, and the choice is kept
 // in the browser.
+// Object names in the list are in the header face (manager-head.html loads it); the rest is the theme's Nunito.
+const DISPLAY = '"Fredoka", "Nunito", ui-rounded, system-ui, sans-serif';
 const VIEW_KEY = "object-catalog-sidebar-view";
 const view = {
   mode: (() => { try { return localStorage.getItem(VIEW_KEY) || "list"; } catch { return "list"; } })(),
@@ -96,8 +98,8 @@ function Card({ item, picked }) {
     React.createElement("span", { style: { display: "block", flex: "0 0 auto", outline: picked ? "2px solid #4F6E86" : "none", outlineOffset: 2, borderRadius: 4, background: "#DDE4EA", width: 56, height: 56, overflow: "hidden" } },
       lost ? null : React.createElement("img", { src: `thumbs/${item.id}.png`, alt: item.name, loading: "lazy", onError: () => setLost(true), style: { width: "100%", height: "100%", objectFit: "cover", display: "block" } })),
     React.createElement("span", { style: { display: "flex", flexDirection: "column", gap: 2, minWidth: 0 } },
-      React.createElement("span", { style: { fontSize: 12, color: picked ? "#2F4A5F" : "#2B3A47", fontWeight: picked ? 600 : 400, lineHeight: 1.3 } }, item.name),
-      React.createElement("span", { style: { fontSize: 10, color: "#66788A", lineHeight: 1.3 } }, item.section)),
+      React.createElement("span", { style: { fontFamily: DISPLAY, fontSize: 14, color: picked ? "#2F4A5F" : "#2B3A47", fontWeight: picked ? 600 : 500, lineHeight: 1.25 } }, item.name),
+      React.createElement("span", { style: { fontSize: 11, color: "#66788A", lineHeight: 1.3 } }, item.section)),
   );
 }
 
@@ -145,8 +147,8 @@ function SearchBar() {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
   const box = React.useRef(null);
-  // The search box is as wide as the sidebar's title above it, and starts
-  // where its text does
+  // The search box starts where the sidebar's title text above it does,
+  // and fills the column up to the filter button
   const [field, setField] = useState(null);
   useEffect(() => {
     const title = document.querySelector(".sidebar-header a[href^='http']");
@@ -155,7 +157,7 @@ function SearchBar() {
       const range = document.createRange();
       range.selectNodeContents(title);
       const text = range.getBoundingClientRect();
-      if (text.width) setField({ w: Math.round(text.width), left: Math.round(text.left - box.current.getBoundingClientRect().left) });
+      if (text.width) setField({ left: Math.round(text.left - box.current.getBoundingClientRect().left) });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -188,11 +190,11 @@ function SearchBar() {
   return React.createElement("div", { ref: box, style: { position: "relative", display: "flex", alignItems: "center", gap: 6, padding: `0 20px 8px ${field?.left ?? 20}px` } },
     React.createElement("input", {
       type: "search", placeholder: "Search objects…", value: f.text, onChange: (e) => filt.set({ text: e.target.value }), "aria-label": "Search objects",
-      style: { flex: field ? "0 0 auto" : 1, width: field?.w, minWidth: 0, boxSizing: "border-box", font: "inherit", fontSize: 12, padding: "4px 8px", border: "1px solid #C3CED7", borderRadius: 3, background: "#F6F8FA", color: "#2B3A47", outline: "none" },
+      style: { flex: 1, minWidth: 0, boxSizing: "border-box", font: "inherit", fontSize: 12, padding: "4px 8px", border: "1px solid #C3CED7", borderRadius: 3, background: "#F6F8FA", color: "#2B3A47", outline: "none" },
     }),
     React.createElement("button", {
       onClick: () => setOpen((o) => !o), title: "Filter by category or tag", "aria-label": "Filter by category or tag", "aria-expanded": open,
-      style: { all: "unset", cursor: "pointer", boxSizing: "border-box", position: "relative", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 4, color: chosen || open ? "#2F4A5F" : "#4A5C6C", background: chosen || open ? "#C9D6E0" : "transparent" },
+      style: { all: "unset", cursor: "pointer", boxSizing: "border-box", position: "relative", flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, borderRadius: 4, color: chosen || open ? "#2F4A5F" : "#4A5C6C", background: chosen || open ? "#C9D6E0" : "transparent" },
       onMouseEnter: (e) => { if (!chosen && !open) e.currentTarget.style.background = "rgba(79,110,134,0.14)"; },
       onMouseLeave: (e) => { if (!chosen && !open) e.currentTarget.style.background = "transparent"; },
     }, React.createElement(FilterIcon), chosen > 0 && React.createElement("span", { style: { position: "absolute", top: -2, right: -2, minWidth: 14, height: 14, padding: "0 3px", boxSizing: "border-box", borderRadius: 7, background: "#4F6E86", color: "#EEF2F5", fontSize: 9, lineHeight: "14px", textAlign: "center" } }, chosen)),
@@ -261,10 +263,12 @@ addons.setConfig({
   theme: storyTheme,
   layout: { panelPosition: "right", showPanel: false, showNav: false },
   // The toolbar lists Storybook's own tools first, then ours in the order
-  // tools.jsx adds them. Every built-in but the reload and open-in-editor
-  // buttons is hidden, so the search box comes right after them; the panel
-  // toggle and isolation mode live on the object bar (tools.jsx) instead.
+  // tools.jsx adds them. Every built-in but the reload button is hidden
+  // (open-in-editor too: it goes nowhere on a hosted site), so the search
+  // box comes right after it; the panel toggle and isolation mode live on
+  // the object bar (tools.jsx) instead.
   toolbar: {
+    "open-in-editor": { hidden: true },
     zoom: { hidden: true },
     addons: { hidden: true },
     isolationMode: { hidden: true },

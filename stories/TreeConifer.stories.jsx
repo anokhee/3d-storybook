@@ -1,12 +1,13 @@
 // Conifer: stacked tiers of needles. The tree component's "conifer" kind
-// (TREE_KINDS in src/nouns/tree/objects.js), with the knobs every tree has.
-// See Bench.stories.jsx for how argTypes, args and render fit together.
+// (TREE_KINDS in src/nouns/tree/objects.js), with the knobs every tree has,
+// fitted to the characters (TREE_FIT there). See Bench.stories.jsx for how
+// argTypes, args and render fit together.
 import Tree from "../src/nouns/tree/Tree.jsx";
-import { TREE, TREE_KNOBS } from "../src/nouns/tree/objects.js";
+import { TREE_MAP, TREE_FIT, TREE_KNOBS } from "../src/nouns/tree/objects.js";
 import { TREE_PALETTES } from "../src/nouns/tree/palettes.js";
 import { knobStory } from "./helpers/knobs.js";
 
-const K = knobStory(TREE, TREE_KNOBS, { kind: "conifer" }, { leafColor: TREE_PALETTES.needles[0].hex, tiers: 4 });
+const K = knobStory(TREE_MAP, TREE_KNOBS, { kind: "conifer", ...TREE_FIT }, { leafColor: TREE_PALETTES.needles[0].hex, tiers: 4 });
 
 export default {
   title: "Nature/Trees/Conifer",
@@ -17,4 +18,3 @@ export default {
 };
 
 export const Default = {};
-

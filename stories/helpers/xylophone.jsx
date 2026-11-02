@@ -53,3 +53,10 @@ export function Built({ build, args = [], center = true }) {
 
   return <primitive object={group} />;
 }
+
+// The xylophone's things are built for its own scene, about three times the
+// size they would stand at beside the characters (1.31 high — see
+// mapmaker/seed.js). The Nature stories that draw them (the fern, the
+// toadstools, the meadow flower, the shells, the rainbow) FIT them to the
+// characters by this, as the trees are (TREE_FIT in src/nouns/tree/objects.js).
+export const XYLO_FIT = 1 / 3;

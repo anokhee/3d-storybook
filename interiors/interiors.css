@@ -1,0 +1,35 @@
+/* The interiors editor, in the mapmaker's clothes (../mapmaker/mapmaker.css
+   is loaded first: the Storybook shell's look, the three docked panels).
+   Only what differs is here. */
+
+/* the shops to load, as cards with the catalog's own pictures */
+.shops { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+
+/* the things to add: small cards without pictures, in groups */
+.palette { display: flex; flex-direction: column; gap: 8px; }
+.palette .group { display: flex; flex-wrap: wrap; gap: 4px; }
+.palette .group h3 { flex: 0 0 100%; margin: 4px 0 0; font-family: var(--display); font-size: 10px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.chip { padding: 3px 8px; border-radius: 10px; font-size: 10px; background: var(--input); }
+.chip.on { background: var(--blue); border-color: var(--blue); color: var(--content); }
+
+/* the config, as text to copy out (or paste in) */
+textarea.config {
+  width: 100%; min-height: 160px; box-sizing: border-box; resize: vertical; padding: 8px; border-radius: 3px;
+  border: 1px solid var(--line); background: var(--input); color: var(--ink);
+  font: 10px/1.45 "IBM Plex Mono", ui-monospace, monospace; -webkit-user-select: text; user-select: text; white-space: pre; overflow: auto;
+}
+textarea.config:focus { outline: none; border-color: var(--steel); box-shadow: 0 0 0 1px var(--steel) inset; }
+.ok { color: #3F7A4F; }
+.bad { color: var(--red); }
+
+/* the knobs of the loaded shop, down the left under its card */
+#catalog .scroll { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 2px; }
+#catalog .knobs { display: flex; flex-direction: column; gap: 6px; }
+
+/* a wide left panel: the knobs and the palette want the room */
+#catalog { width: 300px; }
+#inspector { width: 320px; }
+.flyout { right: 330px; }
+
+/* room for the knobs' names */
+#catalog .row label { flex: 0 0 104px; }

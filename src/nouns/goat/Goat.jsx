@@ -299,9 +299,13 @@ export default function Goat({ config }) {
       g.boundingSphere = lump.geo.boundingSphere;
       return g;
     };
-    return { body: view(rest), tail: view(onTail) };
+    // No tail piece at all when the tail hangs (none of the lump is tail
+    // then): a mesh with an empty index draws nothing here, but baked to
+    // a glTF it loses the index and draws the whole lump as a soup of
+    // triangles in the tail's colour (the car game's horse, 2026-10-30).
+    return { body: view(rest), tail: onTail.length ? view(onTail) : null };
   }, [lump]);
-  useEffect(() => () => { shown.body.dispose(); shown.tail.dispose(); }, [shown]);
+  useEffect(() => () => { shown.body.dispose(); shown.tail?.dispose(); }, [shown]);
 
   // The patch, if it has one: a disc painted over the back — arched at
   // the top and rounded off at the bottom by half its width, so a
@@ -388,7 +392,7 @@ export default function Goat({ config }) {
     <group scale={C.size}>
       {/* The lump: body, legs, neck, head, muzzle and tail, one form. */}
       <mesh geometry={shown.body} castShadow receiveShadow material={coat} />
-      <mesh geometry={shown.tail} castShadow receiveShadow material={unlitMat(paint.tail)} />
+      {shown.tail && <mesh geometry={shown.tail} castShadow receiveShadow material={unlitMat(paint.tail)} />}
       {/* The patch over the back, and the hooves round the feet. */}
       {patch && <mesh geometry={patch} receiveShadow material={unlitMat(paint.patch)} />}
       {hooves.map((g, i) => <mesh key={i} geometry={g} receiveShadow material={unlitMat(paint.hoof)} />)}

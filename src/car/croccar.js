@@ -30,7 +30,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // `dash` the cockpit's walls, the steering wheel and
 // the axles.
 export const CROCCAR = {
-  scale: 1.6, // built about 5.6 long; the game scales it up to fit a driver
+  scale: 1.165, // built about 5.6 long; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   skin: 0x5b8a46,
   scute: 0x3a5e2e,
   belly: 0xd6d99a,

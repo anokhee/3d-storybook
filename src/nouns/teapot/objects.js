@@ -27,8 +27,8 @@ const paint = {
 export const TEAPOT = {
   size: 0.65,
   sides: 20,
-  body: { foot: 0.3, belly: 0.5, neck: 0.26, tall: 1 },
-  lid: { height: 0.14, lip: 0.06, knob: 0.07 },
+  body: { foot: 0.3, belly: 0.5, neck: 0.2, tall: 1 },
+  lid: { height: 0.11, lip: 0.025, knob: 0.055 },
   spout: { radius: 0.055, length: 1 },
   handle: { radius: 0.055, reach: 0.24 },
   colors: {

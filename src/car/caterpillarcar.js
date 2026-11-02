@@ -27,7 +27,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // `foot` the feet and the horn, `trim` the seats and hubcaps, `dash` the
 // cockpit's walls, the steering wheel, the antennae and the axles.
 export const CATERPILLARCAR = {
-  scale: 1.6, // built about 2.9 long, as the bug cars are; the game scales it up to fit a driver
+  scale: 1.165, // built about 2.9 long, as the bug cars are; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   body: 0x7cc24a,
   head: 0x8fd45a,
   spot: 0xf2c230,

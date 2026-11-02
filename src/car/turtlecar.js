@@ -31,7 +31,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // cockpit's floor, walls and lip, the dashboard, the steering wheel and
 // the axles.
 export const TURTLECAR = {
-  scale: 1.6, // built about 3.4 long; the game scales it up to fit a driver
+  scale: 1.165, // built about 3.4 long; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   shell: 0x2f6e3f,
   plate: 0x3d8650,
   scute: 0xc9b86c,

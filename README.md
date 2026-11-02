@@ -194,32 +194,47 @@ terrain tab and move, reshape or delete it, or draw more — and ⌘Z takes it
 all back. The same word on the same ball grows the same ground; the word
 and amounts are saved with the map. See `mapmaker/seed.js`.
 
-**Terrain.** To lay things out against a game's real ground, the game
-exports a snapshot: the car game does it at `index.html?terrain` while the
-mapmaker is running (it posts `terrain.glb` into `../Car/maps`; with no
-server it downloads instead). The map's `terrain` setting names that file
-in the map's folder; the editor shows it, raycasts against its `ground:`
-meshes, and stands things at the real height. Re-export after changing the
-game's terrain. Without one, the editor's ball is a plain sphere at the
-map's radius (the car game's is 36).
-
-**Adopting a game's houses and trees.** The car game's houses and trees
-are left out of the snapshot and offered instead, as placements, in
-`adopt.json` beside it. A map that has none of them yet takes them all as
-the terrain loads (ids `adopt-…`), so the world looks as the game has it
-and the first save changes nothing; after that an `adopt` button offers
-any new ones, and deleted ones stay deleted. Once a map holds any houses
-the game builds ALL its houses from the map (likewise trees), with its
-own code: a house flattens its lot and keeps the fields clear as before,
-a tree is instanced and kept out of. Their knobs in the editor are not
-read by the game — only where they stand, their turn, a tree's size and
-the two-storey house's garage side. Other buildings (the cupcake house,
-the trailer) are plain scenery from the glb.
+**The map is the ground.** The editor's ball is a plain sphere at the
+map's radius, lumped by the map's bumpiness, with the map's own ponds dug,
+cliffs and ramps raised and roads laid on it — and a game builds the same
+ground from the same map, so what stands on a plateau here stands on it
+there. Once a map holds any houses the car game builds ALL its houses from
+the map (likewise trees), with its own code: a house flattens its lot and
+keeps the fields clear, a tree is instanced and kept out of. Their knobs
+in the editor are not read by the game — only where they stand, their
+turn, a tree's size and the two-storey house's garage side. Other
+buildings (the cupcake house, the trailer) are plain scenery from the glb.
 
 Keys: drag moves · arrows nudge · q / e turn · [ ] size · ⌘D duplicate ·
 ⌫ delete · f look at · ⌘Z undo · shift-click keeps placing · esc stops ·
 drag on the ground draws a groundcover patch.
 Planets and the sky are left out of the catalogue; everything else is in.
+
+## The interiors editor
+
+`npm run interiors` opens a third page (http://localhost:6009) for the
+inside of a shop: load one of the Shopfronts entries from inside (a kind's
+Interior story — its café style, size, door side and seed are the same
+knobs the story has — or the Alleyway's back room), then click a piece of
+furniture to pick it up and drag it about the floor, turn it, take it out,
+or add one from the palette on the left — including things let into the
+walls: a door, an archway, a window, or a whole room through the wall
+(they snap to the nearest wall, `w` re-snaps) — or any object of the
+catalog: open it in the storybook, turn its knobs, press "Copy knobs" on
+the object bar there, then "paste from the catalog" here and click the
+floor (an "object" item, `src/world/placed.js`; the street reads the
+catalog in too, so it draws them). Nothing here needs Storybook.
+
+What comes out is a **layout** (`src/world/furnish.js`): the plan still
+furnishes the room as it always has, and the layout says what differs —
+`move` by item id ("cafe0", "light2": its kind and its number in the
+plan), `drop`, and `add`. The panel on the right shows the room's whole
+config with the layout inside, as `ShopInterior` (or `Alley`) takes it:
+copy it out and it can go straight into a story's args, a café or florist
+style's `layout` (bare, or keyed by size: `{ 2: {…} }`), or a shop on the
+street. Paste one back in with "take up pasted" to carry on with it. The
+blocks nothing walks through follow the furniture, so the street's walker
+still walks round it.
 
 ## Deploy
 

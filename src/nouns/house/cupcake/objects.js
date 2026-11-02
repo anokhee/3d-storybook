@@ -52,8 +52,10 @@ import { DWELLING, CAT_HEIGHT, windowShapeKnobs } from "../objects.js";
 //            wall: `on` whether there are any, `height` and `depth`,
 //            `overhang` how far it reaches past the window each side,
 //            `color`, `soil`; `flowers` planted in it — `count`, `shape`
-//            (any flower, see Ornament), `radius`, `stem` how long, its
-//            `stemColor`, and `colors` taken in turn — or null
+//            (any of the pot plant's kinds, see WINDOW_BOX in
+//            ../../windowBox/objects.js, whose box this is), `radius`,
+//            `stem` how long, its `stemColor`, and `colors` taken in turn —
+//            or null
 //   mat      a doormat on the ground at the door: `on`, `width`, `depth`,
 //            `gap` how far it sits out from the wall, `thick`, `inset` the width of its border, `color` and `border`
 //   sprinkles  over the frosting: `count` of them, each an ornament (see

@@ -1,5 +1,6 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
+import { mergeGeometries } from "three/addons/utils/BufferGeometryUtils.js";
 
 import { hue } from "../../world/palette.js";
 import { LIGHT } from "../../adjectives/lit/objects.js";
@@ -295,6 +296,60 @@ function ChainPanel({ run, wide, tall, mid, top, T, mat, railMat }) {
       >
         <cylinderGeometry args={[T.wire, T.wire, rails.wire.length, 6]} />
       </mesh>
+    </group>
+  );
+}
+
+// The wrought iron railing: square `bars` stood `pitch` apart between a
+// bottom rail `bottom` up and a top rail at the top, a second rail
+// `frieze` of the height up under it, and in every gap between the bars
+// in that band a little ring (`rings`) — the old iron balcony's way. All
+// one `color`, every run one merged geometry (a street of balconies is a
+// lot of bars). Leans with its posts as the others do.
+export function WroughtIronPanels({ runs, height, inset, config: T }) {
+  const mat = unlitMat(T.color);
+  const geos = useMemo(() => runs.map((run) => {
+    const lean = leanOf(run);
+    const parts = [];
+    const R = T.rails, B = T.bars, Ri = T.rings;
+    const wide = run.length - 2 * inset;
+    const top = height - R.height / 2, frieze = T.frieze * height, bottom = T.bottom;
+    // the rails
+    for (const y of [bottom, frieze, top]) {
+      const bar = barOf(lean, -wide / 2, wide / 2, y);
+      parts.push(new THREE.BoxGeometry(bar.length, R.height, R.depth).translate(bar.x, bar.y, 0));
+    }
+    // the bars, from the bottom rail up to the top, as many as fit `pitch` apart
+    const count = Math.max(1, Math.floor(wide / B.pitch));
+    const step = wide / (count + 1);
+    for (let k = 1; k <= count; k++) {
+      const x = -wide / 2 + k * step;
+      const [ax, ay] = lean(x, bottom), [bx, by] = lean(x, top);
+      const len = Math.hypot(bx - ax, by - ay);
+      const g = new THREE.BoxGeometry(B.width, len, B.width);
+      g.rotateZ(-Math.atan2(bx - ax, by - ay));
+      parts.push(g.translate((ax + bx) / 2, (ay + by) / 2, 0));
+    }
+    // a ring in each gap between the bars, in the band under the top rail
+    if (Ri.on) {
+      const y = (frieze + top) / 2, r = Math.min(Ri.radius, (top - frieze) / 2 - R.height / 2, step / 2 - B.width);
+      for (let k = 0; k <= count; k++) {
+        const x = -wide / 2 + (k + 0.5) * step;
+        const [cx, cy] = lean(x, y);
+        if (r > 0.005) parts.push(new THREE.TorusGeometry(r, Ri.tube, 6, 16).translate(cx, cy, 0));
+      }
+    }
+    parts.forEach((g) => { if (g.attributes.uv) g.deleteAttribute("uv"); });
+    const geo = mergeGeometries(parts.map((g) => (g.index ? g.toNonIndexed() : g)), false);
+    parts.forEach((g) => g.dispose());
+    return geo;
+  }), [runs, height, inset, T]);
+  useEffect(() => () => geos.forEach((g) => g.dispose()), [geos]);
+  return (
+    <group>
+      {runs.map(({ position, quaternion }, i) => (
+        <mesh key={i} geometry={geos[i]} material={mat} position={position} quaternion={quaternion} castShadow />
+      ))}
     </group>
   );
 }

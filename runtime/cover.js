@@ -55,6 +55,12 @@ export const COVER = {
   ocean: { label: "ocean", density: 0, tint: "#3b6a9a", water: true, patch: { width: 34, length: 26, corner: 10, blend: 4 } },
   spring: { label: "hot spring", density: 0, tint: "#8cc7bf", water: true, patch: { width: 8, length: 7, corner: 3, blend: 2 } },
   water: { label: "water", density: 0, tint: "#495a74", water: true, hidden: true, patch: { width: 14, length: 11, corner: 5, blend: 3 } },
+  // An ISLAND: plain ground laid over a pond or an ocean (as the dollies'
+  // GROUND in a pool), the water cut away round it — the basin not dug
+  // there, the shore running round it (see basinOf). Laid over a hot
+  // spring it does nothing: a spring keeps its water. Grass and the rest
+  // grow on it as on any ground: lay a patch over it.
+  island: { label: "island", density: 0, tint: "#c9b48c", island: true, patch: { width: 6, length: 6, corner: 3, blend: 1 } },
   // A ROAD is a STROKE, not a rectangle: drawn with the pointer like a pen,
   // kept as `knots` (bearings, a few units apart) on the placement, with
   // `closed` for a loop. Its args are its `width` and its `verge` (how far
@@ -201,8 +207,10 @@ export function pathDistance(l, p) {
     const d = _ap.addScaledVector(_ab, -t).lengthSq();
     if (d < best) best = d;
   }
-  return Math.sqrt(best) - l.hw;
+  return Math.sqrt(best) - l.width / 2; // (`hw` is the cap's reach, not the half width — see roadLobe)
 }
+// Whether a bearing lies on a road: its tarmac, or the bare verge past it.
+export const onRoadLobe = (l, p) => l.type === "road" && pathDistance(l, p) - l.verge < 0;
 // A road placement as a lobe: its samples, its points (at the ball's
 // radius, for the distance), and a cap round the whole stroke. `hw` and
 // `hl` are the cap's reach, so what measures a patch by its rectangle
@@ -310,8 +318,10 @@ export function coverField(lobes) {
     let d = m;
     const k = kOf.get(type);
     if (k > 0) for (const di of dists) if (di !== m) d = smin(d, di, k);
-    // cut by everything of another type laid over the nearest lobe (a road, whenever it was laid)
-    for (const o of lobes) if (o.type !== type && (o.over || o.order > owner.order)) d = smax(d, -lobeDistance(o, p), o.k);
+    // cut by everything of another type laid over the nearest lobe (a road,
+    // whenever it was laid — with its verge: nothing grows on the bare strip
+    // a game keeps past the tarmac)
+    for (const o of lobes) if (o.type !== type && (o.over || o.order > owner.order)) d = smax(d, -(lobeDistance(o, p) - (o.type === "road" ? o.verge : 0)), o.k);
     return { d, owner };
   };
   const inside = (type, p) => probe(type, p).d < 0;
@@ -359,11 +369,26 @@ const hashOf = (s) => {
   return h;
 };
 
+// CLEARINGS: a placed thing (a house, say) keeps the groundcover back round
+// it — the dollies' clearings — `clearing` world units from its middle,
+// a field of the placement's own (0, or missing, for none). `clearingsOf`
+// lists a map's as `{ dir, radius }`; `inClearing` says whether a bearing
+// is in one. The editor and a game both deal their things past them.
+export function clearingsOf(placements, R = 36) {
+  const out = [];
+  for (const p of placements) {
+    if (!(p.clearing > 0) || isCover(p.entry) || (typeof p.entry === "string" && p.entry.startsWith("terrain-"))) continue;
+    out.push({ id: p.id, dir: vec(p.dir), radius: p.clearing, cos: Math.cos(Math.min(Math.PI, p.clearing / R)) });
+  }
+  return out;
+}
+export const inClearing = (dir, clearings) => clearings.some((c) => dir.dot(c.dir) > c.cos);
+
 // Deals every lobe's things: `visit(dir, lobe, rand)` for each bearing that
 // lands in the lobe's type's field and is nearest this lobe, `rand` the
 // lobe's own stream, for rolling the thing's size and tint. `only` keeps it
-// to one type.
-export function sampleCover(lobes, { only = null, field = coverField(lobes), visit }) {
+// to one type; `clearings` (clearingsOf) are kept clear.
+export function sampleCover(lobes, { only = null, field = coverField(lobes), clearings = [], visit }) {
   const p = new THREE.Vector3();
   for (const l of lobes) {
     if (!(l.density > 0) || (only && l.type !== only)) continue;
@@ -378,7 +403,183 @@ export function sampleCover(lobes, { only = null, field = coverField(lobes), vis
         fromLocal(l.frame, x, z, p);
         const { d, owner } = field.probe(l.type, p);
         if (owner !== l || d >= 0) continue;
+        if (clearings.length && inClearing(p, clearings)) continue;
         visit(p, l, rand);
       }
   }
+}
+
+// ---- WATER: the basin, as the car game digs it
+// A game sinks a BASIN under every water patch (the car game's planet.js
+// SEA): the ground falls `depth` over `shore` in from the patch's edge,
+// starting `out` past it, eased; the water lies `water` under the grass,
+// so the WATERLINE is where the ground has fallen that far — `line` in
+// from the edge (negative: inside the patch) — and a strip of `sand` from
+// the waterline out a little, darkening to `seabed` under the water. The
+// patches of water melt together over `blend` (an exponential smooth
+// minimum, the albatross's). A SPRING is milky and near opaque, with
+// rocks round its bank (the storybook's SPRING.rocks, nouns/water): stood
+// `spacing` apart along the waterline, each wandering `jitter` of that
+// along and out, `out` past the water's edge before its own size, rolled
+// from the ranges, sat `sink` of its height into the ground.
+export const BASIN = {
+  blend: 3,
+  shore: 6,
+  out: 2,
+  depth: 4,
+  water: 1.2,
+  sand: 0.8,
+  colors: { water: "#495a74", sand: "#d9c9bc", seabed: "#5c5961", foam: "#e6e0d7" },
+  spring: {
+    color: "#9AD9D2",
+    alpha: 0.78,
+    rocks: {
+      spacing: 1.1,
+      jitter: 0.35,
+      out: 0.25,
+      radius: [0.45, 0.9],
+      widen: [0.9, 1.5],
+      deepen: [0.8, 1.3],
+      squash: [0.55, 0.9],
+      sink: 0.3,
+      variants: 6,
+      seed: 11,
+      colors: ["#8C8378", "#6F6A66", "#A69C8E"],
+    },
+  },
+};
+const smooth01 = (x) => {
+  const t = Math.max(0, Math.min(1, x));
+  return t * t * (3 - 2 * t);
+};
+// How far the ground falls at `d` from a patch's edge (negative inside).
+export const basinDropOf = (d) => BASIN.depth * smooth01((BASIN.out - d) / (BASIN.out + BASIN.shore));
+// Where the waterline lies: the edge distance at which the ground has fallen `water`.
+export const BASIN_LINE = (() => {
+  let lo = -BASIN.shore, hi = BASIN.out;
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+    if (basinDropOf(mid) > BASIN.water) lo = mid;
+    else hi = mid;
+  }
+  return (lo + hi) / 2;
+})();
+// A water lobe's edge distance at a bearing, with the ISLANDS laid over it
+// cut out (an island lies over the water it was laid after; never over a
+// spring): inside an island the water is that far away.
+export function waterDistance(l, dir, islands = []) {
+  let d = lobeDistance(l, dir);
+  if (l.kind === "spring") return d;
+  for (const i of islands) if (i.order > l.order) d = smax(d, -lobeDistance(i, dir), i.k);
+  return d;
+}
+// The joined field of a set of water lobes at a bearing: the smooth minimum
+// of their edge distances (a lower bound, nowhere near any), their islands cut out.
+export function basinField(lobes, dir, islands = []) {
+  if (!lobes.length) return Infinity;
+  let m = Infinity;
+  const dist = [];
+  for (const l of lobes) {
+    const away = dir.angleTo(l.frame.d) * l.frame.R - Math.hypot(l.hw, l.hl);
+    const d = away > BASIN.out + BASIN.blend * 8 + 4 ? away : waterDistance(l, dir, islands);
+    dist.push(d);
+    if (d < m) m = d;
+  }
+  if (m > BASIN.out + BASIN.blend * 8) return m;
+  let sum = 0;
+  for (const d of dist) sum += Math.exp(-(d - m) / BASIN.blend);
+  return m - BASIN.blend * Math.log(sum);
+}
+// The basins of a map's water lobes (coverLobes' `type === "water"`), each
+// at the LEVEL the ground is at its middle (`levelAt(dir)`: a cliff's top
+// raises a pond with it; 0 on the ground), the ones at a level dug
+// together. `drop(dir)` is how far the ground falls there — eased off
+// where the ground is not at the pond's level (a cliff over a pond, a
+// pond's edge off its plateau), so the water never cuts through a cliff —
+// `levelOf(dir)` the level of the basin a bearing is in, and `field(dir)`
+// the edge distance over all of them (for the sand).
+export function basinOf(water, { levelAt = () => 0, islands = [] } = {}) {
+  const lobes = water.map((l) => {
+    const rise = levelAt(l.frame.d);
+    return { ...l, level: rise > 0.05 ? Math.round(rise * 20) / 20 : 0 };
+  });
+  const groups = [...new Set(lobes.map((l) => l.level))].map((level) => ({ level, lobes: lobes.filter((l) => l.level === level) }));
+  const drop = (dir) => {
+    let best = 0;
+    for (const g of groups) {
+      const d = basinDropOf(basinField(g.lobes, dir, islands));
+      if (!(d > best)) continue;
+      const off = smooth01(Math.abs(levelAt(dir) - g.level) / 0.5);
+      best = Math.max(best, d * (1 - off));
+    }
+    return best;
+  };
+  const levelOf = (dir) => {
+    let best = 0, level = 0;
+    for (const g of groups) {
+      const d = basinDropOf(basinField(g.lobes, dir, islands));
+      if (d > best) ((best = d), (level = g.level));
+    }
+    return level;
+  };
+  return { lobes, islands, groups, empty: !lobes.length, drop, levelOf, field: (dir) => basinField(lobes, dir, islands), line: BASIN_LINE };
+}
+
+// Round a rounded rectangle's edge, offset `o` out from it (in, negative):
+// points `step` apart by arc length, each with its outward normal, in the
+// rectangle's own (x, z).
+function roundedRectRing(hw, hl, r, o, step) {
+  const W = hw + o, L = hl + o, c = Math.max(0, Math.min(r + o, W, L));
+  const out = [];
+  // the four straight sides and four corner arcs, in order, as (length, point at t)
+  const runs = [];
+  const side = (ax, az, bx, bz, nx, nz) => runs.push({ len: Math.hypot(bx - ax, bz - az), at: (t) => [ax + (bx - ax) * t, az + (bz - az) * t, nx, nz] });
+  const arc = (cx, cz, a0) => runs.push({ len: (Math.PI / 2) * c, at: (t) => [cx + Math.cos(a0 + (t * Math.PI) / 2) * c, cz + Math.sin(a0 + (t * Math.PI) / 2) * c, Math.cos(a0 + (t * Math.PI) / 2), Math.sin(a0 + (t * Math.PI) / 2)] });
+  // round from the +x side, the way the corners' arcs turn
+  side(W, -(L - c), W, L - c, 1, 0);
+  arc(W - c, L - c, 0);
+  side(W - c, L, -(W - c), L, 0, 1);
+  arc(-(W - c), L - c, Math.PI / 2);
+  side(-W, L - c, -W, -(L - c), -1, 0);
+  arc(-(W - c), -(L - c), Math.PI);
+  side(-(W - c), -L, W - c, -L, 0, -1);
+  arc(W - c, -(L - c), (3 * Math.PI) / 2);
+  const total = runs.reduce((s, q) => s + q.len, 0);
+  if (!(total > 0)) return out;
+  const n = Math.max(1, Math.round(total / step));
+  const every = total / n;
+  let k = 0, s = 0;
+  for (let i = 0; i < n; i++) {
+    const want = i * every;
+    while (k < runs.length - 1 && s + runs[k].len < want) s += runs[k++].len;
+    const t = runs[k].len > 0 ? (want - s) / runs[k].len : 0;
+    out.push(runs[k].at(Math.max(0, Math.min(1, t))));
+  }
+  return out;
+}
+// The rocks round a spring: each `{ dir, spin, scale: [w, h, d], variant,
+// color }` — its bearing, its turn about its up, its size (a unit ball
+// pulled to it), which of the `variants` lumps it is, and its colour. Stood
+// along the waterline, `out` past it; `groundAt(dir)` says where the ground
+// is (the basin's bed), so the stone sits `sink` of its height into it:
+// its middle `lift` over the ground. Dealt by a seeded roll from the
+// lobe's own id, so the same spring has the same rocks everywhere.
+export function springRocks(lobe, groundAt) {
+  const K = BASIN.spring.rocks;
+  const rand = mulberry32(hashOf(lobe.id) + K.seed);
+  const out = [];
+  for (const [x0, z0, nx, nz] of roundedRectRing(lobe.hw, lobe.hl, lobe.r, BASIN_LINE + K.out, K.spacing)) {
+    const slide = (rand() * 2 - 1) * K.jitter * K.spacing;
+    const radius = K.radius[0] + (K.radius[1] - K.radius[0]) * rand();
+    const widen = K.widen[0] + (K.widen[1] - K.widen[0]) * rand();
+    const deepen = K.deepen[0] + (K.deepen[1] - K.deepen[0]) * rand();
+    const squash = K.squash[0] + (K.squash[1] - K.squash[0]) * rand();
+    const away = (rand() * 2 - 1) * K.jitter * K.spacing + radius * 0.5;
+    // along the edge by `slide` (the tangent is the normal turned), out by `away`
+    const x = x0 + -nz * slide + nx * away, z = z0 + nx * slide + nz * away;
+    const dir = fromLocal(lobe.frame, x, z);
+    const half = radius * squash;
+    out.push({ dir, spin: rand() * Math.PI * 2, scale: [radius * widen, half, radius * deepen], variant: Math.floor(rand() * K.variants) % K.variants, color: K.colors[out.length % K.colors.length], lift: half - K.sink * 2 * half, ground: groundAt(dir) });
+  }
+  return out;
 }

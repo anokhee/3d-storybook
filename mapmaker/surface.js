@@ -4,61 +4,83 @@
 // stands and which way is up there. Games keep the bearing and stand each
 // thing on their OWN ground (see ../runtime/mapLoader.js).
 //
-// The BASE ground is a plain ball, or a ball with a game's TERRAIN SNAPSHOT
-// laid over it — a glb the game exported (the car page's ?terrain), whose
-// ground meshes (named "ground:…") are what the pointer hits and what
-// things stand on. Anything else in the snapshot (houses, trees: "stuff:…")
-// is only seen. Over the base lies the map's OWN terrain — its plateaus and
-// ramps (../runtime/terrain.js), which the game builds from the map the
-// same way — so a lamp placed on a plateau stands on the plateau. Their
-// drawn previews (Terrain.jsx) are `risers`: the pointer hits those too.
+// The BASE ground is a plain ball. Over it lies the map's OWN terrain — its
+// plateaus and ramps (../runtime/terrain.js), which the game builds from
+// the map the same way — so a lamp placed on a plateau stands on the
+// plateau. Their drawn previews (Terrain.jsx) are `risers`: the pointer
+// hits those too. The map is the ground's one source: a game builds its
+// ball from the map, not the other way round.
 //
 // A flat surface, when a game wants one, is this same interface with up
 // always +y: `dir` becomes a point on the plane.
 import * as THREE from "three";
 import { standOn } from "../src/world/layout.js";
 import { terrainField } from "../runtime/terrain.js";
+import { lobeDistance } from "../runtime/cover.js";
 
 const Y = new THREE.Vector3(0, 1, 0);
 
-export function planetSurface(radius, ground = [], field = terrainField([], radius), risers = () => []) {
+// Whether a point seen from `origin` lies behind the ball (radius R): the
+// line from the eye to it passes through the ball on the way. The pass is
+// counted only strictly between the two, so a point in a basin (the ground
+// there dips under R) or on a thing's side is not behind; and a little
+// slack, the depth of a basin, for a ray that bottoms out in one.
+const _v = new THREE.Vector3(), _c = new THREE.Vector3();
+export function behindBall(origin, point, R) {
+  _v.copy(point).sub(origin);
+  const l2 = _v.lengthSq();
+  if (l2 < 1e-9) return false;
+  const t = -origin.dot(_v) / l2;
+  if (t <= 0 || t >= 1) return false;
+  _c.copy(origin).addScaledVector(_v, t);
+  return _c.length() < R - Math.min(4.5, R * 0.15);
+}
+
+export function planetSurface(radius, field = terrainField([], radius), risers = () => [], basin = null, roads = []) {
   const R = radius;
   const caster = new THREE.Raycaster();
-  caster.firstHitOnly = true; // with a bounds tree on the ground (Scene.jsx), the nearest hit alone, fast
-  const bases = new Map(); // a bearing (rounded) → how far out the base ground is
-  const heights = new Map(); // …and the ground with the map's terrain on it
+  const heights = new Map(); // a bearing (rounded) → how far out the ground with the map's terrain on it is
   const keyOf = (d) => `${d.x.toFixed(4)},${d.y.toFixed(4)},${d.z.toFixed(4)}`;
-  // How far from the middle the BASE ground is at a bearing: a ray dropped
-  // onto the snapshot from outside, or the ball itself with no snapshot (or
-  // where the snapshot has a hole).
-  const baseAt = (d) => {
-    if (!ground.length) return R;
-    const key = keyOf(d);
-    if (bases.has(key)) return bases.get(key);
-    caster.set(d.clone().multiplyScalar(R * 3), d.clone().negate());
-    caster.far = R * 3;
-    const hit = caster.intersectObjects(ground, false)[0];
-    const r = hit ? hit.point.length() : R;
-    bases.set(key, r);
-    return r;
-  };
+  // How far from the middle the BASE ground is at a bearing: the ball itself.
+  const baseAt = () => R;
+  // …how far the ground falls into a water patch's BASIN there (the game
+  // digs one under every pond, ../runtime/cover.js's BASIN)
+  const dug = !!basin && !basin.empty;
+  const dropAt = (d) => (dug ? basin.drop(d) : 0);
+  // …whether a bearing is in a basin at all, and on a road's tarmac (a
+  // little past it), where the game builds a BRIDGE over a basin: its deck
+  // at the water's level
+  const inBasin = (d) => !!basin && !basin.empty && basin.drop(d) > 1e-3;
+  const onRoad = (d) => roads.some((l) => lobeDistance(l, d) < 0.6);
   // …and the ground things stand on: the base, raised by the map's terrain
-  // (a step at a plateau's edge, a kerb along a ramp's).
+  // (a step at a plateau's edge, a kerb along a ramp's), sunk by the basins
+  // — or the bridge's deck, where a road crosses one (the game's onDeck).
   const radiusAt = (d) => {
-    if (field.empty) return baseAt(d);
+    if (field.empty && !dug && !roads.length) return baseAt(d);
     const key = keyOf(d);
     if (heights.has(key)) return heights.get(key);
-    const r = baseAt(d) + field.rise(d, true);
+    let r = baseAt(d) + field.rise(d, true) - dropAt(d);
+    if (inBasin(d) && onRoad(d)) r = Math.max(r, R + basin.levelOf(d));
     heights.set(key, r);
     return r;
+  };
+  // …and where a ROAD lies: on the ground, or, over a basin, on the deck of
+  // the bridge the game builds there, at the water's own level (the game's
+  // onDeck).
+  const deckAt = (d) => {
+    const r = radiusAt(d);
+    return inBasin(d) ? Math.max(r, R + basin.levelOf(d)) : r;
   };
   return {
     kind: "planet",
     radius: R,
-    hasTerrain: ground.length > 0,
     field,
+    basin,
+    dug,
     baseAt,
+    dropAt,
     radiusAt,
+    deckAt,
     // Where a bearing stands: on the ground there, `lift` above it, turned so +y is up.
     standAt(dir, lift = 0, yaw = 0) {
       const d = new THREE.Vector3().fromArray(dir).normalize();
@@ -68,12 +90,13 @@ export function planetSurface(radius, ground = [], field = terrainField([], radi
     },
     // Where a ray from the camera meets the ground: the bearing, or null if it misses.
     hit(ray) {
-      const targets = [...ground, ...risers()];
+      const targets = risers();
       if (targets.length) {
         caster.ray.copy(ray);
         caster.far = Infinity;
         caster.firstHitOnly = false;
-        const hit = caster.intersectObjects(targets, false)[0];
+        // the nearest hit this side of the ball: a riser on the far side, seen through it, is not under the pointer
+        const hit = caster.intersectObjects(targets, false).find((h) => !behindBall(ray.origin, h.point, R));
         caster.firstHitOnly = true;
         if (hit) return hit.point.normalize().toArray();
       }
@@ -96,6 +119,6 @@ export function planetSurface(radius, ground = [], field = terrainField([], radi
   };
 }
 
-export function surfaceOf(spec, ground = [], field, risers) {
-  return planetSurface(spec.radius ?? 36, ground, field, risers);
+export function surfaceOf(spec, field, risers, basin, roads) {
+  return planetSurface(spec.radius ?? 36, field, risers, basin, roads);
 }

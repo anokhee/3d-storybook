@@ -338,12 +338,16 @@ export const PALETTE = {
     dots: [solid("#F6E3C5"), solid("#3B2A4E"), solid("#8FD1A8")],
   },
   // A kitchen counter: its cabinet, the worktop, the basin sunk in it
-  // and the tap over that.
+  // and the tap over that; under it an oven's or dishwasher's front, the
+  // oven's window, and the knobs and handles on the doors.
   counter: {
     body: solid("#F5EBDD"),
     top: solid("#6FA8C9"),
     basin: solid("#DDE7E3"),
     tap: solid("#E8C39E"),
+    appliance: solid("#DDE7E3"),
+    glass: solid("#3B2A4E"),
+    handle: solid("#E8C39E"),
   },
   // A fridge: its body, its doors and their handles.
   fridge: {

@@ -10,7 +10,7 @@ import { POSTS } from "../post/objects.js";
 import Posts from "../post/Posts.jsx";
 import Strung from "../strung/Strung.jsx";
 import { ENCLOSURE, FENCE_TYPES } from "./objects.js";
-import { PicketPanels, WoodenPanels, ChainLinkPanels } from "./Panels.jsx";
+import { PicketPanels, WoodenPanels, ChainLinkPanels, WroughtIronPanels } from "./Panels.jsx";
 
 // What fills each kind of fence between its posts (see Panels.jsx); bare
 // posts, nothing.
@@ -19,6 +19,7 @@ const PANELS = {
   picket: PicketPanels,
   wooden: WoodenPanels,
   chainlink: ChainLinkPanels,
+  wroughtIron: WroughtIronPanels,
 };
 // How far each kind's panels stand proud of the chord between the posts,
 // on the outside — the picket's rails are behind its boards, the wooden
@@ -29,6 +30,7 @@ const PROUD = {
   picket: (T) => T.board.thickness / 2 + T.rails.thickness,
   wooden: (T) => T.rails.radius,
   chainlink: (T) => T.rail,
+  wroughtIron: (T) => T.rails.depth / 2,
 };
 
 // The fence round a station and whatever is strung along it, in the

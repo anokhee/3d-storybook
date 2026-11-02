@@ -51,7 +51,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // hangs on a stalk over the snout, `mouthX` where along the body the grin lies, `eyeX`
 // where the eyes sit.
 export const FISHCAR = {
-  scale: 1.6, // built about 2.9 long; the game scales it up to fit a driver
+  scale: 1.165, // built about 2.9 long; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   body: 0xf07f1f,
   belly: 0xffc98a,
   fin: 0xd9532b,

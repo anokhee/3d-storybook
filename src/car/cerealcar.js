@@ -36,7 +36,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // cardboard of the flaps, `label` the white panels, `trim` the seats
 // and hubcaps, `well` the cockpit's floor, walls and lip.
 export const CEREALCAR = {
-  scale: 1.6, // built about 3 long; the game scales it up to fit a driver
+  scale: 1.165, // built about 3 long; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   box: 0x3f8fd6,
   band: 0xffd23f,
   banner: 0xe63946,

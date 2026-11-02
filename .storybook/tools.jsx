@@ -7,9 +7,9 @@
 // The OBJECT BAR, a second row under it that is there only while a single
 // object is open (not on the catalog page), carries what is about that
 // object: a way back to the catalog, the time of day and the lighting (each
-// a button that opens a popover), and at its right the addon panel, open in
-// isolation, and the Code panel. It rides on Storybook's preview wrapper
-// slot, above the canvas.
+// a button that opens a popover), the knobs copied out and pasted in
+// (KnobsTools), and at its right the addon panel, open in isolation, and
+// the Code panel. It rides on Storybook's preview wrapper slot, above the canvas.
 //
 // Lighting and time of day each write a Storybook "global" (`lighting`,
 // `daylight`). preview.jsx reads the globals and hands them to the stage,
@@ -170,6 +170,79 @@ const CodeIcon = () => (
     <path d="m4.5 4-3 3 3 3M9.5 4l3 3-3 3M8 2.5l-2 9" />
   </svg>
 );
+// THE KNOBS, COPIED AND PASTED. "Copy knobs" puts the open entry's knobs
+// on the clipboard as JSON — which entry it is (its title and id) and the
+// knobs turned from the entry's own starting values — to paste to Claude
+// to bake into the entry's defaults, or to keep. "Paste knobs" takes such
+// a JSON from the clipboard and turns the knobs to it (opening the entry
+// it names first, if it is another).
+const CopyIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" aria-hidden>
+    <rect x="4.5" y="4.5" width="8" height="8" rx="1" /><path d="M9.5 4.5v-2a1 1 0 0 0-1-1h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2" />
+  </svg>
+);
+const PasteIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+    <path d="M5 2.5H3.5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1H9" /><rect x="5" y="1.5" width="4" height="2" rx=".5" /><path d="M5 7.5h4M5 9.5h4" />
+  </svg>
+);
+const sameValue = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+export const knobsOf = (story) => {
+  const changed = {};
+  for (const [k, v] of Object.entries(story.args ?? {})) if (!sameValue(v, story.initialArgs?.[k])) changed[k] = v;
+  for (const k of Object.keys(story.initialArgs ?? {})) if (!(k in (story.args ?? {})) && story.initialArgs[k] !== undefined) changed[k] = null;
+  return { story: `${story.title}/${story.name}`, id: story.id, knobs: changed };
+};
+function KnobsTools() {
+  const api = useStorybookApi();
+  const notify = (headline, subHeadline) => api.addNotification({ id: "object-library/knobs", content: { headline, subHeadline }, duration: 6000 });
+  const copy = async () => {
+    const story = api.getCurrentStoryData();
+    if (!story) return;
+    const out = knobsOf(story);
+    const n = Object.keys(out.knobs).length;
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(out, null, 2));
+      notify("Knobs copied", n ? `${n} knob${n === 1 ? "" : "s"} turned from ${story.name}'s own — paste it to Claude to bake in.` : `Nothing turned yet: ${story.name} as it is.`);
+    } catch {
+      notify("Could not reach the clipboard", "Allow the page to write to it and try again.");
+    }
+  };
+  const paste = async () => {
+    let text;
+    try { text = await navigator.clipboard.readText(); } catch { return notify("Could not read the clipboard", "Allow the page to read it and try again."); }
+    let data;
+    try { data = JSON.parse(text); } catch { return notify("Not knobs", "The clipboard does not hold a knobs JSON (copy some first)."); }
+    const knobs = data.knobs ?? data.args ?? (data.id || data.story ? {} : data);
+    const apply = () => {
+      const story = api.getCurrentStoryData();
+      if (!story) return;
+      // a knob at null is put back to the entry's own; the rest set
+      const reset = Object.keys(knobs).filter((k) => knobs[k] === null);
+      const set = Object.fromEntries(Object.entries(knobs).filter(([, v]) => v !== null));
+      if (reset.length) api.resetStoryArgs(story, reset);
+      if (Object.keys(set).length) api.updateStoryArgs(story, set);
+      notify("Knobs pasted", `${Object.keys(knobs).length} knob${Object.keys(knobs).length === 1 ? "" : "s"} set on ${story.name}.`);
+    };
+    const current = api.getCurrentStoryData();
+    if (data.id && current && data.id !== current.id && api.getData(data.id)) {
+      api.selectStory(data.id);
+      setTimeout(apply, 400); // (once the entry is open)
+    } else apply();
+  };
+  return (
+    <>
+      <IconButton title="Copy this entry's knobs (the ones turned from its own) as JSON, to paste to Claude" onClick={copy}>
+        <CopyIcon />
+        <span style={{ marginLeft: 6 }}>Copy knobs</span>
+      </IconButton>
+      <IconButton title="Set the knobs from a knobs JSON on the clipboard" onClick={paste}>
+        <PasteIcon />
+      </IconButton>
+    </>
+  );
+}
+
 function ObjectBar({ children }) {
   const api = useStorybookApi();
   const { storyId, viewMode } = useStorybookState();
@@ -193,6 +266,8 @@ function ObjectBar({ children }) {
         <span style={{ width: 1, height: 18, background: "rgba(0,0,0,0.12)", margin: "0 6px" }} />
         <DaylightTool />
         <LightingTool />
+        <span style={{ width: 1, height: 18, background: "rgba(0,0,0,0.12)", margin: "0 6px" }} />
+        <KnobsTools />
         <span style={{ flex: 1 }} />
         <IconButton title="Show or hide the addon panel (Controls, Code)" onClick={() => api.togglePanel()}>
           <PanelIcon />

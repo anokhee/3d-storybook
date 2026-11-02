@@ -1,4 +1,5 @@
 import { PALETTE } from "../../world/palette.js";
+import { merge } from "../../world/merge.js";
 import { TREE_PALETTES } from "./palettes.js";
 
 // A tree: a clay trunk with, on top of it, a canopy — by `kind`,
@@ -92,6 +93,26 @@ export const TREE = {
   },
 };
 export const TREE_KINDS = ["deciduous", "flowering", "conifer", "dead"];
+
+// TREE is a station's tree, some fifteen units tall. On a map it stands
+// beside the characters (1.31 high — see mapmaker/seed.js), so the catalog's
+// trees (stories/Tree*.stories.jsx) are FITTED to them: a third the size
+// all through, about four characters tall and three wide. TREE_FIT is the
+// fit as a config, every length TREE has at a third (the clay's lumps
+// follow the radius on their own); laid over TREE in a story's pinned
+// config, it reaches the fields the knobs do not. TREE_MAP is the fitted
+// tree whole, what the stories' knobs start from.
+const FIT = 1 / 3;
+const fit = (v, step = 0.1) => +(Math.round((v * FIT) / step) * step).toFixed(2);
+export const TREE_FIT = {
+  trunk: { radius: fit(TREE.trunk.radius, 0.05), height: fit(TREE.trunk.height, 0.2) },
+  sink: fit(TREE.sink, 0.05),
+  deciduous: { radius: fit(TREE.deciduous.radius) },
+  blooms: { radius: fit(TREE.blooms.radius, 0.05) },
+  conifer: { radius: fit(TREE.conifer.radius), height: fit(TREE.conifer.height) },
+  dead: { length: fit(TREE.dead.length), radius: fit(TREE.dead.radius, 0.01) },
+};
+export const TREE_MAP = merge(TREE, TREE_FIT);
 
 // The knobs the catalog shows for a tree (stories/helpers/knobs.js). The
 // leaf color and the canopy's radius write to the deciduous and the

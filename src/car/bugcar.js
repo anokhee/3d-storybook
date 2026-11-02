@@ -42,7 +42,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // `bands` how many stripes cross the shell's rear (in `band` colour),
 // and `abdomen` how long a tail tapers out behind the shell (0 none).
 export const BUGCAR = {
-  scale: 1.6, // built about 2.9 long; the game scales it up to fit a driver
+  scale: 1.165, // built about 2.9 long; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   shell: 0xd9303a,
   spot: 0x1e1a1c,
   spots: 6,

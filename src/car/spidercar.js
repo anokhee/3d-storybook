@@ -29,7 +29,7 @@ import { COCKPIT, leveller, cutThrough, fitCockpit } from "./tray.js";
 // wheel, the belly and the axles. `sway` how far the legs swing as it
 // drives (0 holds them still).
 export const SPIDERCAR = {
-  scale: 1.6, // built about 3 long, its legs reaching 3.3 across; the game scales it up to fit a driver
+  scale: 1.165, // built about 3 long, its legs reaching 3.3 across; scaled so a character fills the driver's seat at its walking height (CAT_HEIGHT, 1.31 — the seat was built for 1.8 at 1.6)
   body: 0x2c2431,
   band: 0xe0732f,
   spot: 0xf0e2c8,

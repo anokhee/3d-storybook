@@ -1,7 +1,8 @@
 // Cockle Shell: a ridged heart-shaped shell, one of the shells
 // scattered over the xylophone's beach (src/xylophone/island.js). Its
 // stripes and rings are vertex colors over the shell's own color, one of
-// COLOR_PALETTE.shells. About a unit across; `scale` sizes it.
+// COLOR_PALETTE.shells. About a unit across at `scale` 1, where it starts
+// — fitted to the characters (XYLO_FIT in stories/helpers/xylophone.jsx; it was 3).
 import * as THREE from "three";
 import { Built } from "./helpers/xylophone.jsx";
 import { cockleGeo } from "../src/xylophone/island.js";
@@ -23,10 +24,10 @@ const one = (scale, color) => (scene, { toonMat, inked }) => {
 export default {
   title: "Nature/Groundcover/Cockle Shell",
   argTypes: {
-    scale: { control: { type: "range", min: 0.5, max: 6, step: 0.1 } },
+    scale: { control: { type: "range", min: 0.2, max: 4, step: 0.1 } },
     color: { control: "select", options: COLOR_PALETTE.shells },
   },
-  args: { scale: 3, color: COLOR_PALETTE.shells[0] },
+  args: { scale: 1, color: COLOR_PALETTE.shells[0] },
   render: (a) => <Built build={one(a.scale, a.color)} />,
 };
 

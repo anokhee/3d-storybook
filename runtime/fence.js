@@ -232,13 +232,33 @@ export function arcBetween(arcs, i, j, closed = false) {
   const d = Math.abs(arcs[i] - arcs[j]);
   return closed ? Math.min(d, arcs.total - d) : d;
 }
-// Whether `dir` lies on a road: within `reach` of one of its samples — for
-// the road that sample `i` is on (`self`), only of its stretches beyond
-// SELF_WINDOW along it, see above.
-export function onRoad(samples, dir, reach, R = 36, self = null) {
-  for (let j = 0; j < samples.length; j++) {
+// Whether `dir` lies off the end of an open road: past the last sample's
+// line across the road (1), or before the first's (-1) — the tarmac stops
+// flat there, so what lies beyond is off the road however near the end it
+// is (a road ending on another's middle reaches that road's far fence line
+// without being under it). 0 on neither, and for a closed road.
+const _pe = new THREE.Vector3();
+export function pastEnd(samples, dir, R = 36, closed = false) {
+  const N = samples.length;
+  if (closed || N < 2) return 0;
+  if (_pe.copy(dir).sub(samples[N - 1].dir).multiplyScalar(R).dot(samples[N - 1].tangent) > 0) return 1;
+  if (_pe.copy(dir).sub(samples[0].dir).multiplyScalar(R).dot(samples[0].tangent) < 0) return -1;
+  return 0;
+}
+// Whether `dir` lies on a road: within `reach` of one of its samples — not
+// of the samples within `reach` of an end it lies past (pastEnd) — for the
+// road that sample `i` is on (`self`), only of its stretches beyond
+// SELF_WINDOW along it, see above. `closed` is the road's (self's own, given self).
+export function onRoad(samples, dir, reach, R = 36, self = null, closed = !!self?.closed) {
+  const N = samples.length;
+  const past = pastEnd(samples, dir, R, closed);
+  const arcs = past ? (self?.arcs ?? roadArcs(samples, false, R)) : null;
+  for (let j = 0; j < N; j++) {
     if (self && arcBetween(self.arcs, self.i, j, self.closed) <= SELF_WINDOW) continue;
-    if (samples[j].dir.angleTo(dir) * R < reach) return true;
+    if (samples[j].dir.angleTo(dir) * R >= reach) continue;
+    if (past > 0 && arcs[N - 1] - arcs[j] <= reach) continue;
+    if (past < 0 && arcs[j] <= reach) continue;
+    return true;
   }
   return false;
 }

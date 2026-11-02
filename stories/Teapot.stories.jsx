@@ -8,7 +8,7 @@ import { knobStory } from "./helpers/knobs.js";
 const K = knobStory(TEAPOT, TEAPOT_KNOBS, {}, {});
 
 export default {
-  title: "Props/Kitchen/Teapot",
+  title: "Food/Kitchen/Teapot",
   component: Teapot,
   argTypes: K.argTypes,
   args: K.args,

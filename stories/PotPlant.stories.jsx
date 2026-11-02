@@ -19,3 +19,9 @@ export default {
 };
 
 export const Default = {};
+
+// A tall one, for a floor (POT_PLANT_TALL): a tall pot, long stems near
+// upright, blades all the way up them
+export const Tall = {
+  args: { potRadius: 0.45, potFlare: 0.85, potHeight: 1.15, stemCount: 5, stemHeight: 2.5, stemSpread: 1.3, stemLeaves: 5, stemLeafSize: 1.15, plantSize: 0.32, kind: "leaf", leafAspect: 2.1 },
+};

@@ -22,8 +22,10 @@ import Primitive from "../nouns/primitive/Primitive.jsx";
 // bars between them and between the rows, but for an odd count, whose
 // top row is one long pane on its own. `depth`, `detail`, `clay`,
 // `color` and `light` as a primitive's. The rest of a house's door or
-// window config rides along unread. `shadows` "dividers" keeps the
-// slab, its frame and its knob out of the shadows (see Primitive), so
+// window config rides along unread. `bars`, when given ({ color,
+// thickness }), colours the dividers on their own — for a pane with no
+// `frame` behind it (a see-through one: the frame's slab would wall it off).
+// `shadows` "dividers" keeps the slab, its frame and its knob out of the shadows (see Primitive), so
 // only the dividers cast one — a window with the day behind it (see
 // Interior.jsx's Daylight).
 export default function Opening({ O, shadows = "all" }) {
@@ -96,8 +98,8 @@ export default function Opening({ O, shadows = "all" }) {
             top={top}
             bottom={bottom}
             panes={O.panes}
-            thickness={(F?.thickness ?? 0.15) * 0.6}
-            swatch={F?.color ?? O.color}
+            thickness={(F?.thickness ?? O.bars?.thickness ?? 0.15) * 0.6}
+            swatch={O.bars?.color ?? F?.color ?? O.color}
             {...common}
           />
         </group>

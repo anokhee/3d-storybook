@@ -40,7 +40,8 @@ const paint = {
 // (see world/lump.js): a rounded body, a head grown out of its top, two
 // legs pulled down to the ground and two arms, each ending in a mitten
 // of a hand. They start in a T-pose, the arms straight out level with the
-// shoulders; the `pose` knob puts them walking, running or jumping. What
+// shoulders; the `pose` knob puts them walking, running, jumping or
+// swimming (lain forward, as in water, just over the stage). What
 // makes it a frog, a chicken, a cat, a dog, a duck, a person, a witch, a
 // pumpkin head, a statue, a fish head or an alien is the head and what
 // is stuck to it: the frog's wide flat head, bulging gold eyes, wide mouth
@@ -68,10 +69,12 @@ const paint = {
 //   kind    frog, chicken, cat, dog, duck, human, witch, pumpkin, statue, fish, alien,
 //           voodoo, scarecrow, doll, cupcake, donut or roast
 //   skin    `head` and `hands`: whether they are in the skin colour, not the coat
-//   pose    t-pose, walk, run, jump, or wield (1-handed) a water gun or
+//   pose    t-pose, walk, run, jump, swim, or wield (1-handed) a water gun or
 //           wield (2-handed) a whack-a-mole mallet, or hang from a white
-//           parachute (opened only on a drop of a cliff's height or more): the arms and legs (see Anthro.jsx)
-//   animate whether a walk, run or jump plays as a loop of frames, stop-motion
+//           parachute (opened only on a drop of a cliff's height or more), or
+//           stand, or smoke a cigarette (stood, walking, or sat: "smoke",
+//           "walk smoke", "sit smoke"): the arms and legs (see Anthro.jsx)
+//   animate whether a walk, run, jump or swim plays as a loop of frames, stop-motion
 //           style (a pause while the frames are made); the T-pose stands still
 //   body    `radius` of the trunk, `belly` of the round belly in front
 //   head    `width`, `height`, `depth` of the head's block, `round` its
@@ -227,9 +230,37 @@ export const ROAST = {
 
 // What can be changed on a creature, from the panel.
 // The catalog shows these, and the game's edit panel can (stories/helpers/knobs.js).
+// The Shadow Spirit (ShadowSpirit.jsx): the Human, walking, made a spirit —
+// `spirit` its look: the body in `color` at `opacity` (see-through), a round
+// mask in `mask` shrink-wrapped onto its face (`maskShape`: `radius` across,
+// its back `lift` off the skin, `thick`, its front domed `bulge` more at the
+// middle) with two eye holes in `holes` (`eye` across, `eyeAt` from its
+// middle). The crowd on the flat street walks in these.
+export const SHADOW_SPIRIT = {
+  ...HUMAN,
+  pose: "walk",
+  animate: true,
+  outfit: "none", // or "chef": a chef's hat and apron (see ShadowSpirit.jsx's OUTFITS)
+  spirit: {
+    color: "#2B2535",
+    mask: "#F7F4EE",
+    holes: "#1A1620",
+    opacity: 0.5,
+    maskStyle: "plain", // one of MASK_STYLES (../mask/objects.js)
+    maskShape: { radius: 0.15, lift: 0.01, thick: 0.016, bulge: 0.014, eyeAt: [0.052, 0.022] },
+  },
+};
+export const SHADOW_SPIRIT_KNOBS = [
+  { label: "opacity", path: "spirit.opacity", step: 0.05, min: 0.05, max: 1 },
+  { label: "body colour", path: "spirit.color", color: true },
+  { label: "mask colour", path: "spirit.mask", color: true },
+  { label: "mask", path: "spirit.maskStyle", options: ["plain", "horned"] },
+  { label: "outfit", path: "outfit", options: ["none", "chef"] },
+];
+
 export const ANTHRO_KNOBS = [
   { label: "size", path: "size", step: 0.1, min: 0.3, max: 3 },
-  { label: "pose", path: "pose", options: ["t-pose", "walk", "run", "jump", "wield (1-handed)", "wield (2-handed)", "parachute"] },
+  { label: "pose", path: "pose", options: ["t-pose", "stand", "smoke", "walk smoke", "sit smoke", "walk", "run", "jump", "swim", "wield (1-handed)", "wield (2-handed)", "parachute", "sit"] },
   { label: "animate", path: "animate", bool: true, on: true, off: false },
   { label: "arm length", path: "arm.length", step: 0.05, min: 0.2, max: 0.9 },
   { label: "body colour", path: "colors.coat.hex", color: true },

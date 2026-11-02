@@ -9,8 +9,13 @@
 // goes between them, `forward` of the middle as a share of the span
 // (the withers end); a ray down there finds the top of the back, and
 // rays in from the sides how broad the animal is at heights down its
-// flank. The rider is sized to the animal, `size` times as tall as the
-// back is high, its thighs forward along the back (knees to the front)
+// flank. The animal is then FITTED to the characters, as the cars and
+// the trees are: scaled so its back stands CAT_HEIGHT high (1.31, the
+// characters' walking height — src/nouns/house/objects.js), and the rider
+// is drawn at that very size, `size` times as tall as the back is high,
+// so on a map an animal stands beside the characters at the size one of
+// them rides it, and a game sits a character on as they stand, resizing
+// neither. Its thighs go forward along the back (knees to the front)
 // swung out just far enough that the knees clear the animal where they
 // are, and its shins just far enough to clear the flank as far down as
 // they reach. The animals face +z; so do the characters. Found
@@ -20,8 +25,9 @@ import * as THREE from "three";
 import { useFrame } from "@react-three/fiber";
 import Anthro, { RIDE } from "../../src/nouns/anthro/Anthro.jsx";
 import { ANTHRO } from "../../src/nouns/anthro/objects.js";
+import { CAT_HEIGHT } from "../../src/nouns/house/objects.js";
 import { merge } from "../../src/world/merge.js";
-import { DRIVERS, KINDS } from "./driver.jsx";
+import { DRIVERS, KINDS, Character } from "./driver.jsx";
 import { useWalk } from "./walk.js";
 
 export const RIDERS = DRIVERS;
@@ -125,14 +131,20 @@ export function Mounted({ rider = "none", size = 1, forward = 0.1, walk = 0, chi
     const straddle = [out, shinOut];
     figure = (
       <group position={[seat.at[0], seat.at[1] - SINK * tall * scale, seat.at[2]]}>
-        <Anthro config={{ ...base, pose: "ride", straddle, size: scale }} />
+        <Character config={{ ...base, pose: "ride", straddle, size: scale }} />
       </group>
     );
   }
+  // The fit: the whole — animal, its walk's bob and the rider, all measured
+  // in the animal's own units above — scaled so the back stands CAT_HEIGHT
+  // high. Until the back is found it is drawn as built.
+  const fit = seat ? CAT_HEIGHT / seat.at[1] : 1;
   return (
-    <group ref={bob}>
-      <group ref={group}>{children}</group>
-      {figure}
+    <group scale={fit}>
+      <group ref={bob}>
+        <group ref={group}>{children}</group>
+        {figure}
+      </group>
     </group>
   );
 }

@@ -15,7 +15,8 @@ export default {
   render: (a) => <Anthro config={K.configOf(a)} />,
 };
 
-// The pose knob switches the T-pose to walking, running or jumping, or to
+// The pose knob switches the T-pose to walking, running, jumping or
+// swimming (lain forward as in water, the stage its surface), or to
 // wielding a water gun (1-handed) or a whack-a-mole mallet (2-handed), and
 // the animate knob plays those as a loop (the mallet swings).
 export const Default = {};

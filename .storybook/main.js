@@ -17,6 +17,9 @@ const config = {
     // Storybook's "Get started" checklist, in the sidebar and the menu: off.
     sidebarOnboardingChecklist: false,
     menuOnboardingChecklist: false,
+    // The Interactions panel: off. Nothing here has a play function, and
+    // its only other content was an "Open in editor" link that goes nowhere.
+    interactions: false,
   },
 };
 export default config;

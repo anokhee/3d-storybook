@@ -23,6 +23,7 @@ import { topperOf } from "./toppers.js";
 import { Straw, strawBearing } from "../../chocolateStraw/ChocolateStraw.jsx";
 import { CHOCOLATE_STRAW } from "../../chocolateStraw/objects.js";
 import { CANDLE, CUPCAKE, MAX_STICKS } from "./objects.js";
+import WindowBox from "../../windowBox/WindowBox.jsx";
 
 const rad = (deg) => (deg * Math.PI) / 180;
 
@@ -496,14 +497,6 @@ export default function Cupcake({ config }) {
     const mat = K.mat?.on ? stand(0, K.mat.depth, K.mat.gap) : null;
     return { boxes, mat };
   }, [K.boxes, K.mat, C, facets, cupLift, K.windows.apart]);
-  const boxFlower = useMemo(() => {
-    const Fl = K.boxes?.flowers;
-    if (!Fl) return null;
-    const spec = { shape: Fl.shape, radius: Fl.radius };
-    const upright = uprightOf(Fl.shape);
-    if (upright) spec.rotation = upright;
-    return ornamentOf(spec, "CUPCAKE.boxes.flowers");
-  }, [K.boxes]);
   const topper = useMemo(
     () => topperOf(K.topper, tiersTop),
     [K.topper, tiersTop],
@@ -630,45 +623,12 @@ export default function Cupcake({ config }) {
             </group>
           </group>
         ))}
-      {fixtures.boxes.map(({ a, position, side }) => {
-        const Bx = K.boxes;
-        const Fl = Bx.flowers;
-        const width = W.width + 2 * Bx.overhang;
-        return (
-          <group key={side} position={position} rotation-y={a}>
-            <mesh position-y={Bx.height / 2} material={unlitMat(Bx.color)}>
-              <boxGeometry args={[width, Bx.height, Bx.depth]} />
-            </mesh>
-            <mesh position-y={Bx.height - 0.03} material={unlitMat(Bx.color)}>
-              <boxGeometry args={[width + 0.08, 0.07, Bx.depth + 0.08]} />
-            </mesh>
-            <mesh position-y={Bx.height - 0.005} material={unlitMat(Bx.soil)}>
-              <boxGeometry args={[width - 0.06, 0.05, Bx.depth - 0.06]} />
-            </mesh>
-            {Fl &&
-              boxFlower &&
-              Array.from({ length: Fl.count }, (_, i) => {
-                const x = ((i + 0.5) / Fl.count - 0.5) * (width - 0.3);
-                return (
-                  <group key={i} position={[x, Bx.height, 0]}>
-                    <mesh
-                      position-y={Fl.stem / 2}
-                      material={unlitMat(Fl.stemColor)}
-                    >
-                      <cylinderGeometry args={[0.02, 0.02, Fl.stem, 5]} />
-                    </mesh>
-                    <group position-y={Fl.stem} rotation-x={0.5}>
-                      <Ornament
-                        ornament={boxFlower}
-                        swatch={Fl.colors[i % Fl.colors.length]}
-                      />
-                    </group>
-                  </group>
-                );
-              })}
-          </group>
-        );
-      })}
+      {/* the window boxes: the library's Window Box (../../windowBox) */}
+      {fixtures.boxes.map(({ a, position, side }) => (
+        <group key={side} position={position} rotation-y={a}>
+          <WindowBox config={{ ...K.boxes, width: W.width + 2 * K.boxes.overhang }} />
+        </group>
+      ))}
       {fixtures.mat && (
         <group position={fixtures.mat.position} rotation-y={fixtures.mat.a}>
           <mesh position-y={K.mat.thick / 2} material={unlitMat(K.mat.border)}>

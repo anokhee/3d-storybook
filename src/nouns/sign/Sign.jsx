@@ -4,26 +4,39 @@ import * as THREE from "three";
 import { merge } from "../../world/merge.js";
 import { LIGHT } from "../../adjectives/lit/objects.js";
 import Primitive from "../primitive/Primitive.jsx";
+import Lettering from "../lettering/Lettering.jsx";
+import { LETTERING } from "../lettering/objects.js";
 import { SIGN } from "./objects.js";
 
 // The board itself: a clay cube pulled to the sign's proportions — `radius`
 // half the height, the form pulling it `width` across and squashing it to
-// `depth` along z — lying in its own x/y plane about its middle.
+// `depth` along z — lying in its own x/y plane about its middle; and on
+// its face, if it says anything, the Lettering, fitted to `fit` of the
+// board and floated a hair off it clear of the clay.
 function Board({ S, width }) {
   const form = useMemo(
     () => ({ widen: width / S.height, deepen: S.depth / S.height }),
     [width, S.height, S.depth],
   );
   const light = useMemo(() => merge(LIGHT, S.light), [S.light]);
+  const text = useMemo(() => (S.text?.say ? merge(LETTERING, S.text) : null), [S.text]);
+  const fit = useMemo(() => ({ width: width * S.fit.across, height: S.height * S.fit.up }), [width, S.fit, S.height]);
   return (
-    <Primitive
-      shape="cube"
-      radius={S.height / 2}
-      form={form}
-      clay={S.clay}
-      swatch={S.color}
-      light={light}
-    />
+    <>
+      <Primitive
+        shape="cube"
+        radius={S.height / 2}
+        form={form}
+        clay={S.clay}
+        swatch={S.color}
+        light={light}
+      />
+      {text && (
+        <group position-z={S.depth / 2 + text.thick / 2 + 0.01}>
+          <Lettering config={text} fit={fit} anchor="middle" />
+        </group>
+      )}
+    </>
   );
 }
 

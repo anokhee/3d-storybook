@@ -1,12 +1,12 @@
-// Deciduous Tree: a round, lobed canopy on a trunk. The tree component's "deciduous" kind
-// (TREE_KINDS in src/nouns/tree/objects.js), with the knobs every tree has.
-// See Bench.stories.jsx for how argTypes, args and render fit together.
+// Deciduous Tree: a few lobes of leaf-green clay on a trunk. The tree component's "deciduous" kind
+// (TREE_KINDS in src/nouns/tree/objects.js), with the knobs every tree has,
+// fitted to the characters (TREE_FIT there). See Bench.stories.jsx for how
+// argTypes, args and render fit together.
 import Tree from "../src/nouns/tree/Tree.jsx";
-import { TREE, TREE_KNOBS } from "../src/nouns/tree/objects.js";
-import { TREE_PALETTES } from "../src/nouns/tree/palettes.js";
+import { TREE_MAP, TREE_FIT, TREE_KNOBS } from "../src/nouns/tree/objects.js";
 import { knobStory } from "./helpers/knobs.js";
 
-const K = knobStory(TREE, TREE_KNOBS, { kind: "deciduous" }, {});
+const K = knobStory(TREE_MAP, TREE_KNOBS, { kind: "deciduous", ...TREE_FIT }, {});
 
 export default {
   title: "Nature/Trees/Deciduous Tree",
@@ -17,4 +17,3 @@ export default {
 };
 
 export const Default = {};
-

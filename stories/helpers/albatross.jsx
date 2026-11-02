@@ -30,11 +30,20 @@ const grounded = (g) => {
 };
 
 // A tree: kinds cedar, cloud, bottle (TREE_KINDS); `k` picks one of the
-// TREES.shapes shapes of that kind.
-export function AlbatrossTree({ kind = "cedar", k = 0 }) {
+// TREES.shapes shapes of that kind. The game's trees are ten to thirty
+// units tall before its field scales them up again; on a map they stand
+// beside the characters (1.31 high — see mapmaker/seed.js), so here each
+// is FITTED to them, a third the size (as the tree component's are: TREE_FIT
+// in src/nouns/tree/objects.js) — a cedar four to nine units tall.
+export const ALBATROSS_TREE_FIT = 1 / 3;
+export function AlbatrossTree({ kind = "cedar", k = 0, fit = ALBATROSS_TREE_FIT }) {
   const geometry = useMemo(() => buildTree(kind, k % TREES.shapes), [kind, k]);
   const material = useMemo(treeMaterial, []);
-  return <mesh geometry={geometry} material={material} />;
+  return (
+    <group scale={fit}>
+      <mesh geometry={geometry} material={material} />
+    </group>
+  );
 }
 
 // A stone marker or lamp: kinds in OBELISK_KINDS; `k` its height, 0 the

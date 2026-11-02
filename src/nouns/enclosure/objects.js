@@ -1,4 +1,4 @@
-import { PALETTE } from "../../world/palette.js";
+import { PALETTE, solid } from "../../world/palette.js";
 
 // The enclosure round a station: what fences it, how the fence goes round
 // the box, and what is strung along it.
@@ -8,7 +8,10 @@ import { PALETTE } from "../../world/palette.js";
 //               "picket", a white picket fence, pointed boards on two
 //               rails; "wooden", a post-and-rail fence in the bench's
 //               lumpy clay woods; "chainlink", a wire diamond mesh on
-//               thin gray posts under a top rail. Every kind stands its
+//               thin gray posts under a top rail; "wroughtIron", a black
+//               iron railing — square bars between rails, a ring in each
+//               gap under the top — at a balcony's height, on slim posts
+//               with ball caps. Every kind stands its
 //               posts the same way (spacing, count, arc, turn, corner,
 //               gate) and can have the same strung along the tops; each
 //               kind's own look is under its name below, and its posts'
@@ -58,10 +61,15 @@ import { PALETTE } from "../../world/palette.js";
 //               width, and `wire` gauge in world units; the `rail` along
 //               the top, its radius; `sink` how far the mesh is set into
 //               the ground; `color`
+//   wroughtIron the wrought iron: `height`; its `bars`, `width` square,
+//               `pitch` apart at most; `rails`, `height` tall and `depth`
+//               through, along the bottom (`bottom` up), the top, and a
+//               `frieze` of the height up; `rings` in the band between the
+//               frieze and the top, `radius` and `tube`, `on` or not; `color`
 //   garland     overrides on GARLAND — the string between the posts;
 //               its `stand` and `drop` say where on the fence it is tied
 //   sign        overrides on SIGN — the boards between them
-export const FENCE_TYPES = ["posts", "picket", "wooden", "chainlink"];
+export const FENCE_TYPES = ["posts", "picket", "wooden", "chainlink", "wroughtIron"];
 export const ENCLOSURE = {
   type: "posts",
   spacing: 4,
@@ -128,6 +136,20 @@ export const ENCLOSURE = {
       },
       cap: { shape: "sphere", radius: 0.12, light: { type: "unlit" } },
       capColor: PALETTE.fence.chainPost,
+    },
+  },
+  wroughtIron: {
+    height: 1.05,
+    bars: { width: 0.022, pitch: 0.11 },
+    rails: { height: 0.04, depth: 0.04 },
+    bottom: 0.06,
+    frieze: 0.78,
+    rings: { on: true, radius: 0.045, tube: 0.008 },
+    color: solid("#2B2A30"),
+    posts: {
+      post: { sides: 4, taper: 1, baseRadius: 0.035, sink: 0.05, color: solid("#2B2A30") }, // (set in its footing only shallowly: a balcony's slab is thin)
+      cap: { shape: "sphere", radius: 0.045, light: { type: "unlit" } },
+      capColor: solid("#2B2A30"),
     },
   },
 };

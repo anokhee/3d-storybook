@@ -7,6 +7,10 @@
 // off the radius: what makes a cylinder read as the same SIZE as a sphere
 // of the same radius. There is no cone: a cylinder with
 // `form: { top: { inflate: 0 } }` is one, its crown pinched to a point.
+// The cone, so: a cylinder (shape "cylinder") pushed about by this form —
+// its crown pinched to a point, its foot left wide. Primitives/Cone shows
+// it; a pendant light's shade is one (../pendantLight).
+export const CONE_FORM = { top: { inflate: 0 } };
 export const PRIMITIVES = {
   sphere: { sides: 10 },
   cube: { sides: null },

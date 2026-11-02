@@ -29,8 +29,14 @@ export default function Molding({
   const geometry = useMemo(() => {
     if (!(t > 0) || !(depth > 0)) return null;
     const r = width / 2;
-    const riseT = r * clamp01(topCurve);
-    const riseB = closed ? r * clamp01(bottomCurve) : 0;
+    // (scaled back together where they would meet, as Opening scales the
+    // opening's own: on a window wider than it is tall, round top and
+    // bottom, the two ellipses would otherwise overrun each other and the
+    // band fold back on itself, flaring out in wedges at the sides)
+    const want = r * (clamp01(topCurve) + (closed ? clamp01(bottomCurve) : 0));
+    const fit = Math.min(1, height / Math.max(1e-6, want));
+    const riseT = r * clamp01(topCurve) * fit;
+    const riseB = closed ? r * clamp01(bottomCurve) * fit : 0;
     const shape = new THREE.Shape();
     if (closed) {
       // A ring: the swollen outline, with the opening's own cut out.

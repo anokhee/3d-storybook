@@ -1,8 +1,8 @@
-// Apple car: the roadster (see Car.stories.jsx) remade as an apple — one
-// plump red apple with the cockpit cut into its top, the stem and leaf
-// behind it, a bite out of its flank with a worm looking out of it, and
-// the wheels under its belly (src/car/applecar.js). See
-// stories/helpers/applecar.jsx.
+// Apple car: the roadster (see Car.stories.jsx) remade as an apple,
+// built like the ball cars — one plump round apple with the one-seat
+// cockpit cut into its top, the stem and leaf behind it, a bite out of
+// its flank with a worm looking out of it, and the wheels tucked under
+// its belly (src/car/applecar.js). See stories/helpers/applecar.jsx.
 import { useMemo } from "react";
 import { AppleCar } from "./helpers/applecar.jsx";
 import { DRIVERS } from "./helpers/driver.jsx";
@@ -22,7 +22,7 @@ export default {
     driver: { control: "select", options: DRIVERS },
     skin: { control: "color", name: "apple" },
     leaf: { control: "color", name: "leaf" },
-    trim: { control: "color", name: "seats & trim" },
+    trim: { control: "color", name: "seat & trim" },
     wheel: { control: "color", name: "wheels" },
   },
   args: { speed: 6, driver: "none", skin: hex(APPLECAR.skin), leaf: hex(APPLECAR.leaf), trim: hex(APPLECAR.trim), wheel: hex(APPLECAR.wheel) },

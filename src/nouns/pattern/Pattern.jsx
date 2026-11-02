@@ -63,12 +63,31 @@ export default function Pattern({
 // and, pinched (`inner` under 1), a point between each pair at that
 // share of the radius, so it is a star of `sides` points. A wall
 // hanging's art too (see ../wallHanging/WallHanging.jsx).
-export function polygonOf({ sides, radius, inner, turn }) {
+// `curve` (0 … 1), on a star, rounds each of its points into a petal — a
+// flower — fuller the higher it is (0: the sharp star)
+export function polygonOf({ sides, radius, inner, turn, curve = 0 }) {
   const n = Math.max(3, Math.round(sides));
   const pinch = Math.max(0, Math.min(1, inner ?? 1));
   const star = pinch < 1 - 1e-3;
   const count = star ? 2 * n : n;
   const shape = new THREE.Shape();
+  if (star && curve > 0) {
+    // a petal from each pinched point round to the next, through the
+    // point's tip: a curve whose two handles lean out either side of it,
+    // further apart the fuller the petal, out just far enough that it
+    // reaches `radius` at its tip
+    const half = Math.PI / n, ri = radius * pinch, spread = half * Math.min(1, curve) * 1.25;
+    const reach = (8 * radius - 2 * ri * Math.cos(half)) / (6 * Math.cos(spread));
+    const at = (a, r) => [Math.cos(a) * r, Math.sin(a) * r];
+    const a0 = Math.PI / 2 + THREE.MathUtils.degToRad(turn);
+    shape.moveTo(...at(a0 - half, ri));
+    for (let i = 0; i < n; i++) {
+      const tip = a0 + (i * 2 * Math.PI) / n;
+      shape.bezierCurveTo(...at(tip - spread, reach), ...at(tip + spread, reach), ...at(tip + half, ri));
+    }
+    shape.closePath();
+    return shape;
+  }
   for (let i = 0; i < count; i++) {
     const a =
       Math.PI / 2 + THREE.MathUtils.degToRad(turn) + (i * 2 * Math.PI) / count;
@@ -85,7 +104,7 @@ export function polygonOf({ sides, radius, inner, turn }) {
 // Where the dots lie on the face, `{ x, z }` each from its middle, in
 // the order they are dealt — row by row for a grid, round for a border,
 // outside in for rings — all of them `inset` in from the edge.
-function spotsOf(R, P) {
+export function spotsOf(R, P) {
   const inset = Math.max(0, P.inset);
   const w = R.width - 2 * inset;
   const l = R.length - 2 * inset;

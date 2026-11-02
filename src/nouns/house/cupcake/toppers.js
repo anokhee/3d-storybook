@@ -28,7 +28,8 @@ export const TOPPERS = {
   },
   strawberry: {
     Component: Strawberry,
-    defaults: STRAWBERRY,
+    // sat on its leaves on the frosting, its tip up
+    defaults: { ...STRAWBERRY, upright: false, stalk: null },
     heightOf: strawberryHeightOf,
     sink: 0.04,
   },

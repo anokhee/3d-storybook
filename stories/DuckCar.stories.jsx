@@ -1,7 +1,7 @@
 // Duck car: the roadster (see Car.stories.jsx) remade as a rubber
-// ducky — a plump yellow hull with a round chest and a tail flicking
-// up behind, a big round head with a wide orange bill, big eyes and
-// rosy cheeks, a wing along each flank, the cockpit cut into its back
+// ducky — the fish car's plump body sweeping up into a broad tail, a
+// big round head with a wide orange bill and domed eyes for headlights, a wing lying
+// flat along each flank, the cockpit cut into its back
 // between the head and the tail (src/car/duckcar.js). See
 // stories/helpers/duckcar.jsx.
 import { useMemo } from "react";
@@ -11,10 +11,10 @@ import { DUCKCAR } from "../src/car/duckcar.js";
 
 const hex = (n) => "#" + n.toString(16).padStart(6, "0");
 
-function Story({ speed, driver, body, wing, bill, eye, pupil, cheek, cheeks, trim, wheel }) {
+function Story({ speed, driver, body, wing, bill, lamp, pupil, trim, wheel }) {
   const config = useMemo(
-    () => ({ ...DUCKCAR, body, wing, bill, eye, pupil, cheek, cheeks, trim, wheel }),
-    [body, wing, bill, eye, pupil, cheek, cheeks, trim, wheel],
+    () => ({ ...DUCKCAR, body, wing, bill, lamp, pupil, trim, wheel }),
+    [body, wing, bill, lamp, pupil, trim, wheel],
   );
   return <DuckCar speed={speed} driver={driver} config={config} />;
 }
@@ -27,10 +27,8 @@ export default {
     body: { control: "color", name: "duck" },
     wing: { control: "color", name: "wings" },
     bill: { control: "color" },
-    eye: { control: "color", name: "eyes" },
+    lamp: { control: "color", name: "eyes (headlights)" },
     pupil: { control: "color", name: "pupils" },
-    cheek: { control: "color", name: "cheeks" },
-    cheeks: { control: "boolean", name: "rosy cheeks" },
     trim: { control: "color", name: "seats & trim" },
     wheel: { control: "color", name: "wheels" },
   },
@@ -40,10 +38,8 @@ export default {
     body: hex(DUCKCAR.body),
     wing: hex(DUCKCAR.wing),
     bill: hex(DUCKCAR.bill),
-    eye: hex(DUCKCAR.eye),
+    lamp: hex(DUCKCAR.lamp),
     pupil: hex(DUCKCAR.pupil),
-    cheek: hex(DUCKCAR.cheek),
-    cheeks: DUCKCAR.cheeks,
     trim: hex(DUCKCAR.trim),
     wheel: hex(DUCKCAR.wheel),
   },

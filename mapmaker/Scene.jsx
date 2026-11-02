@@ -1,5 +1,5 @@
-// THE SCENE: the planet (or a game's terrain snapshot laid over it), the
-// map's own plateaus and ramps raised on that, the placements on it, and
+// THE SCENE: the planet, the map's own plateaus and ramps raised on it,
+// the placements on that, and
 // the pointer and keys that move them about. Lights and sky are the library
 // stage's toon look (.storybook/stage.jsx) at the map's hour.
 import React, { Suspense, useEffect, useMemo, useRef, useState } from "react";
@@ -7,18 +7,17 @@ import * as THREE from "three";
 import { create } from "zustand";
 import { Canvas, useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { MeshBVH, acceleratedRaycast } from "three-mesh-bvh";
 
 import { LOOKS } from "../.storybook/stage.jsx";
 import { HOLED } from "../src/nouns/water/Basin.jsx";
-import { componentOf, ENTRY } from "./catalog.js";
-import { surfaceOf } from "./surface.js";
-import { useMap, ROLES, isAdopted } from "./store.js";
+import { componentOf, ENTRY, SCULPT } from "./catalog.js";
+import { surfaceOf, behindBall } from "./surface.js";
+import { useMap, ROLES } from "./store.js";
 import { Patch } from "./Patch.jsx";
-import { TerrainLobe, RISERS } from "./Terrain.jsx";
-import { isCover, isRoad, frameOf, toLocal, fromLocal, roadKnots, coverLobes } from "../runtime/cover.js";
-import { isTerrain, terrainLobes, terrainField } from "../runtime/terrain.js";
+import { TerrainLobe, TerrainGround, TerrainWalls, pieceAt, shapeOf, RISERS } from "./Terrain.jsx";
+import { isCover, isRoad, frameOf, toLocal, fromLocal, roadKnots, coverLobes, basinOf, BASIN, lobeDistance } from "../runtime/cover.js";
+import { isTerrain, terrainType, terrainLobes, terrainField, RAMP_ARGS, MAX_LAYERS, TERRAIN } from "../runtime/terrain.js";
+import { rampAlong, rampNear } from "./ramp.js";
 import { bumpAt, bumpFrom, textureDefaults, textures } from "../src/presets/materials/textures.js";
 
 // The sun's shadow box, big enough for a side of the planet.
@@ -31,105 +30,8 @@ const SHADOW = {
   "shadow-camera-near": 1,
   "shadow-camera-far": 260,
   "shadow-bias": -0.0002,
-  "shadow-normalBias": 0.04,
+  "shadow-normalBias": 0.15, // (at 0.04 the cliffs' tops, nearly edge-on to a low sun, shadowed themselves in rings)
 };
-
-// THE TERRAIN: a game's ground, as it exported it (a glb in the map's
-// folder, named by map.terrain), loaded here. Its "ground:…" meshes are what
-// things stand on and the pointer hits; the rest is only seen.
-//
-// Beside it the game may leave adopt.json: its own houses and trees as
-// placements, to be picked up and moved here. A map that has none of them
-// yet (and has sent none away) takes them all as the terrain loads, so the
-// editor shows the world as the game has it; after that they are offered
-// by a button (Panel.jsx), in case the game grew new ones.
-export const useTerrain = create(() => ({ key: null, object: null, ground: [], status: "", offer: [] }));
-function Terrain() {
-  const folder = useMap((s) => s.map.folder);
-  const name = useMap((s) => s.map.terrain);
-  const reload = useTerrain((s) => s.key);
-  const object = useTerrain((s) => s.object);
-  const seen = useRef(null); // the reload key already answered: a folder or name change is not a reload
-  useEffect(() => {
-    if (!name) return useTerrain.setState({ object: null, ground: [], status: "", offer: [] });
-    let gone = false;
-    const asked = reload !== null && reload !== seen.current;
-    seen.current = reload;
-    const where = folder || "maps";
-    useTerrain.setState({ status: `loading ${name}.glb from ${where}…` });
-    fetch(`/__maps/load?${new URLSearchParams({ to: folder, name: "adopt" })}&t=${Date.now()}`)
-      .then((r) => (r.ok ? r.json() : { placements: [] }))
-      .then(({ placements: offer }) => {
-        if (gone) return;
-        useTerrain.setState({ offer });
-        const M = useMap.getState().map;
-        const untouched = !M.placements.some((p) => isAdopted(p.id)) && !(M.dismissed ?? []).length;
-        if (untouched && offer.length) {
-          const n = useMap.getState().adopt(offer);
-          useMap.getState().say(`took the game's ${n} houses and trees onto the map: move them as you like`);
-        }
-      })
-      .catch(() => {});
-    const url = `/__maps/load?${new URLSearchParams({ to: folder, name, kind: "glb" })}&t=${Date.now()}`;
-    new GLTFLoader().loadAsync(url).then(
-      (gltf) => {
-        if (gone) return;
-        const ground = [];
-        let meshes = 0;
-        gltf.scene.traverse((o) => {
-          if (!o.isMesh) return;
-          meshes++;
-          o.castShadow = o.receiveShadow = true;
-          if (o.material) {
-            o.material.roughness = 1;
-            o.material.metalness = 0;
-          }
-          if (o.name.startsWith("ground")) {
-            // a bounds tree, so the thousand rays a patch drops onto the ground are quick
-            o.geometry.boundsTree = new MeshBVH(o.geometry);
-            o.raycast = acceleratedRaycast;
-            ground.push(o);
-          }
-        });
-        gltf.scene.updateWorldMatrix(true, true);
-        // The ground you see is the snapshot's, so the map's radius is the snapshot's:
-        // the median distance of its vertices from the middle (the cliffs, if
-        // any are in it, are a few points of it). Written into the map, so the
-        // game, which builds its ball from the map's radius, matches what is drawn.
-        const lengths = [];
-        const v = new THREE.Vector3();
-        for (const o of ground) {
-          const at = o.geometry.attributes.position;
-          const step = Math.max(1, Math.floor(at.count / 4000));
-          for (let i = 0; i < at.count; i += step) lengths.push(v.fromBufferAttribute(at, i).applyMatrix4(o.matrixWorld).length());
-        }
-        if (lengths.length) {
-          lengths.sort((a, b) => a - b);
-          const radius = Math.round(lengths[lengths.length >> 1] * 100) / 100;
-          if (radius >= 4 && Math.abs(radius - useMap.getState().map.surface.radius) > 0.01) {
-            useMap.getState().setSurface({ radius });
-            useMap.getState().say(`planet radius set to ${radius}, the snapshot's: the game builds its ball from it`);
-          }
-        }
-        useTerrain.setState({ object: gltf.scene, ground, status: `${name}.glb from ${where}: ${meshes} meshes, ${ground.length} ground` });
-        if (asked) useMap.getState().say(`terrain loaded again from ${where}: ${meshes} meshes`);
-      },
-      (e) => {
-        if (gone) return;
-        const msg = String(e.message ?? e);
-        const status = /404/.test(msg)
-          ? `no ${name}.glb in ${where}: set the folder to the game's maps folder (../Car/maps), or export one from the game at index.html?terrain while this runs`
-          : `no terrain: ${msg.split("\n")[0]}`;
-        useTerrain.setState({ object: null, ground: [], status });
-        if (asked) useMap.getState().say(status);
-      },
-    );
-    return () => {
-      gone = true;
-    };
-  }, [folder, name, reload]);
-  return object ? <primitive object={object} /> : null;
-}
 
 // THE MAP'S OWN TERRAIN: its plateaus and ramps as a field over the ball
 // (../runtime/terrain.js), rebuilt when one of THEM changes (not when a
@@ -141,13 +43,53 @@ const terrainKeyOf = (placements) =>
     .filter((p) => isTerrain(p.entry))
     .map((p) => `${p.id}:${p.dir.join(",")}:${p.yaw}:${JSON.stringify(p.args)}`)
     .join(";");
+// …and its WATER: the basins the game digs under its ponds, oceans and
+// springs (../runtime/cover.js's basinOf), each at the level of the
+// terrain under it, rebuilt when a water patch (or the terrain) changes.
+const waterKeyOf = (placements) =>
+  placements
+    .filter((p) => isCover(p.entry) && COVER_WATER.has(p.entry.slice(6)))
+    .map((p) => `${p.id}:${p.dir.join(",")}:${p.yaw}:${JSON.stringify(p.args)}`)
+    .join(";");
+const COVER_WATER = new Set(["pond", "ocean", "spring", "water", "island"]);
+// …and its ROADS, for the bridges over that water: a thing placed on a
+// bridge stands on its deck, not in the pond.
+const roadKeyOf = (placements) =>
+  placements
+    .filter((p) => isRoad(p.entry))
+    .map((p) => `${p.id}:${JSON.stringify(p.knots ?? p.dir)}:${p.yaw}:${!!p.closed}:${JSON.stringify(p.args)}`)
+    .join(";");
 export const useSurface = () => {
   const spec = useMap((s) => s.map.surface);
-  const ground = useTerrain((s) => s.ground);
   const terrainKey = useMap((s) => terrainKeyOf(s.map.placements));
+  const waterKey = useMap((s) => waterKeyOf(s.map.placements));
+  const roadKey = useMap((s) => roadKeyOf(s.map.placements));
+  const roads = useMemo(() => coverLobes(useMap.getState().map.placements, spec.radius).filter((l) => l.type === "road"), [roadKey, spec.radius]);
   const field = useMemo(() => terrainField(terrainLobes(useMap.getState().map.placements, spec.radius), spec.radius), [terrainKey, spec.radius]);
   useEffect(() => useField.setState({ field }), [field]);
-  return useMemo(() => surfaceOf(spec, ground, field, () => [...RISERS]), [spec.kind, spec.radius, ground, field]);
+  // The basins read the terrain live (the field in hand, through a ref),
+  // and are made again only when the water changes or the ground under a
+  // pond does — its level at the middle, the rise round its edge — not on
+  // every change to a cliff elsewhere: the ball is knitted from them, and
+  // everything that stands in them, and a sculpt stroke across the far
+  // side of the ball must not knit it all again at every stamp.
+  const fieldRef = useRef(field);
+  fieldRef.current = field;
+  const levelKey = useMemo(() => {
+    const R = spec.radius;
+    return coverLobes(useMap.getState().map.placements, R)
+      .filter((l) => l.type === "water")
+      .map((l) => [[0, 0], [l.hw + 1, 0], [-l.hw - 1, 0], [0, l.hl + 1], [0, -l.hl - 1]].map(([x, z]) => field.rise(fromLocal(l.frame, x, z), false).toFixed(1)).join(","))
+      .join(";");
+  }, [waterKey, field, spec.radius]);
+  const basin = useMemo(() => {
+    const lobes = coverLobes(useMap.getState().map.placements, spec.radius);
+    return basinOf(
+      lobes.filter((l) => l.type === "water"),
+      { levelAt: (d) => fieldRef.current.rise(d, false), islands: lobes.filter((l) => l.type === "island") },
+    );
+  }, [waterKey, levelKey, spec.radius]);
+  return useMemo(() => surfaceOf(spec, field, () => [...RISERS], basin, roads), [spec.kind, spec.radius, field, basin, roads]);
 };
 
 // A story that throws (a knob turned to a size it cannot build) takes out
@@ -191,7 +133,7 @@ function Badge({ role, scale }) {
 // exporter writes it out as a node a game can read back.
 export const GROUPS = new Map(); // placement id → its group, for the marker and the camera
 // A story's drawn body, memoised on its entry and knobs ALONE: when the
-// ground under it changes (a cliff dragged, the snapshot reloaded) the group
+// ground under it changes (a cliff dragged, a pond dug) the group
 // it sits in moves, but the story — hundreds of meshes, for a house — is
 // not drawn again. A groundcover patch and a piece of terrain are the
 // exception: they are made of the ground, and take the surface.
@@ -213,7 +155,7 @@ const Placement = React.memo(function Placement({ p, surface, ghost = false }) {
     return () => GROUPS.delete(p.id);
   }, [p.id, ghost]);
   const role = p.role ?? "prop";
-  const userData = ghost ? {} : { mm: 1, entry: p.entry, args: p.args, dir: p.dir, yaw: p.yaw, scale: p.scale, lift: p.lift, role, ...(p.knots ? { knots: p.knots, closed: !!p.closed } : {}) };
+  const userData = ghost ? {} : { mm: 1, entry: p.entry, args: p.args, dir: p.dir, yaw: p.yaw, scale: p.scale, lift: p.lift, role, ...(p.clearing > 0 ? { clearing: p.clearing } : {}), ...(p.knots ? { knots: p.knots, closed: !!p.closed } : {}) };
   return (
     <group
       ref={ref}
@@ -246,11 +188,85 @@ const Placement = React.memo(function Placement({ p, surface, ghost = false }) {
   );
 });
 
+// A press on the map's own ground (TerrainGround): the piece under it —
+// a ramp, or the topmost cliff — is picked and dragged, as a press on a
+// thing's own group is (Placement), in terrain mode only.
+function pickTerrain(e) {
+  const S = useMap.getState();
+  if (S.placing || S.mode !== "terrain" || e.button !== 0 || !e.point) return;
+  const field = useField.getState().field;
+  const id = field && pieceAt(field, e.point.clone().normalize());
+  if (!id) return;
+  e.stopPropagation();
+  S.select(id);
+  beginDrag(id, e.clientX, e.clientY, { anchor: e.point.clone().normalize().toArray() });
+}
+// THE SCULPT BRUSH (the catalog's SCULPT tool): a round stamp of the
+// brush's size (the store's `brush`). LEFT, the ground RISES: a round
+// cliff of the brush's height is laid at the press, and another along a
+// drag every half-radius, running together with cliffs of the same height
+// round it (by the brush's blend) — on open ground, or just inside a tier's
+// edge, a piece of that tier; further in (half the brush in), a storey on
+// it, and the stroke stays on that storey: a stamp carried out to within
+// half the brush of the edge under it is not laid. RIGHT,
+// it goes back DOWN: the tier under the pointer is CUT over the brush's
+// disc (a terrain-cut of that tier's height), and any cliff of that tier
+// that fits inside the brush goes whole. A stroke is one undo step.
+const tierAt = (field, at) => {
+  for (let i = field.tiers.length - 1; i >= 0; i--) {
+    const m = field.tiers[i].field(at);
+    if (m !== Infinity && m < 0.5) return field.tiers[i];
+  }
+  return null;
+};
+const stampSpacing = (r) => Math.max(0.6, r * 0.5);
+const layerOf = (tier) => Math.max(1, ...tier.lobes.filter((l) => l.type === "cliff").map((l) => l.layer));
+function sculptBegin(dir, lower, surface) {
+  const field = useField.getState().field;
+  const at = new THREE.Vector3().fromArray(dir);
+  const r = useMap.getState().brush.radius;
+  const tier = field && !field.empty ? tierAt(field, at) : null;
+  // well inside a tier's edge (half the brush in) takes a storey on it; just inside, or open ground, more of itself
+  const onTop = !!tier && tier.field(at) < -r / 2 && layerOf(tier) < MAX_LAYERS;
+  return { lower, layer: onTop ? layerOf(tier) + 1 : tier ? layerOf(tier) : 1, base: onTop ? tier.h : null, last: dir };
+}
+function sculptAt(dir, St, surface) {
+  const S = useMap.getState();
+  const B = S.brush, R = surface.radius, r = B.radius;
+  const at = new THREE.Vector3().fromArray(dir);
+  const field = useField.getState().field;
+  if (!St.lower) {
+    // a storey stays on the tier it began on: not laid within half the brush of that tier's edge
+    if (St.base !== null) {
+      const base = field && !field.empty ? field.tiers.find((t) => Math.abs(t.h - St.base) < 1e-3) : null;
+      if (!base || !(base.field(at) < -r / 2)) return;
+    }
+    S.placeLive("terrain-cliff", dir, { args: { width: 2 * r, length: 2 * r, corner: r, blend: +(B.soft * r).toFixed(2), height: B.height, wobble: B.wobble, layer: St.layer } });
+    return;
+  }
+  if (!field || field.empty) return;
+  const tier = tierAt(field, at);
+  if (!tier) return;
+  // cliffs of this tier the brush covers (near enough: a stamp of its own size under its middle) go whole; what is left of the tier here is cut
+  const gone = new Set();
+  for (const l of tier.lobes) if (l.type === "cliff" && l.frame.d.angleTo(at) * R + Math.max(l.hw, l.hl) <= r * 1.5) gone.add(l.id);
+  for (const id of gone) S.removeLive(id);
+  const left = tier.lobes.some((l) => l.type === "cliff" && !gone.has(l.id) && lobeDistance(l, at) < l.wobble + r);
+  if (left) S.placeLive("terrain-cut", dir, { args: { width: 2 * r, length: 2 * r, corner: r, tier: tier.h } });
+  else S.beginLive();
+}
+
 // The drag in hand: which placement, where the pointer went down, and the
 // placements as they were when it began, for one undo step at the end. A
 // press that moves under SLACK pixels is a click, and moves nothing.
 const SLACK = 4;
 let drag = null;
+// The press that began on the canvas (Interaction's onDown): where, and
+// whether it began on a thing (the thing's own handler has started a drag
+// by then). Kept out here, as `drag` is: the listeners are made again
+// whenever the surface is — and a road's knot laid live rebuilds it (its
+// bridges) — so a stroke in hand must outlive the listeners that began it.
+let press = null;
 function beginDrag(id, x, y, { knot = null, anchor = null } = {}) {
   const S = useMap.getState();
   const p = S.map.placements.find((q) => q.id === id);
@@ -274,7 +290,15 @@ function dragRoad(dir) {
 // Pointer and keyboard, on the window rather than on meshes, so a drag
 // keeps going off the object and a click places through the ghost.
 function Interaction({ surface }) {
-  const { camera, gl, controls } = useThree();
+  const { camera, gl, controls, setEvents } = useThree();
+  // Only what is in view takes the pointer: a thing on the far side of the
+  // ball, hidden behind it, is dropped from the hits before they are dealt
+  // out, so a click does not pick through the planet.
+  useEffect(() => {
+    if (surface.kind !== "planet") return;
+    setEvents({ filter: (hits) => hits.filter((h) => !behindBall(camera.position, h.point, surface.radius)) });
+    return () => setEvents({ filter: undefined });
+  }, [setEvents, camera, surface]);
   const ray = useMemo(() => new THREE.Raycaster(), []);
   const ndc = useMemo(() => new THREE.Vector2(), []);
 
@@ -287,9 +311,6 @@ function Interaction({ surface }) {
 
   useEffect(() => {
     const el = gl.domElement;
-    // A press that began on the canvas: where, and whether it began on a
-    // thing (the thing's own handler has started a drag by then).
-    let press = null;
     // Drawing a patch (or a plateau, or a ramp): a press on the ground while
     // placing one is its first corner; dragging pulls it out to the pointer,
     // squared to the view, and letting go keeps it. A press that does not
@@ -318,6 +339,26 @@ function Interaction({ surface }) {
       useMap.setState((s) => ({
         status: `${w} × ${len} units`,
         map: { ...s.map, placements: s.map.placements.map((q) => (q.id === D.id ? { ...q, dir: fromLocal(D.frame, l.x / 2, l.z / 2).toArray(), args: { ...args, width: w, length: len } } : q)) },
+      }));
+    };
+    // Drawing a RAMP: a line. A press on the ground while placing one is its
+    // foot; dragging runs it out to the pointer, and where the line crosses a
+    // cliff's edge the ramp squares up to the edge and docks its head on the
+    // lip (ramp.js). Letting go keeps it.
+    const line = (ev) => {
+      const S = useMap.getState();
+      const here = hitUnder(ev);
+      if (!here) return;
+      const Ln = press.line;
+      if (!Ln.id) {
+        if (controls) controls.enabled = false;
+        Ln.id = S.placeLive(S.placing, Ln.anchor, { yaw: 0 });
+      }
+      const r = rampAlong(useField.getState().field, new THREE.Vector3().fromArray(Ln.anchor), new THREE.Vector3().fromArray(here), surface.radius);
+      const args = S.map.placements.find((q) => q.id === Ln.id)?.args ?? {};
+      useMap.setState((s) => ({
+        status: `${r.length} units${r.snapped ? " · docked on the lip" : ""}`,
+        map: { ...s.map, placements: s.map.placements.map((q) => (q.id === Ln.id ? { ...q, dir: r.dir, yaw: r.yaw, args: { ...args, length: r.length } } : q)) },
       }));
     };
     // Drawing a ROAD: a pen. A press on the ground while placing one starts
@@ -360,6 +401,15 @@ function Interaction({ surface }) {
     };
     const onMove = (ev) => {
       const S = useMap.getState();
+      if (press?.sculpt) {
+        const here = hitUnder(ev);
+        if (!here) return;
+        S.setHover(here);
+        const Sc = press.sculpt;
+        if (new THREE.Vector3().fromArray(here).angleTo(new THREE.Vector3().fromArray(Sc.last)) * surface.radius < stampSpacing(S.brush.radius)) return;
+        Sc.last = here;
+        return sculptAt(here, Sc, surface);
+      }
       if (press?.pen && !drag) {
         if (Math.hypot(ev.clientX - press.x, ev.clientY - press.y) < SLACK && !press.pen.id) return;
         return pen(ev);
@@ -368,6 +418,10 @@ function Interaction({ surface }) {
         if (Math.hypot(ev.clientX - press.x, ev.clientY - press.y) < SLACK && !press.draw.id) return;
         return draw(ev);
       }
+      if (press?.line && !drag) {
+        if (Math.hypot(ev.clientX - press.x, ev.clientY - press.y) < SLACK && !press.line.id) return;
+        return line(ev);
+      }
       if (drag) {
         if (!drag.moved && Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < SLACK) return;
         const dir = hitUnder(ev);
@@ -375,22 +429,44 @@ function Interaction({ surface }) {
         if (controls) controls.enabled = false;
         drag.moved = true;
         if (drag.knots0) dragRoad(dir);
-        else S.patchLive(drag.id, { dir });
+        else {
+          const p = S.map.placements.find((q) => q.id === drag.id);
+          if (p && terrainType(p.entry) === "ramp") {
+            // a ramp carried by its middle: its own line laid at the pointer, snapped to any edge it crosses
+            const R = surface.radius;
+            const F = frameOf(dir, p.yaw ?? 0, R);
+            const hl = (p.args?.length ?? RAMP_ARGS.length) / 2;
+            const r = rampAlong(useField.getState().field, fromLocal(F, 0, -hl), fromLocal(F, 0, hl), R, { length: hl * 2 });
+            S.patchLive(drag.id, { dir: r.dir, yaw: r.yaw });
+          } else S.patchLive(drag.id, { dir });
+        }
       } else if (S.placing) {
         S.setHover(hitUnder(ev));
       }
     };
     const onUp = (ev) => {
+      if (press?.sculpt) {
+        // the stroke done: one undo step
+        if (controls) controls.enabled = true;
+        press = null;
+        useMap.getState().endLive();
+        return;
+      }
       const onThing = !!drag;
-      if ((press?.draw && !press.draw.id) || (press?.pen && !press.pen.id)) if (controls) controls.enabled = true; // a press that drew nothing
+      if ((press?.draw && !press.draw.id) || (press?.line && !press.line.id) || (press?.pen && !press.pen.id)) if (controls) controls.enabled = true; // a press that drew nothing
       if (drag) {
         if (controls) controls.enabled = true;
-        if (drag.moved) useMap.setState((s) => ({ undo: [...s.undo.slice(-99), drag.before], redo: [], dirty: true }));
+        if (drag.moved) {
+          // a road moved runs over new ground: what was placed there goes, in the same step
+          const cleared = drag.knots0 ? useMap.getState().clearUnderRoad(drag.id) : 0;
+          useMap.setState((s) => ({ undo: [...s.undo.slice(-99), drag.before], redo: [], dirty: true }));
+          if (cleared) useMap.getState().say(`${cleared} thing${cleared > 1 ? "s" : ""} under the road cleared`);
+        }
         drag = null;
       }
       if (!press) return;
       const still = Math.hypot(ev.clientX - press.x, ev.clientY - press.y) < SLACK;
-      const drawn = press.draw?.id;
+      const drawn = press.draw?.id ?? press.line?.id;
       const stroke = press.pen;
       press = null;
       if (stroke) {
@@ -422,8 +498,10 @@ function Interaction({ surface }) {
           knots = sm;
         }
         S.patchLive(id, { knots: knots.map((k) => k.toArray()), closed, dir: knots[0].toArray() });
+        // whatever was placed where the road now runs goes with it (one undo step with the road)
+        const cleared = S.clearUnderRoad(id);
         S.endLive();
-        S.say("");
+        S.say(cleared ? `${cleared} thing${cleared > 1 ? "s" : ""} under the road cleared` : "");
         if (ev.shiftKey) S.setHover(null);
         else useMap.setState({ placing: null, hover: null, selected: id });
         return;
@@ -443,7 +521,9 @@ function Interaction({ surface }) {
       if (S.placing) {
         const dir = hitUnder(ev);
         if (!dir) return;
-        const id = S.place(S.placing, dir);
+        // a ramp clicked down near a cliff is aimed at the nearest lip and docked on it
+        const near = isTerrain(S.placing) && terrainType(S.placing) === "ramp" ? rampNear(useField.getState().field, new THREE.Vector3().fromArray(dir), surface.radius) : null;
+        const id = near ? S.place(S.placing, near.dir, { yaw: near.yaw, args: { length: near.length } }) : S.place(S.placing, dir);
         if (!ev.shiftKey) useMap.setState({ placing: null, hover: null, selected: id });
       } else if (!onThing) {
         S.select(null); // a click on bare ground unpicks
@@ -451,6 +531,17 @@ function Interaction({ surface }) {
     };
     const onDown = (ev) => {
       const S = useMap.getState();
+      if (S.placing === SCULPT) {
+        // the brush: left raises, right lowers, from the press on
+        if (ev.button !== 0 && ev.button !== 2) return;
+        const anchor = hitUnder(ev);
+        if (!anchor) return;
+        if (controls) controls.enabled = false;
+        press = { x: ev.clientX, y: ev.clientY, sculpt: sculptBegin(anchor, ev.button === 2, surface) };
+        S.beginLive();
+        sculptAt(anchor, press.sculpt, surface);
+        return;
+      }
       if (ev.button === 2 && S.placing) return S.stopPlacing();
       if (ev.button === 0) {
         press = { x: ev.clientX, y: ev.clientY };
@@ -460,6 +551,7 @@ function Interaction({ surface }) {
           const anchor = hitUnder(ev);
           if (anchor) {
             if (isRoad(S.placing)) press.pen = { anchor, id: null, knots: null };
+            else if (isTerrain(S.placing) && terrainType(S.placing) === "ramp") press.line = { anchor, id: null };
             else press.draw = { anchor, id: null };
             if (controls) controls.enabled = false;
           }
@@ -527,6 +619,13 @@ function Interaction({ surface }) {
         ev.preventDefault();
         return S.setMode(S.mode === "terrain" ? "objects" : "terrain");
       }
+      // the sculpt brush picked: [ ] its size, shift-[ ] its height
+      if (S.placing === SCULPT && ["[", "]", "{", "}"].includes(ev.key)) {
+        const up = ev.key === "]" || ev.key === "}";
+        if (ev.shiftKey) S.setBrush({ height: S.brush.height + (up ? 0.5 : -0.5) });
+        else S.setBrush({ radius: S.brush.radius + (up ? 0.5 : -0.5) });
+        return S.say(`brush ${S.brush.radius * 2} across · ${S.brush.height} tall`);
+      }
       if (!sel) return;
       if (meta && ev.key.toLowerCase() === "d") {
         ev.preventDefault();
@@ -542,6 +641,8 @@ function Interaction({ surface }) {
             return S.selectKnot(null);
           }
         }
+        // a cliff or a cut goes with its whole shape (every stroke run together with it); alt takes the one piece
+        if (isTerrain(sel.entry) && !ev.altKey) return S.removeMany(shapeOf(useField.getState().field, sel.id));
         return S.remove(sel.id);
       }
       const turn = ((ev.shiftKey ? 5 : 15) * Math.PI) / 180;
@@ -608,21 +709,50 @@ function FlatRing({ surface }) {
   }, [p?.id, p?.args, p?.scale, p?.dir]);
   if (!p || isCover(p.entry) || isTerrain(p.entry)) return null; // a patch or a piece of terrain draws its own outline
   const { position, quaternion } = surface.standAt(p.dir, 0.06, 0);
+  const clearing = p.clearing > 0 ? p.clearing : 0;
   return (
     <group position={position} quaternion={quaternion}>
       <mesh rotation-x={-Math.PI / 2} renderOrder={5}>
         <ringGeometry args={[radius, radius + 0.12, 64]} />
         <meshBasicMaterial color="#6B86A8" side={THREE.DoubleSide} depthTest={false} transparent opacity={0.9} />
       </mesh>
+      {/* its clearing: how far round it the groundcover is kept back, a fainter ring (the ball's curve is ignored: it is a guide) */}
+      {clearing > 0 && (
+        <mesh rotation-x={-Math.PI / 2} renderOrder={5}>
+          <ringGeometry args={[clearing, clearing + 0.08, 96]} />
+          <meshBasicMaterial color="#8E7352" side={THREE.DoubleSide} depthTest={false} transparent opacity={0.6} />
+        </mesh>
+      )}
     </group>
   );
 }
 
+// The sculpt brush's ring on the ground under the pointer, the brush's size.
+function BrushRing({ surface, at }) {
+  const radius = useMap((s) => s.brush.radius);
+  const geometry = useMemo(() => {
+    const F = frameOf(at, 0, surface.radius);
+    const pts = [];
+    for (let i = 0; i < 64; i++) {
+      const a = (i / 64) * Math.PI * 2;
+      const d = fromLocal(F, Math.cos(a) * radius, Math.sin(a) * radius);
+      pts.push(d.multiplyScalar(surface.radiusAt(d) + 0.12));
+    }
+    return new THREE.BufferGeometry().setFromPoints(pts);
+  }, [at, radius, surface]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+  return (
+    <lineLoop geometry={geometry} renderOrder={6} raycast={() => {}} userData={{ editorOnly: true }}>
+      <lineBasicMaterial color={TERRAIN.cliff.tint} depthTest={false} transparent opacity={0.95} />
+    </lineLoop>
+  );
+}
 // The ghost: the entry being placed, following the pointer over the ground.
 function Ghost({ surface }) {
   const placing = useMap((s) => s.placing);
   const hover = useMap((s) => s.hover);
   if (!placing || !hover) return null;
+  if (placing === SCULPT) return <BrushRing surface={surface} at={hover} />;
   const p = { id: "ghost", entry: placing, args: {}, dir: hover, yaw: 0, scale: 1, lift: 0, role: "prop" };
   return <Placement p={p} surface={surface} ghost />;
 }
@@ -656,28 +786,55 @@ const CLAY_BUMP = bumpFrom(CLAY.amount, CLAY.seed, { ...textureDefaults, ...text
 // …except under the roads and their verge, where it is pressed flat and eased
 // back out over BLEND (the game's roadFlat), so a road never sits in a hollow.
 const ROAD_FLAT = { verge: 1.5, blend: 1.8 };
-function bumpyBall(R, bumpiness, roadDistance = null) {
-  const g = new THREE.SphereGeometry(R, 128, 64);
-  if (!(bumpiness > 0) || !(CLAY_BUMP?.amplitude > 0)) return g;
+// …and sunk into the BASINS under the water patches (surface.dropAt: the
+// game digs the same, cover.js's BASIN), the ground there painted sand
+// from the waterline out a little, darkening to seabed under the water,
+// as the game paints it. The ball is knitted finer with water on it, so
+// a basin's slope has vertices to fall through.
+function bumpyBall(R, bumpiness, roadDistance = null, basin = null, ground = "#6E9B5E") {
+  const dug = !!basin && !basin.empty;
+  const dropAt = (d) => (dug ? basin.drop(d) : 0);
+  const g = new THREE.SphereGeometry(R, dug ? 256 : 128, dug ? 128 : 64);
+  const bumpy = bumpiness > 0 && CLAY_BUMP?.amplitude > 0;
+  if (!bumpy && !dug) return g;
   const P = g.attributes.position;
   const d = new THREE.Vector3();
+  const grass = new THREE.Color(ground), sand = new THREE.Color(BASIN.colors.sand), seabed = new THREE.Color(BASIN.colors.seabed), wet = new THREE.Color();
+  const col = dug ? new Float32Array(P.count * 3) : null;
+  const waterR = R - BASIN.water;
   for (let i = 0; i < P.count; i++) {
     d.fromBufferAttribute(P, i).normalize();
-    const f = bumpAt(CLAY_BUMP, d.x * CLAY.lumps, d.y * CLAY.lumps, d.z * CLAY.lumps) / CLAY_BUMP.amplitude;
-    let flat = 0;
-    if (roadDistance) {
-      const away = roadDistance(d) - ROAD_FLAT.verge;
-      flat = away <= 0 ? 1 : away >= ROAD_FLAT.blend ? 0 : (1 - away / ROAD_FLAT.blend) ** 2 * (3 - 2 * (1 - away / ROAD_FLAT.blend));
+    let r = R;
+    if (bumpy) {
+      const f = bumpAt(CLAY_BUMP, d.x * CLAY.lumps, d.y * CLAY.lumps, d.z * CLAY.lumps) / CLAY_BUMP.amplitude;
+      let flat = 0;
+      if (roadDistance) {
+        const away = roadDistance(d) - ROAD_FLAT.verge;
+        flat = away <= 0 ? 1 : away >= ROAD_FLAT.blend ? 0 : (1 - away / ROAD_FLAT.blend) ** 2 * (3 - 2 * (1 - away / ROAD_FLAT.blend));
+      }
+      r -= CLAY.depth * bumpiness * Math.max(0, -f) * (1 - flat);
     }
-    d.multiplyScalar(R - CLAY.depth * bumpiness * Math.max(0, -f) * (1 - flat));
+    if (dug) {
+      r -= dropAt(d);
+      // sand from the waterline out `sand`, to seabed as the ground goes under the water (the pond's own level aside)
+      const level = basin.levelOf(d);
+      const toSea = basin.field(d) - (basin.line + BASIN.sand);
+      // (the shore eased over a vertex or so, since the knit is coarse)
+      const c = toSea < 0.8 ? wet.copy(sand).lerp(seabed, Math.max(0, Math.min(1, (waterR + level - r) / 1.5))).lerp(grass, Math.max(0, Math.min(1, toSea / 0.8))) : grass;
+      col[i * 3] = c.r;
+      col[i * 3 + 1] = c.g;
+      col[i * 3 + 2] = c.b;
+    }
+    d.multiplyScalar(r);
     P.setXYZ(i, d.x, d.y, d.z);
   }
+  if (col) g.setAttribute("color", new THREE.BufferAttribute(col, 3));
   g.computeVertexNormals();
   return g;
 }
 function Planet({ surface, color }) {
   const R = surface.radius;
-  const shown = !surface.hasTerrain;
+  const shown = true;
   const bumpiness = useMap((s) => s.map.surface.bumpiness ?? 1);
   const placements = useMap((s) => s.map.placements);
   const roads = useMemo(() => {
@@ -698,11 +855,16 @@ function Planet({ surface, color }) {
       return best;
     };
   }, [placements, R, bumpiness]);
-  const ball = useMemo(() => bumpyBall(R, bumpiness, roads), [R, bumpiness, roads]);
+  // (the ball is the base ground and its basins: the terrain stands on it as its own meshes, so a cliff moved does not knit it again)
+  const basin = surface.basin;
+  const ball = useMemo(() => bumpyBall(R, bumpiness, roads, basin, color), [R, bumpiness, roads, basin, color]);
+  useEffect(() => () => ball.dispose(), [ball]);
+  const painted = !!ball.attributes.color;
   return (
     <group visible={shown}>
-      <mesh receiveShadow geometry={ball}>
-        <meshStandardMaterial color={color} {...HOLED} />
+      <mesh receiveShadow geometry={ball} onPointerDown={pickTerrain}>
+        {/* (keyed: a material turned to vertex colours after it was made keeps its old shader, and the ball went white until a reload) */}
+        <meshStandardMaterial key={painted ? "painted" : "plain"} color={painted ? "#ffffff" : color} vertexColors={painted} {...HOLED} />
       </mesh>
       {/* a faint graticule, for bearings */}
       <mesh scale={1.002}>
@@ -711,6 +873,23 @@ function Planet({ surface, color }) {
       </mesh>
     </group>
   );
+}
+
+// The top bar's SPIN: the camera, and what it looks at, carried round the
+// planet's axis, so the world turns under it — held while a drag is on
+// (the controls are off then) so nothing moves under the pointer.
+const SPIN_AXIS = new THREE.Vector3(0, 1, 0);
+function Spin() {
+  const spin = useMap((s) => s.spin);
+  const { camera, controls } = useThree();
+  useFrame((_, dt) => {
+    if (!spin.on || !controls || !controls.enabled) return;
+    const a = Math.min(dt, 0.1) * spin.speed * (Math.PI * 2) / 60;
+    camera.position.applyAxisAngle(SPIN_AXIS, a);
+    controls.target.applyAxisAngle(SPIN_AXIS, a);
+    controls.update();
+  });
+  return null;
 }
 
 export default function Scene() {
@@ -724,13 +903,15 @@ export default function Scene() {
         <color attach="background" args={[Look.sky(t)]} />
         <Look.Lights t={t} shadow={SHADOW} />
         <Planet surface={surface} color={look.ground} />
-        <Terrain />
+        <TerrainGround surface={surface} onPick={pickTerrain} />
+        <TerrainWalls surface={surface} />
         <Placements surface={surface} />
         <Ghost surface={surface} />
         <FlatRing surface={surface} />
         <Interaction surface={surface} />
         {/* minDistance is from the TARGET, which "look at" puts on the ground, so it stays small */}
         <OrbitControls makeDefault minDistance={2} maxDistance={surface.radius * 8} enableDamping={false} />
+        <Spin />
       </Canvas>
     </div>
   );
